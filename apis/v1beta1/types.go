@@ -118,21 +118,6 @@ type ClientSpec struct {
 	// ProviderConfigReference to the provider config used to authenticate.
 	ProviderConfigProviderConfigReference `json:"providerConfigRef"`
 
-	// PublishConnectionDetailsTo specifies the Secret name which contains
-	// connection details to publish.
-	// +optional
-	PublishConnectionDetailsTo *xpv1.PublishConnectionDetailsTo `json:"publishConnectionDetailsTo,omitempty"`
-
-	// DeletionPolicy specifies what will happen to the managed resource
-	// when the managed resource is deleted.
-	// +optional
-	DeletionPolicy xpv1.DeletionPolicy `json:"deletionPolicy,omitempty"`
-
-	// ManagementPolicy specifies the level of control Crossplane has over
-	// the managed resource.
-	// +optional
-	ManagementPolicy xpv1.ManagementPolicy `json:"managementPolicy,omitempty"`
-
 	// ForProvider are the fields to set on the Keycloak client.
 	ForProvider ClientParameters `json:"forProvider"`
 }
@@ -205,11 +190,6 @@ type ClientParameters struct {
 	Attributes map[string]string `json:"attributes,omitempty"`
 }
 
-// ClientStatus represents the observed state of a Client.
-type ClientStatus struct {
-	xpv1.TypedStatus `json:",inline"`
-}
-
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced
@@ -222,8 +202,14 @@ type Client struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ClientSpec   `json:"spec"`
+	Spec ClientSpec `json:"spec"`
+	// +kubebuilder:subresource:status
 	Status ClientStatus `json:"status,omitempty"`
+}
+
+// ClientStatus represents the observed state of a Client.
+type ClientStatus struct {
+	xpv1.ManagedResourceStatus `json:",inline"`
 }
 
 // +kubebuilder:object:root=true
@@ -233,277 +219,6 @@ type ClientList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Client `json:"items"`
-}
-
-// =============================================================================
-// User Types
-// =============================================================================
-
-// UserSpec defines the desired state of a User.
-type UserSpec struct {
-	ProviderConfigProviderConfigReference `json:"providerConfigRef"`
-
-	// +optional
-	PublishConnectionDetailsTo *xpv1.PublishConnectionDetailsTo `json:"publishConnectionDetailsTo,omitempty"`
-
-	// +optional
-	DeletionPolicy xpv1.DeletionPolicy `json:"deletionPolicy,omitempty"`
-
-	// +optional
-	ManagementPolicy xpv1.ManagementPolicy `json:"managementPolicy,omitempty"`
-
-	ForProvider UserParameters `json:"forProvider"`
-}
-
-// UserParameters are the fields to set on the Keycloak user.
-type UserParameters struct {
-	// Realm is the Keycloak realm name.
-	// +kubebuilder:validation:Required
-	Realm string `json:"realm"`
-
-	// Username is the user username.
-	// +kubebuilder:validation:Required
-	Username string `json:"username"`
-
-	// Email is the user email.
-	// +optional
-	Email string `json:"email,omitempty"`
-
-	// FirstName is the user's first name.
-	// +optional
-	FirstName string `json:"firstName,omitempty"`
-
-	// LastName is the user's last name.
-	// +optional
-	LastName string `json:"lastName,omitempty"`
-
-	// Enabled indicates if the user is enabled.
-	// +kubebuilder:default=true
-	Enabled *bool `json:"enabled,omitempty"`
-
-	// EmailVerified indicates if the email is verified.
-	// +kubebuilder:default=false
-	EmailVerified *bool `json:"emailVerified,omitempty"`
-
-	// Groups is a list of groups the user belongs to.
-	// +optional
-	Groups []string `json:"groups,omitempty"`
-
-	// RealmRoles is a list of realm roles to assign.
-	// +optional
-	RealmRoles []string `json:"realmRoles,omitempty"`
-
-	// ClientRoles is a map of client roles to assign.
-	// +optional
-	ClientRoles map[string][]string `json:"clientRoles,omitempty"`
-
-	// Attributes is a map of user attributes.
-	// +optional
-	Attributes map[string][]string `json:"attributes,omitempty"`
-}
-
-// UserStatus represents the observed state of a User.
-type UserStatus struct {
-	xpv1.TypedStatus `json:",inline"`
-}
-
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
-// +kubebuilder:storageversion
-// +kubebuilder:printcolumn:name="REALM",type="string",JSONPath=".spec.forProvider.realm"
-// +kubebuilder:printcolumn:name="USERNAME",type="string",JSONPath=".spec.forProvider.username"
-// +kubebuilder:printcolumn:name="EMAIL",type="string",JSONPath=".spec.forProvider.email"
-// +kubebuilder:printcolumn:name="ENABLED",type="boolean",JSONPath=".spec.forProvider.enabled"
-// +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
-type User struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   UserSpec   `json:"spec"`
-	Status UserStatus `json:"status,omitempty"`
-}
-
-// +kubebuilder:object:root=true
-
-// UserList contains a list of User.
-type UserList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []User `json:"items"`
-}
-
-// =============================================================================
-// Group Types
-// =============================================================================
-
-// GroupSpec defines the desired state of a Group.
-type GroupSpec struct {
-	ProviderConfigProviderConfigReference `json:"providerConfigRef"`
-
-	// +optional
-	PublishConnectionDetailsTo *xpv1.PublishConnectionDetailsTo `json:"publishConnectionDetailsTo,omitempty"`
-
-	// +optional
-	DeletionPolicy xpv1.DeletionPolicy `json:"deletionPolicy,omitempty"`
-
-	// +optional
-	ManagementPolicy xpv1.ManagementPolicy `json:"managementPolicy,omitempty"`
-
-	ForProvider GroupParameters `json:"forProvider"`
-}
-
-// GroupParameters are the fields to set on the Keycloak group.
-type GroupParameters struct {
-	// Realm is the Keycloak realm name.
-	// +kubebuilder:validation:Required
-	Realm string `json:"realm"`
-
-	// Name is the group name.
-	// +kubebuilder:validation:Required
-	Name string `json:"name"`
-
-	// Path is the group path.
-	// +optional
-	Path string `json:"path,omitempty"`
-
-	// RealmRoles is a list of realm roles to assign.
-	// +optional
-	RealmRoles []string `json:"realmRoles,omitempty"`
-
-	// ClientRoles is a map of client roles to assign.
-	// +optional
-	ClientRoles map[string][]string `json:"clientRoles,omitempty"`
-
-	// Attributes is a map of group attributes.
-	// +optional
-	Attributes map[string]string `json:"attributes,omitempty"`
-}
-
-// GroupStatus represents the observed state of a Group.
-type GroupStatus struct {
-	xpv1.TypedStatus `json:",inline"`
-}
-
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
-// +kubebuilder:storageversion
-// +kubebuilder:printcolumn:name="REALM",type="string",JSONPath=".spec.forProvider.realm"
-// +kubebuilder:printcolumn:name="NAME",type="string",JSONPath=".spec.forProvider.name"
-// +kubebuilder:printcolumn:name="PATH",type="string",JSONPath=".spec.forProvider.path"
-// +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
-type Group struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   GroupSpec   `json:"spec"`
-	Status GroupStatus `json:"status,omitempty"`
-}
-
-// +kubebuilder:object:root=true
-
-// GroupList contains a list of Group.
-type GroupList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Group `json:"items"`
-}
-
-// =============================================================================
-// Realm Types
-// =============================================================================
-
-// RealmSpec defines the desired state of a Realm.
-type RealmSpec struct {
-	ProviderConfigProviderConfigReference `json:"providerConfigRef"`
-
-	// +optional
-	PublishConnectionDetailsTo *xpv1.PublishConnectionDetailsTo `json:"publishConnectionDetailsTo,omitempty"`
-
-	// +optional
-	DeletionPolicy xpv1.DeletionPolicy `json:"deletionPolicy,omitempty"`
-
-	// +optional
-	ManagementPolicy xpv1.ManagementPolicy `json:"managementPolicy,omitempty"`
-
-	ForProvider RealmParameters `json:"forProvider"`
-}
-
-// RealmParameters are the fields to set on the Keycloak realm.
-type RealmParameters struct {
-	// RealmName is the realm name.
-	// +kubebuilder:validation:Required
-	RealmName string `json:"realmName"`
-
-	// Enabled indicates if the realm is enabled.
-	// +kubebuilder:default=true
-	Enabled *bool `json:"enabled,omitempty"`
-
-	// DisplayName is the display name of the realm.
-	// +optional
-	DisplayName string `json:"displayName,omitempty"`
-
-	// LoginWithEmailAllowed indicates if login with email is allowed.
-	// +kubebuilder:default=true
-	LoginWithEmailAllowed *bool `json:"loginWithEmailAllowed,omitempty"`
-
-	// DuplicateEmailsAllowed indicates if duplicate emails are allowed.
-	// +kubebuilder:default=false
-	DuplicateEmailsAllowed *bool `json:"duplicateEmailsAllowed,omitempty"`
-
-	// ResetPasswordAllowed indicates if password reset is allowed.
-	// +kubebuilder:default=true
-	ResetPasswordAllowed *bool `json:"resetPasswordAllowed,omitempty"`
-
-	// EditUsernameAllowed indicates if username edit is allowed.
-	// +kubebuilder:default=false
-	EditUsernameAllowed *bool `json:"editUsernameAllowed,omitempty"`
-
-	// BruteForceProtected indicates if brute force protection is enabled.
-	// +kubebuilder:default=false
-	BruteForceProtected *bool `json:"bruteForceProtected,omitempty"`
-
-	// SSOEnabled indicates if SSO is enabled.
-	// +kubebuilder:default=false
-	SSOEnabled *bool `json:"ssoEnabled,omitempty"`
-
-	// RegistrationAllowed indicates if registration is allowed.
-	// +kubebuilder:default=false
-	RegistrationAllowed *bool `json:"registrationAllowed,omitempty"`
-
-	// LoginAllowed indicates if login is allowed.
-	// +kubebuilder:default=true
-	LoginAllowed *bool `json:"loginAllowed,omitempty"`
-}
-
-// RealmStatus represents the observed state of a Realm.
-type RealmStatus struct {
-	xpv1.TypedStatus `json:",inline"`
-}
-
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
-// +kubebuilder:storageversion
-// +kubebuilder:printcolumn:name="REALM",type="string",JSONPath=".spec.forProvider.realmName"
-// +kubebuilder:printcolumn:name="ENABLED",type="boolean",JSONPath=".spec.forProvider.enabled"
-// +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
-type Realm struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   RealmSpec   `json:"spec"`
-	Status RealmStatus `json:"status,omitempty"`
-}
-
-// +kubebuilder:object:root=true
-
-// RealmList contains a list of Realm.
-type RealmList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Realm `json:"items"`
 }
 
 // ProviderConfigProviderConfigReference is a reference to a ProviderConfig

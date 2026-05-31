@@ -1,0 +1,207 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: clients.
+spec:
+  group: ""
+  names:
+    kind: Client
+    listKind: ClientList
+    plural: clients
+    singular: client
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.forProvider.realm
+      name: REALM
+      type: string
+    - jsonPath: .spec.forProvider.clientId
+      name: CLIENT_ID
+      type: string
+    - jsonPath: .spec.forProvider.enabled
+      name: ENABLED
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: ""
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClientSpec defines the desired state of a Client.
+            properties:
+              forProvider:
+                description: ForProvider are the fields to set on the Keycloak client.
+                properties:
+                  attributes:
+                    additionalProperties:
+                      type: string
+                    description: Attribute is a map of client attributes.
+                    type: object
+                  baseURL:
+                    description: BaseURL is the client base URL.
+                    type: string
+                  clientId:
+                    description: ClientID is the OAuth2 client identifier.
+                    type: string
+                  description:
+                    description: Description is the client description.
+                    type: string
+                  directAccessGrantsEnabled:
+                    default: true
+                    description: DirectAccessGrantsEnabled enables direct access grants.
+                    type: boolean
+                  enabled:
+                    default: true
+                    description: Enabled indicates if the client is enabled.
+                    type: boolean
+                  implicitFlowEnabled:
+                    default: false
+                    description: ImplicitFlowEnabled enables implicit flow.
+                    type: boolean
+                  name:
+                    description: Name is the display name of the client.
+                    type: string
+                  protocol:
+                    default: openid
+                    description: Protocol is the client protocol (openid, saml).
+                    type: string
+                  publicClient:
+                    default: false
+                    description: PublicClient indicates if this is a public client.
+                    type: boolean
+                  realm:
+                    description: Realm is the Keycloak realm name.
+                    type: string
+                  rootURL:
+                    description: RootURL is the client root URL.
+                    type: string
+                  serviceAccountsEnabled:
+                    default: false
+                    description: ServiceAccountsEnabled enables service accounts.
+                    type: boolean
+                  standardFlowEnabled:
+                    default: true
+                    description: StandardFlowEnabled enables standard OIDC flow.
+                    type: boolean
+                  validRedirectURIs:
+                    description: ValidRedirectURIs is a list of valid redirect URIs.
+                    items:
+                      type: string
+                    type: array
+                  webOrigins:
+                    description: WebOrigins is a list of allowed CORS origins.
+                    items:
+                      type: string
+                    type: array
+                required:
+                - clientId
+                - realm
+                type: object
+              providerConfigRef:
+                description: ProviderConfigReference to the provider config used to
+                  authenticate.
+                properties:
+                  name:
+                    description: ProviderConfigReference to the provider config used
+                      to authenticate.
+                    type: string
+                required:
+                - name
+                type: object
+            required:
+            - forProvider
+            - providerConfigRef
+            type: object
+          status:
+            description: ClientStatus represents the observed state of a Client.
+            properties:
+              conditions:
+                description: Conditions of the resource.
+                items:
+                  description: A Condition that may apply to a resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        LastTransitionTime is the last time this condition transitioned from one
+                        status to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A Message containing details about this condition's last transition from
+                        one status to another, if any.
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        ObservedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      type: integer
+                    reason:
+                      description: A Reason for this condition's last transition from
+                        one status to another.
+                      type: string
+                    status:
+                      description: Status of this condition; is it currently True,
+                        False, or Unknown?
+                      type: string
+                    type:
+                      description: |-
+                        Type of this condition. At most one of each condition type may apply to
+                        a resource at any point in time.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              lastHandledReconcileAt:
+                description: |-
+                  LastHandledReconcileAt holds the value of the most recent
+                  reconcile-requested-at annotation token that the controller has
+                  processed. Users can compare this to the annotation to determine
+                  whether a reconcile request has been handled.
+                type: string
+              observedGeneration:
+                description: |-
+                  ObservedGeneration is the latest metadata.generation
+                  which resulted in either a ready state, or stalled due to error
+                  it can not recover from without human intervention.
+                format: int64
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -24,7 +24,6 @@ import (
 	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/reconciler/managed"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
-	"github.com/crossplane/crossplane-runtime/v2/pkg/event"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -33,20 +32,17 @@ import (
 )
 
 const (
-	errNotClient          = "managed resource is not a Client"
-	errGetProviderConfig  = "cannot get ProviderConfig"
-	errClientNotFound     = "Keycloak client not found"
-	errCreateClient       = "cannot create Keycloak client"
-	errUpdateClient       = "cannot update Keycloak client"
-	errDeleteClient       = "cannot delete Keycloak client"
-	errGetClient          = "cannot get Keycloak client"
-	errProviderNotReady   = "Provider is not ready"
+	errNotClient         = "managed resource is not a Client"
+	errGetProviderConfig = "cannot get ProviderConfig"
+	errClientNotFound    = "Keycloak client not found"
+	errCreateClient      = "cannot create Keycloak client"
+	errUpdateClient     = "cannot update Keycloak client"
+	errDeleteClient     = "cannot delete Keycloak client"
+	errGetClient        = "cannot get Keycloak client"
+	errProviderNotReady = "Provider is not ready"
 )
 
-// Controller is the controller for Client resources.
-type Controller struct {
-	kube client.Client
-}
+const controllerName = "client.keycloak.crossplane.io"
 
 // Setup creates and adds a new Controller.
 func Setup(mgr ctrl.Manager, o managed.Options) error {
@@ -54,20 +50,16 @@ func Setup(mgr ctrl.Manager, o managed.Options) error {
 		resource.ManagedKind(v1beta1.ClientGroupVersionKind),
 		managed.WithExternalConnector(&connector{kube: mgr.GetClient()}),
 		managed.WithLogger(o.Logger.WithValues("controller", v1beta1.ClientKind)),
-		managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorder(ControllerName))),
+		managed.WithRecorder(mgr.GetEventRecorder(controllerName)),
 	)
 
 	return ctrl.NewControllerManagedBy(mgr).
-		Named(ControllerName).
+		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
 		For(&v1beta1.Client{}).
 		Complete(r)
 }
-
-const (
-	ControllerName = "client.keycloak.crossplane.io"
-)
 
 type connector struct {
 	kube client.Client
@@ -85,23 +77,22 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	}
 
 	pc := &v1beta1.ProviderConfig{}
-	pcRef := cr.GetProviderConfigReference()
+	pcRef := cr.Spec.ProviderConfigRef
 
-	if err := c.kube.Get(ctx, client.ObjectKeyFromObject(pc), pc); err != nil {
+	if err := c.kube.Get(ctx, client.ObjectKey{Name: pcRef.Name}, pc); err != nil {
 		return nil, errors.Wrap(err, errGetProviderConfig)
 	}
 
-	// Check if ProviderConfig is ready
 	if !pc.Status.IsReady() {
 		return nil, errors.New(errProviderNotReady)
 	}
 
-	client, err := clients.NewClient(ctx, pc, c.kube)
+	kc, err := clients.NewClient(ctx, pc, c.kube)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create Keycloak client")
 	}
 
-	return &external{kube: c.kube, client: client}, nil
+	return &external{kube: c.kube, client: kc}, nil
 }
 
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
@@ -119,9 +110,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	}
 
 	if kcClient == nil {
-		return managed.ExternalObservation{
-			ResourceExists: false,
-		}, nil
+		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
 
 	cr.Status.SetConditions(xpv1.Available().WithMessage("Keycloak client is available"))
@@ -141,16 +130,16 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	realm := cr.Spec.ForProvider.Realm
 
 	client := &clients.ClientRepresentation{
-		ClientID:              cr.Spec.ForProvider.ClientID,
-		Name:                  cr.Spec.ForProvider.Name,
-		Description:           cr.Spec.ForProvider.Description,
-		Enabled:               true,
-		RootURL:               cr.Spec.ForProvider.RootURL,
-		BaseURL:               cr.Spec.ForProvider.BaseURL,
-		ValidRedirectURIs:     cr.Spec.ForProvider.ValidRedirectURIs,
-		WebOrigins:            cr.Spec.ForProvider.WebOrigins,
-		StandardFlowEnabled:  true,
-		DirectAccessGrantsEnabled: true,
+		ClientID:                   cr.Spec.ForProvider.ClientID,
+		Name:                       cr.Spec.ForProvider.Name,
+		Description:                cr.Spec.ForProvider.Description,
+		Enabled:                    true,
+		RootURL:                    cr.Spec.ForProvider.RootURL,
+		BaseURL:                    cr.Spec.ForProvider.BaseURL,
+		ValidRedirectURIs:          cr.Spec.ForProvider.ValidRedirectURIs,
+		WebOrigins:                 cr.Spec.ForProvider.WebOrigins,
+		StandardFlowEnabled:        true,
+		DirectAccessGrantsEnabled:  true,
 	}
 
 	if cr.Spec.ForProvider.Enabled != nil {
@@ -161,15 +150,6 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	}
 	if cr.Spec.ForProvider.DirectAccessGrantsEnabled != nil {
 		client.DirectAccessGrantsEnabled = *cr.Spec.ForProvider.DirectAccessGrantsEnabled
-	}
-	if cr.Spec.ForProvider.ImplicitFlowEnabled != nil {
-		client.ImplicitFlowEnabled = *cr.Spec.ForProvider.ImplicitFlowEnabled
-	}
-	if cr.Spec.ForProvider.ServiceAccountsEnabled != nil {
-		client.ServiceAccountsEnabled = *cr.Spec.ForProvider.ServiceAccountsEnabled
-	}
-	if cr.Spec.ForProvider.PublicClient != nil {
-		client.PublicClient = *cr.Spec.ForProvider.PublicClient
 	}
 	if cr.Spec.ForProvider.Protocol != "" {
 		client.Protocol = cr.Spec.ForProvider.Protocol
@@ -186,16 +166,12 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	}
 
 	if created.ID != "" {
-		cr.Status.AtProvider = map[string]interface{}{
-			"clientId": created.ID,
-		}
+		cr.Status.AtProvider = map[string]interface{}{"clientId": created.ID}
 	}
 
-	cr.SetConditions(xpv1.Creating().WithMessage("Created Keycloak client"))
+	cr.Status.SetConditions(xpv1.Creating().WithMessage("Created Keycloak client"))
 
-	return managed.ExternalCreation{
-		ConnectionDetails: managed.ConnectionDetails{},
-	}, nil
+	return managed.ExternalCreation{ConnectionDetails: managed.ConnectionDetails{}}, nil
 }
 
 func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
@@ -207,23 +183,17 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	realm := cr.Spec.ForProvider.Realm
 
 	client := &clients.ClientRepresentation{
-		ClientID:              cr.Spec.ForProvider.ClientID,
-		Name:                  cr.Spec.ForProvider.Name,
-		Description:           cr.Spec.ForProvider.Description,
-		RootURL:               cr.Spec.ForProvider.RootURL,
-		BaseURL:               cr.Spec.ForProvider.BaseURL,
-		ValidRedirectURIs:     cr.Spec.ForProvider.ValidRedirectURIs,
-		WebOrigins:            cr.Spec.ForProvider.WebOrigins,
+		ClientID:          cr.Spec.ForProvider.ClientID,
+		Name:              cr.Spec.ForProvider.Name,
+		Description:       cr.Spec.ForProvider.Description,
+		RootURL:           cr.Spec.ForProvider.RootURL,
+		BaseURL:           cr.Spec.ForProvider.BaseURL,
+		ValidRedirectURIs: cr.Spec.ForProvider.ValidRedirectURIs,
+		WebOrigins:        cr.Spec.ForProvider.WebOrigins,
 	}
 
 	if cr.Spec.ForProvider.Enabled != nil {
 		client.Enabled = *cr.Spec.ForProvider.Enabled
-	}
-	if cr.Spec.ForProvider.StandardFlowEnabled != nil {
-		client.StandardFlowEnabled = *cr.Spec.ForProvider.StandardFlowEnabled
-	}
-	if cr.Spec.ForProvider.DirectAccessGrantsEnabled != nil {
-		client.DirectAccessGrantsEnabled = *cr.Spec.ForProvider.DirectAccessGrantsEnabled
 	}
 	if cr.Spec.ForProvider.Protocol != "" {
 		client.Protocol = cr.Spec.ForProvider.Protocol
@@ -232,7 +202,6 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		client.Attributes = cr.Spec.ForProvider.Attributes
 	}
 
-	// Get the existing client to get its ID
 	existing, err := e.client.GetClient(ctx, realm, client.ClientID)
 	if err != nil {
 		return managed.ExternalUpdate{}, errors.Wrap(err, errGetClient)
@@ -242,13 +211,12 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	}
 
 	client.ID = existing.ID
-
 	err = e.client.UpdateClient(ctx, realm, client)
 	if err != nil {
 		return managed.ExternalUpdate{}, errors.Wrap(err, errUpdateClient)
 	}
 
-	cr.SetConditions(xpv1.Updating().WithMessage("Updated Keycloak client"))
+	cr.Status.SetConditions(xpv1.Updating().WithMessage("Updated Keycloak client"))
 
 	return managed.ExternalUpdate{}, nil
 }
@@ -261,26 +229,19 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) error {
 
 	realm := cr.Spec.ForProvider.Realm
 
-	// Get the existing client to get its ID
 	existing, err := e.client.GetClient(ctx, realm, cr.Spec.ForProvider.ClientID)
 	if err != nil {
 		return errors.Wrap(err, errGetClient)
 	}
 	if existing == nil {
-		// Client already deleted
 		return nil
 	}
 
 	err = e.client.DeleteClient(ctx, realm, existing.ID)
-	if err != nil {
-		if strings.Contains(err.Error(), "404") {
-			// Client already deleted
-			return nil
-		}
+	if err != nil && !strings.Contains(err.Error(), "404") {
 		return errors.Wrap(err, errDeleteClient)
 	}
 
-	cr.SetConditions(xpv1.Deleting().WithMessage("Deleted Keycloak client"))
-
+	cr.Status.SetConditions(xpv1.Deleting().WithMessage("Deleted Keycloak client"))
 	return nil
 }
