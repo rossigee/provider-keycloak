@@ -20,21 +20,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
-
-	"github.com/rossigee/provider-keycloak/internal/controller/client"
 )
 
-// Setup creates all Keycloak v2 controllers with the supplied logger and adds them to
-// the supplied manager.
+// Setup sets up Keycloak provider controllers.
+// Note: ProviderConfig controller setup is handled by crossplane-runtime
 func Setup(mgr ctrl.Manager, o controller.Options) error {
-	if err := client.Setup(mgr, o); err != nil {
-		return err
-	}
-
-	// Additional controllers to be added here
-	// - realm
-	// - user
-	// - group
-
 	return nil
 }
