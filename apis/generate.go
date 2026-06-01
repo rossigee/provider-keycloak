@@ -16,22 +16,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// NOTE: See the below link for details on what is happening here.
-// https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module
+// NOTE: This provider uses a native HTTP client and does not use angryjet or
+// upjet. Interface method implementations in zz_generated.managed.go are
+// written by hand and must not be overwritten by code generators.
 
 // Remove existing CRDs
 //go:generate rm -rf ../package/crds
 
-// Generate deepcopy methodsets and CRD manifests
-//go:generate go run -tags generate sigs.k8s.io/controller-tools/cmd/controller-gen object:headerFile=../hack/boilerplate.go.txt paths=./... crd:crdVersions=v1 output:artifacts:config=../package/crds
-
-// Generate crossplane-runtime methodsets (resource.Claim, etc)
-//go:generate go run -tags generate github.com/crossplane/crossplane-tools/cmd/angryjet generate-methodsets --header-file=../hack/boilerplate.go.txt ./...
+// Generate CRD manifests only. Deepcopy (zz_generated.deepcopy.go) and
+// managed interface methods (zz_generated.managed.go) are maintained by hand
+// because controller-gen v0.21 does not correctly handle embedded crossplane
+// types from crossplane/crossplane/apis/v2.
+//go:generate go run -tags generate sigs.k8s.io/controller-tools/cmd/controller-gen crd:crdVersions=v1 paths=./... output:artifacts:config=../package/crds
 
 package apis
 
 import (
 	_ "sigs.k8s.io/controller-tools/cmd/controller-gen" //nolint:typecheck
-
-	_ "github.com/crossplane/crossplane-tools/cmd/angryjet" //nolint:typecheck
 )

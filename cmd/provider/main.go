@@ -40,7 +40,7 @@ import (
 )
 
 func main() {
-var (
+	var (
 		app              = kingpin.New(filepath.Base(os.Args[0]), "Keycloak support for Crossplane.").DefaultEnvars()
 		debug            = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
 		leaderElection   = app.Flag("leader-election", "Use leader election for the controller manager.").Short('l').Default("false").OverrideDefaultFromEnvar("LEADER_ELECTION").Bool()

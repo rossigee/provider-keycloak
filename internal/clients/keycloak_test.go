@@ -102,7 +102,7 @@ func TestFetchOAuth2Token(t *testing.T) {
 				ClientSecret: "secret",
 			}
 
-			token, err := fetchOAuth2Token(context.Background(), srv.Client(), srv.URL, cfg)
+			token, _, err := fetchOAuth2Token(context.Background(), srv.Client(), srv.URL, cfg)
 			if tt.wantErrStr != "" {
 				if err == nil {
 					t.Fatalf("expected error containing %q, got nil", tt.wantErrStr)

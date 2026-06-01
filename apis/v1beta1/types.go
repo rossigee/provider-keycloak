@@ -1,5 +1,5 @@
 /*
-Copyright 2025 The Crossplane Authors.
+Copyright 2024 The Crossplane Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,24 +22,18 @@ import (
 	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
 )
 
-// A ProviderConfigSpec defines the desired state of a ProviderConfig.
+// ProviderConfigSpec defines the desired state of a ProviderConfig.
+// Credentials must be a JSON secret with keys: url, base_path, realm,
+// client_id, client_secret, root_ca_certificate.
 type ProviderConfigSpec struct {
 	// Credentials required to authenticate to this provider.
 	Credentials ProviderCredentials `json:"credentials"`
-
-	// BaseURL is the base URL for Keycloak Admin API.
-	// e.g. https://keycloak.example.com/auth
-	BaseURL string `json:"baseURL"`
-
-	// Insecure enables TLS verification (false = verify, true = skip verify).
-	// +optional
-	Insecure *bool `json:"insecure,omitempty"`
 }
 
 // ProviderCredentials required to authenticate.
 type ProviderCredentials struct {
 	// Source of the provider credentials.
-	// +kubebuilder:validation:Enum=Secret;InjectedIdentity;Environment;Filesystem
+	// +kubebuilder:validation:Enum=Secret;Environment;Filesystem
 	Source xpv1.CredentialsSource `json:"source"`
 
 	xpv1.CommonCredentialSelectors `json:",inline"`
@@ -51,11 +45,12 @@ type ProviderConfigStatus struct {
 }
 
 // +kubebuilder:object:root=true
-
-// A ProviderConfig configures a Mailgun provider.
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:printcolumn:name="SECRET-NAME",type="string",JSONPath=".spec.credentials.secretRef.name",priority=1
+
+// A ProviderConfig configures a Keycloak provider.
 type ProviderConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -74,6 +69,7 @@ type ProviderConfigList struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
 
 // A ProviderConfigUsage indicates that a resource is using a ProviderConfig.
 type ProviderConfigUsage struct {
@@ -85,7 +81,7 @@ type ProviderConfigUsage struct {
 
 // +kubebuilder:object:root=true
 
-// ProviderConfigUsageList contains a list of ProviderConfigUsage
+// ProviderConfigUsageList contains a list of ProviderConfigUsage.
 type ProviderConfigUsageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
