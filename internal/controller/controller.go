@@ -20,10 +20,29 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
+
+	"github.com/rossigee/provider-keycloak/internal/controller/client"
+	"github.com/rossigee/provider-keycloak/internal/controller/group"
+	"github.com/rossigee/provider-keycloak/internal/controller/protocolmapper"
+	"github.com/rossigee/provider-keycloak/internal/controller/realm"
+	"github.com/rossigee/provider-keycloak/internal/controller/role"
+	"github.com/rossigee/provider-keycloak/internal/controller/user"
 )
 
 // Setup sets up Keycloak provider controllers.
 // Note: ProviderConfig controller setup is handled by crossplane-runtime
 func Setup(mgr ctrl.Manager, o controller.Options) error {
+	for _, setup := range []func(ctrl.Manager, controller.Options) error{
+		client.Setup,
+		realm.Setup,
+		user.Setup,
+		group.Setup,
+		role.Setup,
+		protocolmapper.Setup,
+	} {
+		if err := setup(mgr, o); err != nil {
+			return err
+		}
+	}
 	return nil
 }
