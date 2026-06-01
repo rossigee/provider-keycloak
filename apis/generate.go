@@ -27,7 +27,9 @@ limitations under the License.
 // managed interface methods (zz_generated.managed.go) are maintained by hand
 // because controller-gen v0.21 does not correctly handle embedded crossplane
 // types from crossplane/crossplane/apis/v2.
-//go:generate go run -tags generate sigs.k8s.io/controller-tools/cmd/controller-gen crd:crdVersions=v1 paths=./... output:artifacts:config=../package/crds
+// Note: We specify explicit paths to avoid controller-gen trying to generate
+// CRDs for ProviderConfigUsage in each API group package.
+//go:generate go run -tags generate sigs.k8s.io/controller-tools/cmd/controller-gen crd:crdVersions=v1 paths=./v1beta1 paths=./client/v1alpha1 paths=./group/v1alpha1 paths=./openidclient/v1alpha1 paths=./realm/v1alpha1 paths=./role/v1alpha1 paths=./user/v1alpha1 output:artifacts:config=../package/crds
 
 package apis
 

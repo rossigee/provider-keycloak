@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: clients.
+  name: users.
 spec:
   group: ""
   names:
@@ -12,21 +12,18 @@ spec:
     - crossplane
     - managed
     - keycloak
-    kind: Client
-    listKind: ClientList
-    plural: clients
-    singular: client
+    kind: User
+    listKind: UserList
+    plural: users
+    singular: user
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - jsonPath: .spec.forProvider.realmId
       name: REALM
       type: string
-    - jsonPath: .spec.forProvider.clientId
-      name: CLIENT-ID
-      type: string
-    - jsonPath: .spec.forProvider.accessType
-      name: ACCESS-TYPE
+    - jsonPath: .spec.forProvider.username
+      name: USERNAME
       type: string
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: READY
@@ -37,7 +34,7 @@ spec:
     name: ""
     schema:
       openAPIV3Schema:
-        description: A Client is an OpenID Connect client managed by Keycloak.
+        description: A User is a Keycloak user.
         properties:
           apiVersion:
             description: |-
@@ -57,119 +54,61 @@ spec:
           metadata:
             type: object
           spec:
-            description: ClientSpec defines the desired state of a Client.
+            description: UserSpec defines the desired state of a User.
             properties:
               forProvider:
-                description: ClientParameters are the configurable fields of a Client.
+                description: UserParameters are the configurable fields of a User.
                 properties:
-                  accessTokenLifespan:
-                    description: AccessTokenLifespan overrides the realm access token
-                      lifespan for this client.
-                    type: string
-                  accessType:
-                    description: AccessType specifies the client access type (CONFIDENTIAL,
-                      PUBLIC, BEARER_ONLY).
-                    enum:
-                    - CONFIDENTIAL
-                    - PUBLIC
-                    - BEARER_ONLY
-                    type: string
-                  adminUrl:
-                    description: AdminUrl is the URL to the admin interface of the
-                      client.
-                    type: string
-                  alwaysDisplayInConsole:
-                    description: AlwaysDisplayInConsole always displays this client
-                      in the account console.
-                    type: boolean
-                  backchannelLogoutRevokeOfflineSessions:
-                    description: BackchannelLogoutRevokeOfflineSessions revokes offline
-                      sessions on back-channel logout.
-                    type: boolean
-                  backchannelLogoutSessionRequired:
-                    description: BackchannelLogoutSessionRequired specifies whether
-                      a session is required on back-channel logout.
-                    type: boolean
-                  backchannelLogoutUrl:
-                    description: BackchannelLogoutUrl is the URL for back-channel
-                      logout.
-                    type: string
-                  baseUrl:
-                    description: BaseUrl is the default URL for redirecting when no
-                      redirect URI is specified.
-                    type: string
-                  clientId:
-                    description: ClientId is the OAuth2 client identifier.
-                    type: string
-                  clientSecretSecretRef:
-                    description: ClientSecretSecretRef references the Kubernetes secret
-                      that will receive the generated client secret.
-                    properties:
-                      key:
-                        description: Key within the secret.
-                        type: string
-                      name:
-                        description: Name of the secret.
-                        type: string
-                      namespace:
-                        description: Namespace of the secret.
-                        type: string
-                    required:
-                    - key
-                    - name
-                    - namespace
-                    type: object
-                  consentRequired:
-                    description: ConsentRequired requires user consent before the
-                      client receives tokens.
-                    type: boolean
-                  description:
-                    description: Description is the client description.
-                    type: string
-                  directAccessGrantsEnabled:
-                    description: DirectAccessGrantsEnabled enables the resource owner
-                      password credentials grant.
-                    type: boolean
-                  enabled:
-                    description: Enabled indicates if the client is enabled.
-                    type: boolean
-                  extraConfig:
+                  attributes:
                     additionalProperties:
                       type: string
-                    description: ExtraConfig is a map of additional Keycloak client
-                      configuration.
+                    description: Attributes is a map of user attributes.
                     type: object
-                  frontchannelLogoutEnabled:
-                    description: FrontchannelLogoutEnabled enables front-channel logout.
-                    type: boolean
-                  frontchannelLogoutUrl:
-                    description: FrontchannelLogoutUrl is the URL for front-channel
-                      logout.
+                  email:
+                    description: Email is the user's email address.
                     type: string
-                  fullScopeAllowed:
-                    description: FullScopeAllowed allows all roles to be mapped as
-                      scope.
+                  emailVerified:
+                    description: EmailVerified indicates if the user's email has been
+                      verified.
                     type: boolean
-                  implicitFlowEnabled:
-                    description: ImplicitFlowEnabled enables the implicit flow.
+                  enabled:
+                    description: Enabled indicates if the user account is enabled.
                     type: boolean
-                  loginTheme:
-                    description: LoginTheme overrides the login theme for this client.
+                  federatedIdentity:
+                    description: FederatedIdentity is the list of federated identities
+                      for this user.
+                    items:
+                      description: FederatedIdentity represents an identity from an
+                        external provider.
+                      properties:
+                        identityProvider:
+                          description: IdentityProvider is the alias of the identity
+                            provider.
+                          type: string
+                        userId:
+                          description: UserId is the user ID at the identity provider.
+                          type: string
+                        userName:
+                          description: UserName is the username at the identity provider.
+                          type: string
+                      required:
+                      - identityProvider
+                      - userId
+                      - userName
+                      type: object
+                    type: array
+                  firstName:
+                    description: FirstName is the user's first name.
                     type: string
-                  name:
-                    description: Name is the display name of the client.
-                    type: string
-                  pkceCodeChallengeMethod:
-                    description: PkceCodeChallengeMethod specifies the PKCE code challenge
-                      method.
+                  lastName:
+                    description: LastName is the user's last name.
                     type: string
                   realmId:
-                    description: RealmId is the ID of the realm this client belongs
+                    description: RealmId is the ID of the realm this user belongs
                       to.
                     type: string
                   realmIdRef:
-                    description: RealmIdRef is a reference to a Realm to populate
-                      realmId.
+                    description: RealmIdRef is a reference to a Realm.
                     properties:
                       name:
                         description: Name of the referenced object.
@@ -242,36 +181,17 @@ spec:
                             type: string
                         type: object
                     type: object
-                  rootUrl:
-                    description: RootUrl is the client root URL appended to relative
-                      URLs.
+                  requiredActions:
+                    description: RequiredActions is the list of required actions the
+                      user must perform on next login.
+                    items:
+                      type: string
+                    type: array
+                  username:
+                    description: Username is the user's login name.
                     type: string
-                  serviceAccountsEnabled:
-                    description: ServiceAccountsEnabled enables service accounts (client
-                      credentials grant).
-                    type: boolean
-                  standardFlowEnabled:
-                    description: StandardFlowEnabled enables the standard OpenID Connect
-                      redirect based flow.
-                    type: boolean
-                  validPostLogoutRedirectUris:
-                    description: ValidPostLogoutRedirectUris is the list of valid
-                      post-logout redirect URIs.
-                    items:
-                      type: string
-                    type: array
-                  validRedirectUris:
-                    description: ValidRedirectUris is the list of valid redirect URIs.
-                    items:
-                      type: string
-                    type: array
-                  webOrigins:
-                    description: WebOrigins is the list of allowed CORS origins.
-                    items:
-                      type: string
-                    type: array
                 required:
-                - clientId
+                - username
                 type: object
               managementPolicies:
                 default:
@@ -332,7 +252,7 @@ spec:
             - forProvider
             type: object
           status:
-            description: ClientStatus defines the observed state of a Client.
+            description: UserStatus defines the observed state of a User.
             properties:
               conditions:
                 description: Conditions of the resource.

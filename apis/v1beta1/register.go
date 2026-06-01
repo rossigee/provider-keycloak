@@ -35,7 +35,7 @@ var (
 
 func init() {
 	SchemeBuilder.Register(&ProviderConfig{}, &ProviderConfigList{})
-	SchemeBuilder.Register(&ProviderConfigUsage{}, &ProviderConfigUsageList{})
+	// ProviderConfigUsage is provided by Crossplane framework
 }
 
 // AddToScheme adds all types of this group into the given scheme.

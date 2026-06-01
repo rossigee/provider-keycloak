@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: clients.
+  name: clientdefaultscopes.
 spec:
   group: ""
   names:
@@ -12,32 +12,17 @@ spec:
     - crossplane
     - managed
     - keycloak
-    kind: Client
-    listKind: ClientList
-    plural: clients
-    singular: client
+    kind: ClientDefaultScopes
+    listKind: ClientDefaultScopesList
+    plural: clientdefaultscopes
+    singular: clientdefaultscopes
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - jsonPath: .spec.forProvider.realmId
-      name: REALM
-      type: string
-    - jsonPath: .spec.forProvider.clientId
-      name: CLIENT-ID
-      type: string
-    - jsonPath: .spec.forProvider.accessType
-      name: ACCESS-TYPE
-      type: string
-    - jsonPath: .status.conditions[?(@.type=='Ready')].status
-      name: READY
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: AGE
-      type: date
-    name: ""
+  - name: ""
     schema:
       openAPIV3Schema:
-        description: A Client is an OpenID Connect client managed by Keycloak.
+        description: ClientDefaultScopes manages the default scopes assigned to a
+          client.
         properties:
           apiVersion:
             description: |-
@@ -57,119 +42,100 @@ spec:
           metadata:
             type: object
           spec:
-            description: ClientSpec defines the desired state of a Client.
+            description: ClientDefaultScopesSpec defines the desired state of ClientDefaultScopes.
             properties:
               forProvider:
-                description: ClientParameters are the configurable fields of a Client.
+                description: ClientDefaultScopesParameters are the configurable fields
+                  of a ClientDefaultScopes.
                 properties:
-                  accessTokenLifespan:
-                    description: AccessTokenLifespan overrides the realm access token
-                      lifespan for this client.
-                    type: string
-                  accessType:
-                    description: AccessType specifies the client access type (CONFIDENTIAL,
-                      PUBLIC, BEARER_ONLY).
-                    enum:
-                    - CONFIDENTIAL
-                    - PUBLIC
-                    - BEARER_ONLY
-                    type: string
-                  adminUrl:
-                    description: AdminUrl is the URL to the admin interface of the
-                      client.
-                    type: string
-                  alwaysDisplayInConsole:
-                    description: AlwaysDisplayInConsole always displays this client
-                      in the account console.
-                    type: boolean
-                  backchannelLogoutRevokeOfflineSessions:
-                    description: BackchannelLogoutRevokeOfflineSessions revokes offline
-                      sessions on back-channel logout.
-                    type: boolean
-                  backchannelLogoutSessionRequired:
-                    description: BackchannelLogoutSessionRequired specifies whether
-                      a session is required on back-channel logout.
-                    type: boolean
-                  backchannelLogoutUrl:
-                    description: BackchannelLogoutUrl is the URL for back-channel
-                      logout.
-                    type: string
-                  baseUrl:
-                    description: BaseUrl is the default URL for redirecting when no
-                      redirect URI is specified.
-                    type: string
                   clientId:
-                    description: ClientId is the OAuth2 client identifier.
+                    description: ClientId is the internal Keycloak UUID of the client.
                     type: string
-                  clientSecretSecretRef:
-                    description: ClientSecretSecretRef references the Kubernetes secret
-                      that will receive the generated client secret.
+                  clientIdRef:
+                    description: ClientIdRef is a reference to a Client to populate
+                      clientId.
                     properties:
-                      key:
-                        description: Key within the secret.
-                        type: string
                       name:
-                        description: Name of the secret.
+                        description: Name of the referenced object.
                         type: string
-                      namespace:
-                        description: Namespace of the secret.
-                        type: string
+                      policy:
+                        description: Policies for referencing.
+                        properties:
+                          resolution:
+                            default: Required
+                            description: |-
+                              Resolution specifies whether resolution of this reference is required.
+                              The default is 'Required', which means the reconcile will fail if the
+                              reference cannot be resolved. 'Optional' means this reference will be
+                              a no-op if it cannot be resolved.
+                            enum:
+                            - Required
+                            - Optional
+                            type: string
+                          resolve:
+                            description: |-
+                              Resolve specifies when this reference should be resolved. The default
+                              is 'IfNotPresent', which will attempt to resolve the reference only when
+                              the corresponding field is not present. Use 'Always' to resolve the
+                              reference on every reconcile.
+                            enum:
+                            - Always
+                            - IfNotPresent
+                            type: string
+                        type: object
                     required:
-                    - key
                     - name
-                    - namespace
                     type: object
-                  consentRequired:
-                    description: ConsentRequired requires user consent before the
-                      client receives tokens.
-                    type: boolean
-                  description:
-                    description: Description is the client description.
-                    type: string
-                  directAccessGrantsEnabled:
-                    description: DirectAccessGrantsEnabled enables the resource owner
-                      password credentials grant.
-                    type: boolean
-                  enabled:
-                    description: Enabled indicates if the client is enabled.
-                    type: boolean
-                  extraConfig:
-                    additionalProperties:
+                  clientIdSelector:
+                    description: ClientIdSelector selects a reference to a Client.
+                    properties:
+                      matchControllerRef:
+                        description: |-
+                          MatchControllerRef ensures an object with the same controller reference
+                          as the selecting object is selected.
+                        type: boolean
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: MatchLabels ensures an object with matching labels
+                          is selected.
+                        type: object
+                      policy:
+                        description: Policies for selection.
+                        properties:
+                          resolution:
+                            default: Required
+                            description: |-
+                              Resolution specifies whether resolution of this reference is required.
+                              The default is 'Required', which means the reconcile will fail if the
+                              reference cannot be resolved. 'Optional' means this reference will be
+                              a no-op if it cannot be resolved.
+                            enum:
+                            - Required
+                            - Optional
+                            type: string
+                          resolve:
+                            description: |-
+                              Resolve specifies when this reference should be resolved. The default
+                              is 'IfNotPresent', which will attempt to resolve the reference only when
+                              the corresponding field is not present. Use 'Always' to resolve the
+                              reference on every reconcile.
+                            enum:
+                            - Always
+                            - IfNotPresent
+                            type: string
+                        type: object
+                    type: object
+                  defaultScopes:
+                    description: DefaultScopes is the list of default scopes to assign.
+                    items:
                       type: string
-                    description: ExtraConfig is a map of additional Keycloak client
-                      configuration.
-                    type: object
-                  frontchannelLogoutEnabled:
-                    description: FrontchannelLogoutEnabled enables front-channel logout.
-                    type: boolean
-                  frontchannelLogoutUrl:
-                    description: FrontchannelLogoutUrl is the URL for front-channel
-                      logout.
-                    type: string
-                  fullScopeAllowed:
-                    description: FullScopeAllowed allows all roles to be mapped as
-                      scope.
-                    type: boolean
-                  implicitFlowEnabled:
-                    description: ImplicitFlowEnabled enables the implicit flow.
-                    type: boolean
-                  loginTheme:
-                    description: LoginTheme overrides the login theme for this client.
-                    type: string
-                  name:
-                    description: Name is the display name of the client.
-                    type: string
-                  pkceCodeChallengeMethod:
-                    description: PkceCodeChallengeMethod specifies the PKCE code challenge
-                      method.
-                    type: string
+                    type: array
                   realmId:
-                    description: RealmId is the ID of the realm this client belongs
-                      to.
+                    description: RealmId is the ID of the realm.
                     type: string
                   realmIdRef:
-                    description: RealmIdRef is a reference to a Realm to populate
-                      realmId.
+                    description: RealmIdRef is a reference to a Realm.
                     properties:
                       name:
                         description: Name of the referenced object.
@@ -242,36 +208,8 @@ spec:
                             type: string
                         type: object
                     type: object
-                  rootUrl:
-                    description: RootUrl is the client root URL appended to relative
-                      URLs.
-                    type: string
-                  serviceAccountsEnabled:
-                    description: ServiceAccountsEnabled enables service accounts (client
-                      credentials grant).
-                    type: boolean
-                  standardFlowEnabled:
-                    description: StandardFlowEnabled enables the standard OpenID Connect
-                      redirect based flow.
-                    type: boolean
-                  validPostLogoutRedirectUris:
-                    description: ValidPostLogoutRedirectUris is the list of valid
-                      post-logout redirect URIs.
-                    items:
-                      type: string
-                    type: array
-                  validRedirectUris:
-                    description: ValidRedirectUris is the list of valid redirect URIs.
-                    items:
-                      type: string
-                    type: array
-                  webOrigins:
-                    description: WebOrigins is the list of allowed CORS origins.
-                    items:
-                      type: string
-                    type: array
                 required:
-                - clientId
+                - defaultScopes
                 type: object
               managementPolicies:
                 default:
@@ -332,7 +270,7 @@ spec:
             - forProvider
             type: object
           status:
-            description: ClientStatus defines the observed state of a Client.
+            description: ClientDefaultScopesStatus defines the observed state of ClientDefaultScopes.
             properties:
               conditions:
                 description: Conditions of the resource.

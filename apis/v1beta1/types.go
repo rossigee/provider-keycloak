@@ -68,22 +68,5 @@ type ProviderConfigList struct {
 	Items           []ProviderConfig `json:"items"`
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster
-
-// A ProviderConfigUsage indicates that a resource is using a ProviderConfig.
-type ProviderConfigUsage struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	xpv1.ProviderConfigUsage `json:",inline"`
-}
-
-// +kubebuilder:object:root=true
-
-// ProviderConfigUsageList contains a list of ProviderConfigUsage.
-type ProviderConfigUsageList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ProviderConfigUsage `json:"items"`
-}
+// NOTE: ProviderConfigUsage is provided by Crossplane framework
+// (github.com/crossplane/crossplane/apis/v2/core/v2), so we don't define it here.

@@ -2,8 +2,10 @@
 /.work
 /_output
 cover.out
+coverage.out
 /vendor
 /.vendor-new
 .vscode
 .idea
 .DS_Store
+provider
