@@ -141,28 +141,68 @@ func clientUpToDate(desired *openidclientv1alpha1.ClientParameters, actual *clie
 	return clientFlagsUpToDate(desired, actual) && clientURLsUpToDate(desired, actual)
 }
 
+func boolChanged(desired *bool, actual bool) bool {
+	return desired != nil && *desired != actual
+}
+
 func clientFlagsUpToDate(desired *openidclientv1alpha1.ClientParameters, actual *clients.ClientRepresentation) bool {
-	if desired.Enabled != nil && *desired.Enabled != actual.Enabled {
-		return false
+	flags := []struct {
+		desired *bool
+		actual  bool
+	}{
+		{desired.Enabled, actual.Enabled},
+		{desired.StandardFlowEnabled, actual.StandardFlowEnabled},
+		{desired.ImplicitFlowEnabled, actual.ImplicitFlowEnabled},
+		{desired.DirectAccessGrantsEnabled, actual.DirectAccessGrantsEnabled},
+		{desired.ServiceAccountsEnabled, actual.ServiceAccountsEnabled},
+		{desired.PublicClient, actual.PublicClient},
+		{desired.BearerOnly, actual.BearerOnly},
+		{desired.ConsentRequired, actual.ConsentRequired},
+		{desired.FullScopeAllowed, actual.FullScopeAllowed},
+		{desired.AlwaysDisplayInConsole, actual.AlwaysDisplayInConsole},
+		{desired.FrontchannelLogoutEnabled, actual.FrontchannelLogoutEnabled},
+		{desired.BackchannelLogoutSessionRequired, actual.BackchannelLogoutSessionRequired},
+		{desired.BackchannelLogoutRevokeOfflineSessions, actual.BackchannelLogoutRevokeOfflineSessions},
+		{desired.AuthorizationServicesEnabled, actual.AuthorizationServicesEnabled},
+		{desired.OAuth2DeviceAuthorizationGrantEnabled, actual.OAuth2DeviceAuthorizationGrantEnabled},
+		{desired.StandardTokenExchangeEnabled, actual.StandardTokenExchangeEnabled},
+		{desired.UseRefreshTokens, actual.UseRefreshTokens},
 	}
-	if desired.StandardFlowEnabled != nil && *desired.StandardFlowEnabled != actual.StandardFlowEnabled {
-		return false
-	}
-	if desired.DirectAccessGrantsEnabled != nil && *desired.DirectAccessGrantsEnabled != actual.DirectAccessGrantsEnabled {
-		return false
-	}
-	if desired.ServiceAccountsEnabled != nil && *desired.ServiceAccountsEnabled != actual.ServiceAccountsEnabled {
-		return false
+	for _, f := range flags {
+		if boolChanged(f.desired, f.actual) {
+			return false
+		}
 	}
 	return true
 }
 
+func stringChanged(desired *string, actual string) bool {
+	return desired != nil && *desired != actual
+}
+
 func clientURLsUpToDate(desired *openidclientv1alpha1.ClientParameters, actual *clients.ClientRepresentation) bool {
-	if desired.RootUrl != nil && *desired.RootUrl != actual.RootURL {
-		return false
+	fields := []struct {
+		desired *string
+		actual  string
+	}{
+		{desired.RootUrl, actual.RootURL},
+		{desired.HomeUrl, actual.HomeURL},
+		{desired.BaseUrl, actual.BaseURL},
+		{desired.AdminUrl, actual.AdminURL},
+		{desired.Protocol, actual.Protocol},
+		{desired.FrontchannelLogoutUrl, actual.FrontchannelLogoutURL},
+		{desired.BackchannelLogoutUrl, actual.BackchannelLogoutURL},
+		{desired.PkceCodeChallengeMethod, actual.PkceCodeChallengeMethod},
+		{desired.AccessTokenLifespan, actual.AccessTokenLifespan},
+		{desired.ClientSessionIdleTimeout, actual.ClientSessionIdleTimeout},
+		{desired.ClientSessionMaxLifespan, actual.ClientSessionMaxLifespan},
+		{desired.ClientOfflineSessionIdleTimeout, actual.ClientOfflineSessionIdleTimeout},
+		{desired.ClientOfflineSessionMaxLifespan, actual.ClientOfflineSessionMaxLifespan},
 	}
-	if desired.BaseUrl != nil && *desired.BaseUrl != actual.BaseURL {
-		return false
+	for _, f := range fields {
+		if stringChanged(f.desired, f.actual) {
+			return false
+		}
 	}
 	if desired.ValidRedirectUris != nil && !stringSlicesEqual(desired.ValidRedirectUris, actual.ValidRedirectURIs) {
 		return false
@@ -317,12 +357,24 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 // clientParamsToRepresentation maps CR parameters to a Keycloak API representation.
 func clientParamsToRepresentation(p *openidclientv1alpha1.ClientParameters) *clients.ClientRepresentation {
 	rep := &clients.ClientRepresentation{
-		ClientID:                  p.ClientId,
-		Enabled:                   boolVal(p.Enabled, true),
-		StandardFlowEnabled:       boolVal(p.StandardFlowEnabled, false),
-		ImplicitFlowEnabled:       boolVal(p.ImplicitFlowEnabled, false),
-		DirectAccessGrantsEnabled: boolVal(p.DirectAccessGrantsEnabled, false),
-		ServiceAccountsEnabled:    boolVal(p.ServiceAccountsEnabled, false),
+		ClientID:                               p.ClientId,
+		Enabled:                                boolVal(p.Enabled, true),
+		StandardFlowEnabled:                    boolVal(p.StandardFlowEnabled, false),
+		ImplicitFlowEnabled:                    boolVal(p.ImplicitFlowEnabled, false),
+		DirectAccessGrantsEnabled:              boolVal(p.DirectAccessGrantsEnabled, false),
+		ServiceAccountsEnabled:                 boolVal(p.ServiceAccountsEnabled, false),
+		PublicClient:                           boolVal(p.PublicClient, false),
+		BearerOnly:                             boolVal(p.BearerOnly, false),
+		ConsentRequired:                        boolVal(p.ConsentRequired, false),
+		FullScopeAllowed:                       boolVal(p.FullScopeAllowed, false),
+		AlwaysDisplayInConsole:                 boolVal(p.AlwaysDisplayInConsole, false),
+		FrontchannelLogoutEnabled:              boolVal(p.FrontchannelLogoutEnabled, false),
+		BackchannelLogoutSessionRequired:       boolVal(p.BackchannelLogoutSessionRequired, false),
+		BackchannelLogoutRevokeOfflineSessions: boolVal(p.BackchannelLogoutRevokeOfflineSessions, false),
+		AuthorizationServicesEnabled:           boolVal(p.AuthorizationServicesEnabled, false),
+		OAuth2DeviceAuthorizationGrantEnabled:  boolVal(p.OAuth2DeviceAuthorizationGrantEnabled, false),
+		StandardTokenExchangeEnabled:           boolVal(p.StandardTokenExchangeEnabled, false),
+		UseRefreshTokens:                       boolVal(p.UseRefreshTokens, true),
 	}
 	setClientStrings(rep, p)
 	setClientSlices(rep, p)
@@ -330,17 +382,30 @@ func clientParamsToRepresentation(p *openidclientv1alpha1.ClientParameters) *cli
 }
 
 func setClientStrings(rep *clients.ClientRepresentation, p *openidclientv1alpha1.ClientParameters) {
-	if p.Name != nil {
-		rep.Name = *p.Name
+	stringFields := []struct {
+		source *string
+		target *string
+	}{
+		{p.Name, &rep.Name},
+		{p.Description, &rep.Description},
+		{p.RootUrl, &rep.RootURL},
+		{p.HomeUrl, &rep.HomeURL},
+		{p.BaseUrl, &rep.BaseURL},
+		{p.AdminUrl, &rep.AdminURL},
+		{p.Protocol, &rep.Protocol},
+		{p.PkceCodeChallengeMethod, &rep.PkceCodeChallengeMethod},
+		{p.AccessTokenLifespan, &rep.AccessTokenLifespan},
+		{p.ClientSessionIdleTimeout, &rep.ClientSessionIdleTimeout},
+		{p.ClientSessionMaxLifespan, &rep.ClientSessionMaxLifespan},
+		{p.ClientOfflineSessionIdleTimeout, &rep.ClientOfflineSessionIdleTimeout},
+		{p.ClientOfflineSessionMaxLifespan, &rep.ClientOfflineSessionMaxLifespan},
+		{p.FrontchannelLogoutUrl, &rep.FrontchannelLogoutURL},
+		{p.BackchannelLogoutUrl, &rep.BackchannelLogoutURL},
 	}
-	if p.Description != nil {
-		rep.Description = *p.Description
-	}
-	if p.RootUrl != nil {
-		rep.RootURL = *p.RootUrl
-	}
-	if p.BaseUrl != nil {
-		rep.BaseURL = *p.BaseUrl
+	for _, f := range stringFields {
+		if f.source != nil {
+			*f.target = *f.source
+		}
 	}
 }
 

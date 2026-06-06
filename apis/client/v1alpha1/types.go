@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// +groupName=client.keycloak.crossplane.io
+
 package v1alpha1
 
 import (
@@ -89,6 +91,7 @@ type ProtocolMapperStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,categories={crossplane,managed,keycloak}
 // +kubebuilder:storageversion
+// +kubebuilder:group=client.keycloak.crossplane.io
 // +kubebuilder:printcolumn:name="REALM",type="string",JSONPath=".spec.forProvider.realmId"
 // +kubebuilder:printcolumn:name="NAME",type="string",JSONPath=".spec.forProvider.name"
 // +kubebuilder:printcolumn:name="MAPPER",type="string",JSONPath=".spec.forProvider.protocolMapper"

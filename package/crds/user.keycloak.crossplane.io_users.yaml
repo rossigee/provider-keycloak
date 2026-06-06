@@ -3,26 +3,38 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.20.0
-  name: clientoptionalscopes.
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: users.user.keycloak.crossplane.io
 spec:
-  group: ""
+  group: user.keycloak.crossplane.io
   names:
     categories:
     - crossplane
     - managed
     - keycloak
-    kind: ClientOptionalScopes
-    listKind: ClientOptionalScopesList
-    plural: clientoptionalscopes
-    singular: clientoptionalscopes
+    kind: User
+    listKind: UserList
+    plural: users
+    singular: user
   scope: Namespaced
   versions:
-  - name: ""
+  - additionalPrinterColumns:
+    - jsonPath: .spec.forProvider.realmId
+      name: REALM
+      type: string
+    - jsonPath: .spec.forProvider.username
+      name: USERNAME
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: READY
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ClientOptionalScopes manages the optional scopes assigned to
-          a client.
+        description: A User is a Keycloak user.
         properties:
           apiVersion:
             description: |-
@@ -42,98 +54,58 @@ spec:
           metadata:
             type: object
           spec:
-            description: ClientOptionalScopesSpec defines the desired state of ClientOptionalScopes.
+            description: UserSpec defines the desired state of a User.
             properties:
               forProvider:
-                description: ClientOptionalScopesParameters are the configurable fields
-                  of a ClientOptionalScopes.
+                description: UserParameters are the configurable fields of a User.
                 properties:
-                  clientId:
-                    description: ClientId is the internal Keycloak UUID of the client.
-                    type: string
-                  clientIdRef:
-                    description: ClientIdRef is a reference to a Client to populate
-                      clientId.
-                    properties:
-                      name:
-                        description: Name of the referenced object.
-                        type: string
-                      policy:
-                        description: Policies for referencing.
-                        properties:
-                          resolution:
-                            default: Required
-                            description: |-
-                              Resolution specifies whether resolution of this reference is required.
-                              The default is 'Required', which means the reconcile will fail if the
-                              reference cannot be resolved. 'Optional' means this reference will be
-                              a no-op if it cannot be resolved.
-                            enum:
-                            - Required
-                            - Optional
-                            type: string
-                          resolve:
-                            description: |-
-                              Resolve specifies when this reference should be resolved. The default
-                              is 'IfNotPresent', which will attempt to resolve the reference only when
-                              the corresponding field is not present. Use 'Always' to resolve the
-                              reference on every reconcile.
-                            enum:
-                            - Always
-                            - IfNotPresent
-                            type: string
-                        type: object
-                    required:
-                    - name
-                    type: object
-                  clientIdSelector:
-                    description: ClientIdSelector selects a reference to a Client.
-                    properties:
-                      matchControllerRef:
-                        description: |-
-                          MatchControllerRef ensures an object with the same controller reference
-                          as the selecting object is selected.
-                        type: boolean
-                      matchLabels:
-                        additionalProperties:
-                          type: string
-                        description: MatchLabels ensures an object with matching labels
-                          is selected.
-                        type: object
-                      policy:
-                        description: Policies for selection.
-                        properties:
-                          resolution:
-                            default: Required
-                            description: |-
-                              Resolution specifies whether resolution of this reference is required.
-                              The default is 'Required', which means the reconcile will fail if the
-                              reference cannot be resolved. 'Optional' means this reference will be
-                              a no-op if it cannot be resolved.
-                            enum:
-                            - Required
-                            - Optional
-                            type: string
-                          resolve:
-                            description: |-
-                              Resolve specifies when this reference should be resolved. The default
-                              is 'IfNotPresent', which will attempt to resolve the reference only when
-                              the corresponding field is not present. Use 'Always' to resolve the
-                              reference on every reconcile.
-                            enum:
-                            - Always
-                            - IfNotPresent
-                            type: string
-                        type: object
-                    type: object
-                  optionalScopes:
-                    description: OptionalScopes is the list of optional scopes to
-                      assign.
-                    items:
+                  attributes:
+                    additionalProperties:
                       type: string
+                    description: Attributes is a map of user attributes.
+                    type: object
+                  email:
+                    description: Email is the user's email address.
+                    type: string
+                  emailVerified:
+                    description: EmailVerified indicates if the user's email has been
+                      verified.
+                    type: boolean
+                  enabled:
+                    description: Enabled indicates if the user account is enabled.
+                    type: boolean
+                  federatedIdentity:
+                    description: FederatedIdentity is the list of federated identities
+                      for this user.
+                    items:
+                      description: FederatedIdentity represents an identity from an
+                        external provider.
+                      properties:
+                        identityProvider:
+                          description: IdentityProvider is the alias of the identity
+                            provider.
+                          type: string
+                        userId:
+                          description: UserId is the user ID at the identity provider.
+                          type: string
+                        userName:
+                          description: UserName is the username at the identity provider.
+                          type: string
+                      required:
+                      - identityProvider
+                      - userId
+                      - userName
+                      type: object
                     type: array
+                  firstName:
+                    description: FirstName is the user's first name.
+                    type: string
+                  lastName:
+                    description: LastName is the user's last name.
+                    type: string
                   realmId:
-                    description: RealmId is the ID of the realm.
+                    description: RealmId is the ID of the realm this user belongs
+                      to.
                     type: string
                   realmIdRef:
                     description: RealmIdRef is a reference to a Realm.
@@ -209,8 +181,17 @@ spec:
                             type: string
                         type: object
                     type: object
+                  requiredActions:
+                    description: RequiredActions is the list of required actions the
+                      user must perform on next login.
+                    items:
+                      type: string
+                    type: array
+                  username:
+                    description: Username is the user's login name.
+                    type: string
                 required:
-                - optionalScopes
+                - username
                 type: object
               managementPolicies:
                 default:
@@ -271,8 +252,7 @@ spec:
             - forProvider
             type: object
           status:
-            description: ClientOptionalScopesStatus defines the observed state of
-              ClientOptionalScopes.
+            description: UserStatus defines the observed state of a User.
             properties:
               conditions:
                 description: Conditions of the resource.

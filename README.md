@@ -15,7 +15,7 @@ The provider implements the same API surface as [crossplane-contrib/provider-key
 | `Realm` | `realm.keycloak.crossplane.io/v1alpha1` | Keycloak realm |
 | `User` | `user.keycloak.crossplane.io/v1alpha1` | Keycloak user |
 | `Groups` | `user.keycloak.crossplane.io/v1alpha1` | Group memberships for a user |
-| `Group` | `group.keycloak.crossplane.io/v1alpha1` | Keycloak group |
+| `Group` | `user.keycloak.crossplane.io/v1alpha1` | Keycloak group |
 | `Role` | `role.keycloak.crossplane.io/v1alpha1` | Realm or client role |
 | `ProtocolMapper` | `client.keycloak.crossplane.io/v1alpha1` | Protocol mapper on a client or client scope |
 

@@ -3,26 +3,26 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.20.0
-  name: clientdefaultscopes.
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: clientoptionalscopes.openidclient.keycloak.crossplane.io
 spec:
-  group: ""
+  group: openidclient.keycloak.crossplane.io
   names:
     categories:
     - crossplane
     - managed
     - keycloak
-    kind: ClientDefaultScopes
-    listKind: ClientDefaultScopesList
-    plural: clientdefaultscopes
-    singular: clientdefaultscopes
+    kind: ClientOptionalScopes
+    listKind: ClientOptionalScopesList
+    plural: clientoptionalscopes
+    singular: clientoptionalscopes
   scope: Namespaced
   versions:
-  - name: ""
+  - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ClientDefaultScopes manages the default scopes assigned to a
-          client.
+        description: ClientOptionalScopes manages the optional scopes assigned to
+          a client.
         properties:
           apiVersion:
             description: |-
@@ -42,11 +42,11 @@ spec:
           metadata:
             type: object
           spec:
-            description: ClientDefaultScopesSpec defines the desired state of ClientDefaultScopes.
+            description: ClientOptionalScopesSpec defines the desired state of ClientOptionalScopes.
             properties:
               forProvider:
-                description: ClientDefaultScopesParameters are the configurable fields
-                  of a ClientDefaultScopes.
+                description: ClientOptionalScopesParameters are the configurable fields
+                  of a ClientOptionalScopes.
                 properties:
                   clientId:
                     description: ClientId is the internal Keycloak UUID of the client.
@@ -126,8 +126,9 @@ spec:
                             type: string
                         type: object
                     type: object
-                  defaultScopes:
-                    description: DefaultScopes is the list of default scopes to assign.
+                  optionalScopes:
+                    description: OptionalScopes is the list of optional scopes to
+                      assign.
                     items:
                       type: string
                     type: array
@@ -209,7 +210,7 @@ spec:
                         type: object
                     type: object
                 required:
-                - defaultScopes
+                - optionalScopes
                 type: object
               managementPolicies:
                 default:
@@ -270,7 +271,8 @@ spec:
             - forProvider
             type: object
           status:
-            description: ClientDefaultScopesStatus defines the observed state of ClientDefaultScopes.
+            description: ClientOptionalScopesStatus defines the observed state of
+              ClientOptionalScopes.
             properties:
               conditions:
                 description: Conditions of the resource.

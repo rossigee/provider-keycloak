@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// +groupName=role.keycloak.crossplane.io
+
 package v1alpha1
 
 import (
@@ -80,6 +82,7 @@ type RoleStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,categories={crossplane,managed,keycloak}
 // +kubebuilder:storageversion
+// +kubebuilder:group=role.keycloak.crossplane.io
 // +kubebuilder:printcolumn:name="REALM",type="string",JSONPath=".spec.forProvider.realmId"
 // +kubebuilder:printcolumn:name="NAME",type="string",JSONPath=".spec.forProvider.name"
 // +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"

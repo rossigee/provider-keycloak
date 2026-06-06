@@ -3,27 +3,24 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.20.0
-  name: roles.
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: groups.user.keycloak.crossplane.io
 spec:
-  group: ""
+  group: user.keycloak.crossplane.io
   names:
     categories:
     - crossplane
     - managed
     - keycloak
-    kind: Role
-    listKind: RoleList
-    plural: roles
-    singular: role
+    kind: Groups
+    listKind: GroupsList
+    plural: groups
+    singular: groups
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - jsonPath: .spec.forProvider.realmId
       name: REALM
-      type: string
-    - jsonPath: .spec.forProvider.name
-      name: NAME
       type: string
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: READY
@@ -31,10 +28,10 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: ""
+    name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: A Role is a Keycloak realm or client role.
+        description: Groups manages the group memberships of a Keycloak user.
         properties:
           apiVersion:
             description: |-
@@ -54,57 +51,62 @@ spec:
           metadata:
             type: object
           spec:
-            description: RoleSpec defines the desired state of a Role.
+            description: GroupsSpec defines the desired state of Groups membership.
             properties:
               forProvider:
-                description: RoleParameters are the configurable fields of a Role.
+                description: GroupsParameters are the configurable fields of a Groups
+                  membership resource.
                 properties:
-                  attributes:
-                    additionalProperties:
-                      type: string
-                    description: Attributes is a map of role attributes.
-                    type: object
-                  clientId:
+                  exhaustive:
+                    default: true
                     description: |-
-                      ClientId scopes the role to a specific client (for client roles).
-                      When set, this creates a client role; when unset, a realm role.
-                    type: string
-                  clientIdRef:
-                    description: ClientIdRef is a reference to a Client.
-                    properties:
-                      name:
-                        description: Name of the referenced object.
-                        type: string
-                      policy:
-                        description: Policies for referencing.
-                        properties:
-                          resolution:
-                            default: Required
-                            description: |-
-                              Resolution specifies whether resolution of this reference is required.
-                              The default is 'Required', which means the reconcile will fail if the
-                              reference cannot be resolved. 'Optional' means this reference will be
-                              a no-op if it cannot be resolved.
-                            enum:
-                            - Required
-                            - Optional
-                            type: string
-                          resolve:
-                            description: |-
-                              Resolve specifies when this reference should be resolved. The default
-                              is 'IfNotPresent', which will attempt to resolve the reference only when
-                              the corresponding field is not present. Use 'Always' to resolve the
-                              reference on every reconcile.
-                            enum:
-                            - Always
-                            - IfNotPresent
-                            type: string
-                        type: object
-                    required:
-                    - name
-                    type: object
-                  clientIdSelector:
-                    description: ClientIdSelector selects a reference to a Client.
+                      Exhaustive indicates whether this resource manages the complete set of group
+                      memberships for the user (removing unlisted groups) or is additive only.
+                    type: boolean
+                  groupIds:
+                    description: GroupIds is the list of Keycloak internal group UUIDs.
+                    items:
+                      type: string
+                    type: array
+                  groupIdsRefs:
+                    description: GroupIdsRefs is a list of references to Groups.
+                    items:
+                      description: A Reference to a named object.
+                      properties:
+                        name:
+                          description: Name of the referenced object.
+                          type: string
+                        policy:
+                          description: Policies for referencing.
+                          properties:
+                            resolution:
+                              default: Required
+                              description: |-
+                                Resolution specifies whether resolution of this reference is required.
+                                The default is 'Required', which means the reconcile will fail if the
+                                reference cannot be resolved. 'Optional' means this reference will be
+                                a no-op if it cannot be resolved.
+                              enum:
+                              - Required
+                              - Optional
+                              type: string
+                            resolve:
+                              description: |-
+                                Resolve specifies when this reference should be resolved. The default
+                                is 'IfNotPresent', which will attempt to resolve the reference only when
+                                the corresponding field is not present. Use 'Always' to resolve the
+                                reference on every reconcile.
+                              enum:
+                              - Always
+                              - IfNotPresent
+                              type: string
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  groupIdsSelector:
+                    description: GroupIdsSelector selects references to Groups.
                     properties:
                       matchControllerRef:
                         description: |-
@@ -143,60 +145,8 @@ spec:
                             type: string
                         type: object
                     type: object
-                  compositeRoles:
-                    description: CompositeRoles is the list of role names that compose
-                      this role.
-                    items:
-                      type: string
-                    type: array
-                  compositeRolesRefs:
-                    description: CompositeRolesRefs is a list of references to Roles
-                      to compose.
-                    items:
-                      description: A Reference to a named object.
-                      properties:
-                        name:
-                          description: Name of the referenced object.
-                          type: string
-                        policy:
-                          description: Policies for referencing.
-                          properties:
-                            resolution:
-                              default: Required
-                              description: |-
-                                Resolution specifies whether resolution of this reference is required.
-                                The default is 'Required', which means the reconcile will fail if the
-                                reference cannot be resolved. 'Optional' means this reference will be
-                                a no-op if it cannot be resolved.
-                              enum:
-                              - Required
-                              - Optional
-                              type: string
-                            resolve:
-                              description: |-
-                                Resolve specifies when this reference should be resolved. The default
-                                is 'IfNotPresent', which will attempt to resolve the reference only when
-                                the corresponding field is not present. Use 'Always' to resolve the
-                                reference on every reconcile.
-                              enum:
-                              - Always
-                              - IfNotPresent
-                              type: string
-                          type: object
-                      required:
-                      - name
-                      type: object
-                    type: array
-                  description:
-                    description: Description is a human-readable description of the
-                      role.
-                    type: string
-                  name:
-                    description: Name is the role name.
-                    type: string
                   realmId:
-                    description: RealmId is the ID of the realm this role belongs
-                      to.
+                    description: RealmId is the ID of the realm.
                     type: string
                   realmIdRef:
                     description: RealmIdRef is a reference to a Realm.
@@ -272,8 +222,83 @@ spec:
                             type: string
                         type: object
                     type: object
-                required:
-                - name
+                  userId:
+                    description: UserId is the Keycloak internal user UUID.
+                    type: string
+                  userIdRef:
+                    description: UserIdRef is a reference to a User.
+                    properties:
+                      name:
+                        description: Name of the referenced object.
+                        type: string
+                      policy:
+                        description: Policies for referencing.
+                        properties:
+                          resolution:
+                            default: Required
+                            description: |-
+                              Resolution specifies whether resolution of this reference is required.
+                              The default is 'Required', which means the reconcile will fail if the
+                              reference cannot be resolved. 'Optional' means this reference will be
+                              a no-op if it cannot be resolved.
+                            enum:
+                            - Required
+                            - Optional
+                            type: string
+                          resolve:
+                            description: |-
+                              Resolve specifies when this reference should be resolved. The default
+                              is 'IfNotPresent', which will attempt to resolve the reference only when
+                              the corresponding field is not present. Use 'Always' to resolve the
+                              reference on every reconcile.
+                            enum:
+                            - Always
+                            - IfNotPresent
+                            type: string
+                        type: object
+                    required:
+                    - name
+                    type: object
+                  userIdSelector:
+                    description: UserIdSelector selects a reference to a User.
+                    properties:
+                      matchControllerRef:
+                        description: |-
+                          MatchControllerRef ensures an object with the same controller reference
+                          as the selecting object is selected.
+                        type: boolean
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: MatchLabels ensures an object with matching labels
+                          is selected.
+                        type: object
+                      policy:
+                        description: Policies for selection.
+                        properties:
+                          resolution:
+                            default: Required
+                            description: |-
+                              Resolution specifies whether resolution of this reference is required.
+                              The default is 'Required', which means the reconcile will fail if the
+                              reference cannot be resolved. 'Optional' means this reference will be
+                              a no-op if it cannot be resolved.
+                            enum:
+                            - Required
+                            - Optional
+                            type: string
+                          resolve:
+                            description: |-
+                              Resolve specifies when this reference should be resolved. The default
+                              is 'IfNotPresent', which will attempt to resolve the reference only when
+                              the corresponding field is not present. Use 'Always' to resolve the
+                              reference on every reconcile.
+                            enum:
+                            - Always
+                            - IfNotPresent
+                            type: string
+                        type: object
+                    type: object
                 type: object
               managementPolicies:
                 default:
@@ -334,7 +359,7 @@ spec:
             - forProvider
             type: object
           status:
-            description: RoleStatus defines the observed state of a Role.
+            description: GroupsStatus defines the observed state of Groups membership.
             properties:
               conditions:
                 description: Conditions of the resource.

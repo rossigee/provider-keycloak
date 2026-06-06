@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// +groupName=user.keycloak.crossplane.io
+
 package v1alpha1
 
 import (
@@ -96,6 +98,7 @@ type UserStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,categories={crossplane,managed,keycloak}
 // +kubebuilder:storageversion
+// +kubebuilder:group=user.keycloak.crossplane.io
 // +kubebuilder:printcolumn:name="REALM",type="string",JSONPath=".spec.forProvider.realmId"
 // +kubebuilder:printcolumn:name="USERNAME",type="string",JSONPath=".spec.forProvider.username"
 // +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
@@ -173,6 +176,7 @@ type GroupsStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,categories={crossplane,managed,keycloak}
 // +kubebuilder:storageversion
+// +kubebuilder:group=user.keycloak.crossplane.io
 // +kubebuilder:printcolumn:name="REALM",type="string",JSONPath=".spec.forProvider.realmId"
 // +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"

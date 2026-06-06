@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// +groupName=openidclient.keycloak.crossplane.io
+
 package v1alpha1
 
 import (
@@ -68,6 +70,10 @@ type ClientParameters struct {
 	// RootUrl is the client root URL appended to relative URLs.
 	// +optional
 	RootUrl *string `json:"rootUrl,omitempty"`
+
+	// HomeUrl is the client home URL for linking from the account console.
+	// +optional
+	HomeUrl *string `json:"homeUrl,omitempty"`
 
 	// BaseUrl is the default URL for redirecting when no redirect URI is specified.
 	// +optional
@@ -149,6 +155,50 @@ type ClientParameters struct {
 	// +optional
 	AccessTokenLifespan *string `json:"accessTokenLifespan,omitempty"`
 
+	// BearerOnly indicates if the client is bearer-only.
+	// +optional
+	BearerOnly *bool `json:"bearerOnly,omitempty"`
+
+	// PublicClient indicates if the client is public (no client secret).
+	// +optional
+	PublicClient *bool `json:"publicClient,omitempty"`
+
+	// Protocol is the protocol used by the client (openid-connect or saml).
+	// +optional
+	Protocol *string `json:"protocol,omitempty"`
+
+	// AuthorizationServicesEnabled enables authorization services for this client.
+	// +optional
+	AuthorizationServicesEnabled *bool `json:"authorizationServicesEnabled,omitempty"`
+
+	// OAuth2DeviceAuthorizationGrantEnabled enables the OAuth2 Device Authorization Grant flow.
+	// +optional
+	OAuth2DeviceAuthorizationGrantEnabled *bool `json:"oauth2DeviceAuthorizationGrantEnabled,omitempty"`
+
+	// ClientSessionIdleTimeout is the idle timeout for client sessions.
+	// +optional
+	ClientSessionIdleTimeout *string `json:"clientSessionIdleTimeout,omitempty"`
+
+	// ClientSessionMaxLifespan is the max lifespan for client sessions.
+	// +optional
+	ClientSessionMaxLifespan *string `json:"clientSessionMaxLifespan,omitempty"`
+
+	// ClientOfflineSessionIdleTimeout is the idle timeout for offline client sessions.
+	// +optional
+	ClientOfflineSessionIdleTimeout *string `json:"clientOfflineSessionIdleTimeout,omitempty"`
+
+	// ClientOfflineSessionMaxLifespan is the max lifespan for offline client sessions.
+	// +optional
+	ClientOfflineSessionMaxLifespan *string `json:"clientOfflineSessionMaxLifespan,omitempty"`
+
+	// StandardTokenExchangeEnabled enables Standard Token Exchange.
+	// +optional
+	StandardTokenExchangeEnabled *bool `json:"standardTokenExchangeEnabled,omitempty"`
+
+	// UseRefreshTokens enables refresh tokens for this client.
+	// +optional
+	UseRefreshTokens *bool `json:"useRefreshTokens,omitempty"`
+
 	// ClientSecretSecretRef references the Kubernetes secret that will receive the generated client secret.
 	// +optional
 	ClientSecretSecretRef *ClientSecretSecretRef `json:"clientSecretSecretRef,omitempty"`
@@ -173,6 +223,7 @@ type ClientStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,categories={crossplane,managed,keycloak}
 // +kubebuilder:storageversion
+// +kubebuilder:group=openidclient.keycloak.crossplane.io
 // +kubebuilder:printcolumn:name="REALM",type="string",JSONPath=".spec.forProvider.realmId"
 // +kubebuilder:printcolumn:name="CLIENT-ID",type="string",JSONPath=".spec.forProvider.clientId"
 // +kubebuilder:printcolumn:name="ACCESS-TYPE",type="string",JSONPath=".spec.forProvider.accessType"

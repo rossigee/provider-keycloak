@@ -328,22 +328,43 @@ func (c *keycloakClient) DeleteRealm(ctx context.Context, realm string) error {
 // =============================================================================
 
 type ClientRepresentation struct {
-	ID                        string            `json:"id,omitempty"`
-	ClientID                  string            `json:"clientId"`
-	Name                      string            `json:"name,omitempty"`
-	Description               string            `json:"description,omitempty"`
-	Enabled                   bool              `json:"enabled"`
-	RootURL                   string            `json:"rootUrl,omitempty"`
-	BaseURL                   string            `json:"baseUrl,omitempty"`
-	ValidRedirectURIs         []string          `json:"validRedirectUris,omitempty"`
-	WebOrigins                []string          `json:"webOrigins,omitempty"`
-	StandardFlowEnabled       bool              `json:"standardFlowEnabled"`
-	DirectAccessGrantsEnabled bool              `json:"directAccessGrantsEnabled"`
-	ImplicitFlowEnabled       bool              `json:"implicitFlowEnabled"`
-	ServiceAccountsEnabled    bool              `json:"serviceAccountsEnabled"`
-	PublicClient              bool              `json:"publicClient"`
-	Protocol                  string            `json:"protocol,omitempty"`
-	Attributes                map[string]string `json:"attributes,omitempty"`
+	ID                                     string            `json:"id,omitempty"`
+	ClientID                               string            `json:"clientId"`
+	Name                                   string            `json:"name,omitempty"`
+	Description                            string            `json:"description,omitempty"`
+	Enabled                                bool              `json:"enabled"`
+	RootURL                                string            `json:"rootUrl,omitempty"`
+	HomeURL                                string            `json:"homeUrl,omitempty"`
+	BaseURL                                string            `json:"baseUrl,omitempty"`
+	AdminURL                               string            `json:"adminUrl,omitempty"`
+	ValidRedirectURIs                      []string          `json:"validRedirectUris,omitempty"`
+	WebOrigins                             []string          `json:"webOrigins,omitempty"`
+	StandardFlowEnabled                    bool              `json:"standardFlowEnabled"`
+	DirectAccessGrantsEnabled              bool              `json:"directAccessGrantsEnabled"`
+	ImplicitFlowEnabled                    bool              `json:"implicitFlowEnabled"`
+	ServiceAccountsEnabled                 bool              `json:"serviceAccountsEnabled"`
+	PublicClient                           bool              `json:"publicClient"`
+	BearerOnly                             bool              `json:"bearerOnly"`
+	ConsentRequired                        bool              `json:"consentRequired"`
+	FullScopeAllowed                       bool              `json:"fullScopeAllowed"`
+	AlwaysDisplayInConsole                 bool              `json:"alwaysDisplayInConsole"`
+	FrontchannelLogoutEnabled              bool              `json:"frontchannelLogoutEnabled"`
+	FrontchannelLogoutURL                  string            `json:"frontchannelLogoutUrl,omitempty"`
+	BackchannelLogoutURL                   string            `json:"backchannelLogoutUrl,omitempty"`
+	BackchannelLogoutSessionRequired       bool              `json:"backchannelLogoutSessionRequired"`
+	BackchannelLogoutRevokeOfflineSessions bool              `json:"backchannelLogoutRevokeOfflineSessions"`
+	Protocol                               string            `json:"protocol,omitempty"`
+	AuthorizationServicesEnabled           bool              `json:"authorizationServicesEnabled"`
+	OAuth2DeviceAuthorizationGrantEnabled  bool              `json:"oauth2DeviceAuthorizationGrantEnabled"`
+	StandardTokenExchangeEnabled           bool              `json:"standardTokenExchangeEnabled"`
+	UseRefreshTokens                       bool              `json:"useRefreshTokens"`
+	ClientSessionIdleTimeout               string            `json:"clientSessionIdleTimeout,omitempty"`
+	ClientSessionMaxLifespan               string            `json:"clientSessionMaxLifespan,omitempty"`
+	ClientOfflineSessionIdleTimeout        string            `json:"clientOfflineSessionIdleTimeout,omitempty"`
+	ClientOfflineSessionMaxLifespan        string            `json:"clientOfflineSessionMaxLifespan,omitempty"`
+	PkceCodeChallengeMethod                string            `json:"pkceCodeChallengeMethod,omitempty"`
+	AccessTokenLifespan                    string            `json:"accessTokenLifespan,omitempty"`
+	Attributes                             map[string]string `json:"attributes,omitempty"`
 }
 
 func (c *keycloakClient) GetClient(ctx context.Context, realm, clientID string) (*ClientRepresentation, error) {
