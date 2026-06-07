@@ -157,6 +157,16 @@ type Client interface {
 
 	// Realm Keys operations (read-only)
 	GetRealmKeys(ctx context.Context, realm string) (*RealmKeysRepresentation, error)
+
+	// Client Default Scopes operations
+	ListClientDefaultScopes(ctx context.Context, realm, clientUUID string) ([]ClientScopeRepresentation, error)
+	AddClientDefaultScopes(ctx context.Context, realm, clientUUID string, scopes []ClientScopeRepresentation) error
+	RemoveClientDefaultScopes(ctx context.Context, realm, clientUUID string, scopes []ClientScopeRepresentation) error
+
+	// Client Optional Scopes operations
+	ListClientOptionalScopes(ctx context.Context, realm, clientUUID string) ([]ClientScopeRepresentation, error)
+	AddClientOptionalScopes(ctx context.Context, realm, clientUUID string, scopes []ClientScopeRepresentation) error
+	RemoveClientOptionalScopes(ctx context.Context, realm, clientUUID string, scopes []ClientScopeRepresentation) error
 }
 
 // keycloakClient implements Client
@@ -1322,4 +1332,87 @@ func (c *keycloakClient) GetRealmKeys(ctx context.Context, realm string) (*Realm
 		return nil, errors.Wrap(err, "failed to unmarshal realm keys")
 	}
 	return &keys, nil
+}
+
+// =============================================================================
+// Client Scope Operations
+// =============================================================================
+
+type ClientScopeRepresentation struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
+func (c *keycloakClient) ListClientDefaultScopes(ctx context.Context, realm, clientUUID string) ([]ClientScopeRepresentation, error) {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/default-client-scopes"
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var scopes []ClientScopeRepresentation
+	if err := json.Unmarshal(respBody, &scopes); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal client default scopes")
+	}
+	return scopes, nil
+}
+
+func (c *keycloakClient) AddClientDefaultScopes(ctx context.Context, realm, clientUUID string, scopes []ClientScopeRepresentation) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/default-client-scopes"
+	for _, s := range scopes {
+		scopePath := path + "/" + url.PathEscape(s.ID)
+		_, err := c.doRequest(ctx, http.MethodPut, scopePath, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *keycloakClient) RemoveClientDefaultScopes(ctx context.Context, realm, clientUUID string, scopes []ClientScopeRepresentation) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/default-client-scopes"
+	for _, s := range scopes {
+		scopePath := path + "/" + url.PathEscape(s.ID)
+		_, err := c.doRequest(ctx, http.MethodDelete, scopePath, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *keycloakClient) ListClientOptionalScopes(ctx context.Context, realm, clientUUID string) ([]ClientScopeRepresentation, error) {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/optional-client-scopes"
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var scopes []ClientScopeRepresentation
+	if err := json.Unmarshal(respBody, &scopes); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal client optional scopes")
+	}
+	return scopes, nil
+}
+
+func (c *keycloakClient) AddClientOptionalScopes(ctx context.Context, realm, clientUUID string, scopes []ClientScopeRepresentation) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/optional-client-scopes"
+	for _, s := range scopes {
+		scopePath := path + "/" + url.PathEscape(s.ID)
+		_, err := c.doRequest(ctx, http.MethodPut, scopePath, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *keycloakClient) RemoveClientOptionalScopes(ctx context.Context, realm, clientUUID string, scopes []ClientScopeRepresentation) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/optional-client-scopes"
+	for _, s := range scopes {
+		scopePath := path + "/" + url.PathEscape(s.ID)
+		_, err := c.doRequest(ctx, http.MethodDelete, scopePath, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
