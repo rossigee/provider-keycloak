@@ -22,6 +22,7 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
 
 	"github.com/rossigee/provider-keycloak/internal/controller/authenticationflow"
+	"github.com/rossigee/provider-keycloak/internal/controller/authorizationpolicy"
 	"github.com/rossigee/provider-keycloak/internal/controller/authz"
 	"github.com/rossigee/provider-keycloak/internal/controller/client"
 	"github.com/rossigee/provider-keycloak/internal/controller/clientcertificates"
@@ -51,6 +52,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 	}
 	for _, setup := range []func(ctrl.Manager, controller.Options) error{
 		authenticationflow.Setup,
+		authorizationpolicy.Setup,
 		client.Setup,
 		realm.Setup,
 		user.Setup,

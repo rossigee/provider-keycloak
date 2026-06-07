@@ -181,6 +181,13 @@ type Client interface {
 	UpdateAuthenticationFlow(ctx context.Context, realm, alias string, flow *AuthenticationFlowRepresentation) error
 	DeleteAuthenticationFlow(ctx context.Context, realm, alias string) error
 	ListAuthenticationFlows(ctx context.Context, realm string) ([]AuthenticationFlowRepresentation, error)
+
+	// Authorization Policy operations
+	GetAuthorizationPolicy(ctx context.Context, realm, clientID, policyID string) (*AuthorizationPolicyRepresentation, error)
+	CreateAuthorizationPolicy(ctx context.Context, realm, clientID string, policy *AuthorizationPolicyRepresentation) (string, error)
+	UpdateAuthorizationPolicy(ctx context.Context, realm, clientID, policyID string, policy *AuthorizationPolicyRepresentation) error
+	DeleteAuthorizationPolicy(ctx context.Context, realm, clientID, policyID string) error
+	ListAuthorizationPolicies(ctx context.Context, realm, clientID string) ([]AuthorizationPolicyRepresentation, error)
 }
 
 // keycloakClient implements Client
@@ -556,8 +563,11 @@ func (c *keycloakClient) UpdateClient(ctx context.Context, realm string, client 
 	if client.ID == "" {
 		return errors.New("client ID is required for update")
 	}
-	// Keycloak API doesn't accept homeUrl in update requests
+	// Keycloak API doesn't accept these fields in update requests - clear them
 	client.HomeURL = ""
+	client.ValidRedirectURIs = nil
+	client.WebOrigins = nil
+	client.RootURL = ""
 	path := realmPath(realm) + "/clients/" + url.PathEscape(client.ID)
 	_, err := c.doRequest(ctx, http.MethodPut, path, client)
 	return err
@@ -1548,4 +1558,61 @@ func (c *keycloakClient) ListAuthenticationFlows(ctx context.Context, realm stri
 		return nil, errors.Wrap(err, "failed to unmarshal authentication flows")
 	}
 	return flows, nil
+}
+
+// =============================================================================
+// Authorization Policy Operations
+// =============================================================================
+
+type AuthorizationPolicyRepresentation struct {
+	ID          string            `json:"id,omitempty"`
+	Name        string            `json:"name"`
+	Type        string            `json:"type"`
+	Description string            `json:"description,omitempty"`
+	Logic       string            `json:"logic,omitempty"`
+	Config      map[string]string `json:"config,omitempty"`
+}
+
+func (c *keycloakClient) GetAuthorizationPolicy(ctx context.Context, realm, clientID, policyID string) (*AuthorizationPolicyRepresentation, error) {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientID) + "/authz/resource-server/policy/" + url.PathEscape(policyID)
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var policy AuthorizationPolicyRepresentation
+	if err := json.Unmarshal(respBody, &policy); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal authorization policy")
+	}
+	return &policy, nil
+}
+
+func (c *keycloakClient) CreateAuthorizationPolicy(ctx context.Context, realm, clientID string, policy *AuthorizationPolicyRepresentation) (string, error) {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientID) + "/authz/resource-server/policy"
+	id, err := c.doCreate(ctx, path, policy)
+	return id, err
+}
+
+func (c *keycloakClient) UpdateAuthorizationPolicy(ctx context.Context, realm, clientID, policyID string, policy *AuthorizationPolicyRepresentation) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientID) + "/authz/resource-server/policy/" + url.PathEscape(policyID)
+	_, err := c.doRequest(ctx, http.MethodPut, path, policy)
+	return err
+}
+
+func (c *keycloakClient) DeleteAuthorizationPolicy(ctx context.Context, realm, clientID, policyID string) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientID) + "/authz/resource-server/policy/" + url.PathEscape(policyID)
+	_, err := c.doRequest(ctx, http.MethodDelete, path, nil)
+	return err
+}
+
+func (c *keycloakClient) ListAuthorizationPolicies(ctx context.Context, realm, clientID string) ([]AuthorizationPolicyRepresentation, error) {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientID) + "/authz/resource-server/policy"
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var policies []AuthorizationPolicyRepresentation
+	if err := json.Unmarshal(respBody, &policies); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal authorization policies")
+	}
+	return policies, nil
 }
