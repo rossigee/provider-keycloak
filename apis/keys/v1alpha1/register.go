@@ -23,6 +23,6 @@ import (
 
 var (
 	SchemeGroupVersion = schema.GroupVersion{Group: "keys.keycloak.crossplane.io", Version: "v1alpha1"}
-	SchemeBuilder     = &scheme.Builder{GroupVersion: SchemeGroupVersion}
-	AddToScheme       = SchemeBuilder.AddToScheme
+	SchemeBuilder      = &scheme.Builder{GroupVersion: SchemeGroupVersion}
+	AddToScheme        = SchemeBuilder.AddToScheme
 )

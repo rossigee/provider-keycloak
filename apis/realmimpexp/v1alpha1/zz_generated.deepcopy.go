@@ -35,14 +35,18 @@ func (in *RealmImport) DeepCopyInto(out *RealmImport) {
 }
 
 func (in *RealmImport) DeepCopy() *RealmImport {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(RealmImport)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *RealmImport) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }
 
@@ -60,13 +64,17 @@ func (in *RealmImportList) DeepCopyInto(out *RealmImportList) {
 }
 
 func (in *RealmImportList) DeepCopy() *RealmImportList {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(RealmImportList)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *RealmImportList) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }

@@ -60,14 +60,18 @@ func (in *RealmEventsConfig) DeepCopyInto(out *RealmEventsConfig) {
 }
 
 func (in *RealmEventsConfig) DeepCopy() *RealmEventsConfig {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(RealmEventsConfig)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *RealmEventsConfig) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }
 
@@ -85,13 +89,17 @@ func (in *RealmEventsConfigList) DeepCopyInto(out *RealmEventsConfigList) {
 }
 
 func (in *RealmEventsConfigList) DeepCopy() *RealmEventsConfigList {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(RealmEventsConfigList)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *RealmEventsConfigList) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }

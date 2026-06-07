@@ -17,10 +17,11 @@ limitations under the License.
 package realm
 
 import (
-	"github.com/rossigee/provider-keycloak/internal/controller/testhelpers"
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/rossigee/provider-keycloak/internal/controller/testhelpers"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -135,22 +136,50 @@ func (m *mockRealmClient) DeleteClientProtocolMapper(ctx context.Context, realm,
 func (m *mockRealmClient) ListClientProtocolMappers(ctx context.Context, realm, clientID string) ([]clients.ProtocolMapperRepresentation, error) {
 	return nil, nil
 }
-func (m *mockRealmClient) GetUserFederationProvider(_ context.Context, _, _ string) (*clients.UserFederationProviderRepresentation, error) { return nil, nil }
-func (m *mockRealmClient) CreateUserFederationProvider(_ context.Context, _ string, _ *clients.UserFederationProviderRepresentation) (string, error) { return "", nil }
-func (m *mockRealmClient) UpdateUserFederationProvider(_ context.Context, _, _ string, _ *clients.UserFederationProviderRepresentation) error { return nil }
-func (m *mockRealmClient) DeleteUserFederationProvider(_ context.Context, _, _ string) error { return nil }
-func (m *mockRealmClient) ListUserFederationProviders(_ context.Context, _ string) ([]clients.UserFederationProviderRepresentation, error) { return nil, nil }
-func (m *mockRealmClient) GetRealmEventsConfig(_ context.Context, _ string) (*clients.RealmEventsConfigRepresentation, error) { return nil, nil }
-func (m *mockRealmClient) UpdateRealmEventsConfig(_ context.Context, _ string, _ *clients.RealmEventsConfigRepresentation) error { return nil }
+func (m *mockRealmClient) GetUserFederationProvider(_ context.Context, _, _ string) (*clients.UserFederationProviderRepresentation, error) {
+	return nil, nil
+}
+func (m *mockRealmClient) CreateUserFederationProvider(_ context.Context, _ string, _ *clients.UserFederationProviderRepresentation) (string, error) {
+	return "", nil
+}
+func (m *mockRealmClient) UpdateUserFederationProvider(_ context.Context, _, _ string, _ *clients.UserFederationProviderRepresentation) error {
+	return nil
+}
+func (m *mockRealmClient) DeleteUserFederationProvider(_ context.Context, _, _ string) error {
+	return nil
+}
+func (m *mockRealmClient) ListUserFederationProviders(_ context.Context, _ string) ([]clients.UserFederationProviderRepresentation, error) {
+	return nil, nil
+}
+func (m *mockRealmClient) GetRealmEventsConfig(_ context.Context, _ string) (*clients.RealmEventsConfigRepresentation, error) {
+	return nil, nil
+}
+func (m *mockRealmClient) UpdateRealmEventsConfig(_ context.Context, _ string, _ *clients.RealmEventsConfigRepresentation) error {
+	return nil
+}
 func (m *mockRealmClient) ImportRealm(_ context.Context, _ string, _ bool) error { return nil }
-func (m *mockRealmClient) GetAuthzResource(_ context.Context, _, _, _ string) (*clients.AuthzResourceRepresentation, error) { return nil, nil }
-func (m *mockRealmClient) CreateAuthzResource(_ context.Context, _, _ string, _ *clients.AuthzResourceRepresentation) (string, error) { return "", nil }
-func (m *mockRealmClient) UpdateAuthzResource(_ context.Context, _, _, _ string, _ *clients.AuthzResourceRepresentation) error { return nil }
+func (m *mockRealmClient) GetAuthzResource(_ context.Context, _, _, _ string) (*clients.AuthzResourceRepresentation, error) {
+	return nil, nil
+}
+func (m *mockRealmClient) CreateAuthzResource(_ context.Context, _, _ string, _ *clients.AuthzResourceRepresentation) (string, error) {
+	return "", nil
+}
+func (m *mockRealmClient) UpdateAuthzResource(_ context.Context, _, _, _ string, _ *clients.AuthzResourceRepresentation) error {
+	return nil
+}
 func (m *mockRealmClient) DeleteAuthzResource(_ context.Context, _, _, _ string) error { return nil }
-func (m *mockRealmClient) ListAuthzResources(_ context.Context, _, _ string) ([]clients.AuthzResourceRepresentation, error) { return nil, nil }
-func (m *mockRealmClient) GetClientCertificate(_ context.Context, _, _, _ string) (*clients.ClientCertificateRepresentation, error) { return nil, nil }
-func (m *mockRealmClient) GenerateClientCertificate(_ context.Context, _, _ string, _ string) (*clients.ClientCertificateRepresentation, error) { return nil, nil }
-func (m *mockRealmClient) ListClientCertificates(_ context.Context, _, _ string) ([]clients.ClientCertificateRepresentation, error) { return nil, nil }
+func (m *mockRealmClient) ListAuthzResources(_ context.Context, _, _ string) ([]clients.AuthzResourceRepresentation, error) {
+	return nil, nil
+}
+func (m *mockRealmClient) GetClientCertificate(_ context.Context, _, _, _ string) (*clients.ClientCertificateRepresentation, error) {
+	return nil, nil
+}
+func (m *mockRealmClient) GenerateClientCertificate(_ context.Context, _, _ string, _ string) (*clients.ClientCertificateRepresentation, error) {
+	return nil, nil
+}
+func (m *mockRealmClient) ListClientCertificates(_ context.Context, _, _ string) ([]clients.ClientCertificateRepresentation, error) {
+	return nil, nil
+}
 
 func newRealmCR(name string) *realmv1alpha1.Realm {
 	return &realmv1alpha1.Realm{

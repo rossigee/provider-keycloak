@@ -18,11 +18,11 @@ import (
 )
 
 const (
-	errNotRealmEventsConfig      = "managed resource is not a RealmEventsConfig"
-	errGetProviderConfig         = "cannot get ProviderConfig"
-	errGetRealmEventsConfig      = "cannot get Keycloak realm events config"
-	errUpdateRealmEventsConfig   = "cannot update Keycloak realm events config"
-	errProviderNotReady          = "provider is not ready"
+	errNotRealmEventsConfig    = "managed resource is not a RealmEventsConfig"
+	errGetProviderConfig       = "cannot get ProviderConfig"
+	errGetRealmEventsConfig    = "cannot get Keycloak realm events config"
+	errUpdateRealmEventsConfig = "cannot update Keycloak realm events config"
+	errProviderNotReady        = "provider is not ready"
 )
 
 const controllerName = "realmeventsconfigs.events.keycloak.crossplane.io"
@@ -162,7 +162,7 @@ func eventsConfigParamsToRepresentation(p *eventv1alpha1.RealmEventsConfigParame
 	return &clients.RealmEventsConfigRepresentation{
 		EventsEnabled:             p.EventsEnabled,
 		EventsExpiration:          p.EventsExpiration,
-		EventsListeners:          p.EventsListeners,
+		EventsListeners:           p.EventsListeners,
 		EnabledEvents:             p.EnabledEvents,
 		AdminEventsEnabled:        p.AdminEventsEnabled,
 		AdminEventsDetailsEnabled: p.AdminEventsDetailsEnabled,

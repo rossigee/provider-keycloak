@@ -18,13 +18,13 @@ import (
 )
 
 const (
-	errNotUserFederationProvider   = "managed resource is not a UserFederationProvider"
-	errGetProviderConfig           = "cannot get ProviderConfig"
-	errGetUserFederationProvider   = "cannot get Keycloak user federation provider"
+	errNotUserFederationProvider    = "managed resource is not a UserFederationProvider"
+	errGetProviderConfig            = "cannot get ProviderConfig"
+	errGetUserFederationProvider    = "cannot get Keycloak user federation provider"
 	errCreateUserFederationProvider = "cannot create Keycloak user federation provider"
 	errUpdateUserFederationProvider = "cannot update Keycloak user federation provider"
 	errDeleteUserFederationProvider = "cannot delete Keycloak user federation provider"
-	errProviderNotReady            = "provider is not ready"
+	errProviderNotReady             = "provider is not ready"
 )
 
 const controllerName = "userfederationproviders.userfederation.keycloak.crossplane.io"

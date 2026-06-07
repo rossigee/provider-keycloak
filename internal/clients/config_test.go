@@ -62,7 +62,7 @@ func TestParseCredentials(t *testing.T) {
 		},
 		{
 			name:    "missing url",
-			input:   map[string]interface{}{"client_id": "x", oauthKeyClientSecret: "y"},
+			input:   map[string]interface{}{oauthKeyClientID: "x", oauthKeyClientSecret: "y"},
 			wantErr: "url",
 		},
 		{

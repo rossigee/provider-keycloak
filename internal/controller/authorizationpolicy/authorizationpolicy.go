@@ -88,7 +88,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotAuthorizationPolicy)
 	}
-	policy, err := e.client.GetAuthorizationPolicy(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, cr.ObjectMeta.GetAnnotations()["crossplane.io/external-name"])
+	policy, err := e.client.GetAuthorizationPolicy(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, cr.GetAnnotations()["crossplane.io/external-name"])
 	if err != nil {
 		return managed.ExternalObservation{}, err
 	}
@@ -113,7 +113,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	if err != nil {
 		return managed.ExternalCreation{}, err
 	}
-	cr.ObjectMeta.Annotations["crossplane.io/external-name"] = id
+	cr.Annotations["crossplane.io/external-name"] = id
 	cr.Status.SetConditions(xpv1.Creating())
 	return managed.ExternalCreation{}, nil
 }
@@ -130,7 +130,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		Logic:       deref(cr.Spec.ForProvider.Logic),
 		Config:      cr.Spec.ForProvider.Config,
 	}
-	return managed.ExternalUpdate{}, e.client.UpdateAuthorizationPolicy(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, cr.ObjectMeta.GetAnnotations()["crossplane.io/external-name"], policy)
+	return managed.ExternalUpdate{}, e.client.UpdateAuthorizationPolicy(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, cr.GetAnnotations()["crossplane.io/external-name"], policy)
 }
 
 func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
@@ -138,7 +138,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotAuthorizationPolicy)
 	}
-	if err := e.client.DeleteAuthorizationPolicy(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, cr.ObjectMeta.GetAnnotations()["crossplane.io/external-name"]); err != nil {
+	if err := e.client.DeleteAuthorizationPolicy(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, cr.GetAnnotations()["crossplane.io/external-name"]); err != nil {
 		return managed.ExternalDelete{}, err
 	}
 	cr.Status.SetConditions(xpv1.Deleting())

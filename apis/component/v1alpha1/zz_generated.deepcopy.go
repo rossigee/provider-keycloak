@@ -49,14 +49,18 @@ func (in *Component) DeepCopyInto(out *Component) {
 }
 
 func (in *Component) DeepCopy() *Component {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(Component)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *Component) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }
 
@@ -74,13 +78,17 @@ func (in *ComponentList) DeepCopyInto(out *ComponentList) {
 }
 
 func (in *ComponentList) DeepCopy() *ComponentList {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(ComponentList)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *ComponentList) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }

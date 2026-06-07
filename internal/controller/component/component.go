@@ -170,8 +170,8 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func getComponentID(cr *compv1alpha1.Component) string {
-	if cr.ObjectMeta.Annotations != nil {
-		if id, ok := cr.ObjectMeta.Annotations["keycloak.crossplane.io/component-id"]; ok {
+	if cr.Annotations != nil {
+		if id, ok := cr.Annotations["keycloak.crossplane.io/component-id"]; ok {
 			return id
 		}
 	}
@@ -179,8 +179,8 @@ func getComponentID(cr *compv1alpha1.Component) string {
 }
 
 func setComponentID(cr *compv1alpha1.Component, id string) {
-	if cr.ObjectMeta.Annotations == nil {
-		cr.ObjectMeta.Annotations = make(map[string]string)
+	if cr.Annotations == nil {
+		cr.Annotations = make(map[string]string)
 	}
-	cr.ObjectMeta.Annotations["keycloak.crossplane.io/component-id"] = id
+	cr.Annotations["keycloak.crossplane.io/component-id"] = id
 }

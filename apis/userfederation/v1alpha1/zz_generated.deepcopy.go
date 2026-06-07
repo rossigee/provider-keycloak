@@ -47,14 +47,18 @@ func (in *UserFederationProvider) DeepCopyInto(out *UserFederationProvider) {
 }
 
 func (in *UserFederationProvider) DeepCopy() *UserFederationProvider {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(UserFederationProvider)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *UserFederationProvider) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }
 
@@ -72,13 +76,17 @@ func (in *UserFederationProviderList) DeepCopyInto(out *UserFederationProviderLi
 }
 
 func (in *UserFederationProviderList) DeepCopy() *UserFederationProviderList {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(UserFederationProviderList)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *UserFederationProviderList) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }

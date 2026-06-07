@@ -19,14 +19,14 @@ import (
 )
 
 const (
-	errNotAuthzResource        = "managed resource is not an AuthzResource"
-	errGetProviderConfig       = "cannot get ProviderConfig"
-	errGetAuthzResource        = "cannot get Keycloak authz resource"
-	errCreateAuthzResource     = "cannot create Keycloak authz resource"
-	errUpdateAuthzResource     = "cannot update Keycloak authz resource"
-	errDeleteAuthzResource     = "cannot delete Keycloak authz resource"
-	errProviderNotReady        = "provider is not ready"
-	errClientNotFound          = "client not found"
+	errNotAuthzResource    = "managed resource is not an AuthzResource"
+	errGetProviderConfig   = "cannot get ProviderConfig"
+	errGetAuthzResource    = "cannot get Keycloak authz resource"
+	errCreateAuthzResource = "cannot create Keycloak authz resource"
+	errUpdateAuthzResource = "cannot update Keycloak authz resource"
+	errDeleteAuthzResource = "cannot delete Keycloak authz resource"
+	errProviderNotReady    = "provider is not ready"
+	errClientNotFound      = "client not found"
 )
 
 const controllerName = "authzresources.authz.keycloak.crossplane.io"

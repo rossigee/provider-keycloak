@@ -40,14 +40,18 @@ func (in *ClientScopeMapping) DeepCopyInto(out *ClientScopeMapping) {
 }
 
 func (in *ClientScopeMapping) DeepCopy() *ClientScopeMapping {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(ClientScopeMapping)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *ClientScopeMapping) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }
 
@@ -65,13 +69,17 @@ func (in *ClientScopeMappingList) DeepCopyInto(out *ClientScopeMappingList) {
 }
 
 func (in *ClientScopeMappingList) DeepCopy() *ClientScopeMappingList {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(ClientScopeMappingList)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *ClientScopeMappingList) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }

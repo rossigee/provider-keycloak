@@ -18,11 +18,11 @@ import (
 )
 
 const (
-	errNotRealmImport          = "managed resource is not a RealmImport"
-	errGetProviderConfig       = "cannot get ProviderConfig"
-	errImportRealm             = "cannot import realm"
-	errProviderNotReady        = "provider is not ready"
-	errRealmAlreadyExists      = "realm already exists"
+	errNotRealmImport     = "managed resource is not a RealmImport"
+	errGetProviderConfig  = "cannot get ProviderConfig"
+	errImportRealm        = "cannot import realm"
+	errProviderNotReady   = "provider is not ready"
+	errRealmAlreadyExists = "realm already exists"
 )
 
 const controllerName = "realmimports.realmimpexp.keycloak.crossplane.io"

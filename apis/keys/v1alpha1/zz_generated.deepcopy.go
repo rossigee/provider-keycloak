@@ -35,14 +35,18 @@ func (in *RealmKeys) DeepCopyInto(out *RealmKeys) {
 }
 
 func (in *RealmKeys) DeepCopy() *RealmKeys {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(RealmKeys)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *RealmKeys) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }
 
@@ -60,13 +64,17 @@ func (in *RealmKeysList) DeepCopyInto(out *RealmKeysList) {
 }
 
 func (in *RealmKeysList) DeepCopy() *RealmKeysList {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(RealmKeysList)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *RealmKeysList) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }

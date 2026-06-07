@@ -155,8 +155,8 @@ func getAccessID(cr *ciav1alpha1.ClientInitialAccess) string {
 }
 
 func setAccessID(cr *ciav1alpha1.ClientInitialAccess, id string) {
-	if cr.ObjectMeta.Annotations == nil {
-		cr.ObjectMeta.Annotations = make(map[string]string)
+	if cr.Annotations == nil {
+		cr.Annotations = make(map[string]string)
 	}
-	cr.ObjectMeta.Annotations["keycloak.crossplane.io/access-id"] = id
+	cr.Annotations["keycloak.crossplane.io/access-id"] = id
 }

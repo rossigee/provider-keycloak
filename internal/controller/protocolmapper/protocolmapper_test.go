@@ -17,10 +17,11 @@ limitations under the License.
 package protocolmapper
 
 import (
-	"github.com/rossigee/provider-keycloak/internal/controller/testhelpers"
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/rossigee/provider-keycloak/internal/controller/testhelpers"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -134,22 +135,50 @@ func (m *mockMapperClient) DeleteRealmRole(ctx context.Context, realm, roleName 
 func (m *mockMapperClient) GetClientProtocolMapper(ctx context.Context, realm, clientID, mapperID string) (*clients.ProtocolMapperRepresentation, error) {
 	return nil, nil
 }
-func (m *mockMapperClient) GetUserFederationProvider(_ context.Context, _, _ string) (*clients.UserFederationProviderRepresentation, error) { return nil, nil }
-func (m *mockMapperClient) CreateUserFederationProvider(_ context.Context, _ string, _ *clients.UserFederationProviderRepresentation) (string, error) { return "", nil }
-func (m *mockMapperClient) UpdateUserFederationProvider(_ context.Context, _, _ string, _ *clients.UserFederationProviderRepresentation) error { return nil }
-func (m *mockMapperClient) DeleteUserFederationProvider(_ context.Context, _, _ string) error { return nil }
-func (m *mockMapperClient) ListUserFederationProviders(_ context.Context, _ string) ([]clients.UserFederationProviderRepresentation, error) { return nil, nil }
-func (m *mockMapperClient) GetRealmEventsConfig(_ context.Context, _ string) (*clients.RealmEventsConfigRepresentation, error) { return nil, nil }
-func (m *mockMapperClient) UpdateRealmEventsConfig(_ context.Context, _ string, _ *clients.RealmEventsConfigRepresentation) error { return nil }
+func (m *mockMapperClient) GetUserFederationProvider(_ context.Context, _, _ string) (*clients.UserFederationProviderRepresentation, error) {
+	return nil, nil
+}
+func (m *mockMapperClient) CreateUserFederationProvider(_ context.Context, _ string, _ *clients.UserFederationProviderRepresentation) (string, error) {
+	return "", nil
+}
+func (m *mockMapperClient) UpdateUserFederationProvider(_ context.Context, _, _ string, _ *clients.UserFederationProviderRepresentation) error {
+	return nil
+}
+func (m *mockMapperClient) DeleteUserFederationProvider(_ context.Context, _, _ string) error {
+	return nil
+}
+func (m *mockMapperClient) ListUserFederationProviders(_ context.Context, _ string) ([]clients.UserFederationProviderRepresentation, error) {
+	return nil, nil
+}
+func (m *mockMapperClient) GetRealmEventsConfig(_ context.Context, _ string) (*clients.RealmEventsConfigRepresentation, error) {
+	return nil, nil
+}
+func (m *mockMapperClient) UpdateRealmEventsConfig(_ context.Context, _ string, _ *clients.RealmEventsConfigRepresentation) error {
+	return nil
+}
 func (m *mockMapperClient) ImportRealm(_ context.Context, _ string, _ bool) error { return nil }
-func (m *mockMapperClient) GetAuthzResource(_ context.Context, _, _, _ string) (*clients.AuthzResourceRepresentation, error) { return nil, nil }
-func (m *mockMapperClient) CreateAuthzResource(_ context.Context, _, _ string, _ *clients.AuthzResourceRepresentation) (string, error) { return "", nil }
-func (m *mockMapperClient) UpdateAuthzResource(_ context.Context, _, _, _ string, _ *clients.AuthzResourceRepresentation) error { return nil }
+func (m *mockMapperClient) GetAuthzResource(_ context.Context, _, _, _ string) (*clients.AuthzResourceRepresentation, error) {
+	return nil, nil
+}
+func (m *mockMapperClient) CreateAuthzResource(_ context.Context, _, _ string, _ *clients.AuthzResourceRepresentation) (string, error) {
+	return "", nil
+}
+func (m *mockMapperClient) UpdateAuthzResource(_ context.Context, _, _, _ string, _ *clients.AuthzResourceRepresentation) error {
+	return nil
+}
 func (m *mockMapperClient) DeleteAuthzResource(_ context.Context, _, _, _ string) error { return nil }
-func (m *mockMapperClient) ListAuthzResources(_ context.Context, _, _ string) ([]clients.AuthzResourceRepresentation, error) { return nil, nil }
-func (m *mockMapperClient) GetClientCertificate(_ context.Context, _, _, _ string) (*clients.ClientCertificateRepresentation, error) { return nil, nil }
-func (m *mockMapperClient) GenerateClientCertificate(_ context.Context, _, _ string, _ string) (*clients.ClientCertificateRepresentation, error) { return nil, nil }
-func (m *mockMapperClient) ListClientCertificates(_ context.Context, _, _ string) ([]clients.ClientCertificateRepresentation, error) { return nil, nil }
+func (m *mockMapperClient) ListAuthzResources(_ context.Context, _, _ string) ([]clients.AuthzResourceRepresentation, error) {
+	return nil, nil
+}
+func (m *mockMapperClient) GetClientCertificate(_ context.Context, _, _, _ string) (*clients.ClientCertificateRepresentation, error) {
+	return nil, nil
+}
+func (m *mockMapperClient) GenerateClientCertificate(_ context.Context, _, _ string, _ string) (*clients.ClientCertificateRepresentation, error) {
+	return nil, nil
+}
+func (m *mockMapperClient) ListClientCertificates(_ context.Context, _, _ string) ([]clients.ClientCertificateRepresentation, error) {
+	return nil, nil
+}
 
 func newMapperCR(realmId, clientId, name string) *clientv1alpha1.ProtocolMapper {
 	cr := &clientv1alpha1.ProtocolMapper{

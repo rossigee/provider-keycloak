@@ -45,11 +45,11 @@ type ProviderCredentials struct {
 
 // Config contains the resolved connection details for the Keycloak API.
 type Config struct {
-	BaseURL                string
-	Realm                  string
-	ClientID               string
-	ClientSecret           string
-	RootCACertificate      string
+	BaseURL               string
+	Realm                 string
+	ClientID              string
+	ClientSecret          string
+	RootCACertificate     string
 	TLSInsecureSkipVerify bool
 	Username              string
 	Password              string
@@ -93,37 +93,48 @@ func parseCredentials(raw []byte) (*Config, error) {
 	if err := json.Unmarshal(raw, &creds); err != nil {
 		return nil, errors.Wrap(err, "cannot parse credentials JSON")
 	}
+	if err := validateCredentials(&creds); err != nil {
+		return nil, err
+	}
+	applyDefaults(&creds)
+	return &Config{
+		BaseURL:               creds.URL + creds.BasePath,
+		Realm:                 creds.Realm,
+		ClientID:              creds.ClientID,
+		ClientSecret:          creds.ClientSecret,
+		RootCACertificate:     creds.RootCACertificate,
+		TLSInsecureSkipVerify: creds.TLSInsecureSkipVerify,
+		Username:              creds.Username,
+		Password:              creds.Password,
+	}, nil
+}
+
+func validateCredentials(creds *ProviderCredentials) error {
 	if creds.URL == "" {
-		return nil, errors.New("credentials JSON missing required field: url")
+		return errors.New("credentials JSON missing required field: url")
 	}
 	parsed, err := url.Parse(creds.URL)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return nil, errors.New("credentials: url must be a valid http or https URL")
+		return errors.New("credentials: url must be a valid http or https URL")
 	}
 	if creds.ClientID == "" {
-		return nil, errors.New("credentials JSON missing required field: client_id")
+		return errors.New("credentials JSON missing required field: client_id")
 	}
 	hasClientSecret := creds.ClientSecret != ""
 	hasUserPass := creds.Username != "" && creds.Password != ""
 	if !hasClientSecret && !hasUserPass {
-		return nil, errors.New("credentials must include either client_secret or both username and password")
+		return errors.New("credentials must include either client_secret or both username and password")
 	}
+	return nil
+}
+
+func applyDefaults(creds *ProviderCredentials) {
 	if creds.Realm == "" {
 		creds.Realm = defaultRealm
 	}
 	if creds.BasePath == "" {
 		creds.BasePath = "/auth"
 	}
-	return &Config{
-		BaseURL:                creds.URL + creds.BasePath,
-		Realm:                  creds.Realm,
-		ClientID:               creds.ClientID,
-		ClientSecret:           creds.ClientSecret,
-		RootCACertificate:      creds.RootCACertificate,
-		TLSInsecureSkipVerify:  creds.TLSInsecureSkipVerify,
-		Username:              creds.Username,
-		Password:              creds.Password,
-	}, nil
 }
 
 const defaultRealm = "master"

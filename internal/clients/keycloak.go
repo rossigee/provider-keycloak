@@ -211,10 +211,10 @@ func NewClient(ctx context.Context, pc *v1beta1.ProviderConfig, kube client.Clie
 
 // NewClientFromConfig creates a new Keycloak API client from a resolved Config.
 func NewClientFromConfig(ctx context.Context, cfg *Config) (*keycloakClient, error) {
-	var transport http.RoundTripper = http.DefaultTransport
+	transport := http.DefaultTransport
 	if cfg.RootCACertificate != "" || cfg.TLSInsecureSkipVerify {
 		tlsConfig := &tls.Config{
-			InsecureSkipVerify: cfg.TLSInsecureSkipVerify,
+			InsecureSkipVerify: cfg.TLSInsecureSkipVerify, // nolint:gosec // configured via explicit provider credential
 		}
 		if cfg.RootCACertificate != "" {
 			pool := x509.NewCertPool()
@@ -266,10 +266,10 @@ func fetchOAuth2Token(ctx context.Context, hc *http.Client, baseURL string, cfg 
 	// Use password grant if username/password are provided, otherwise use client_credentials
 	if cfg.Username != "" && cfg.Password != "" {
 		form = url.Values{
-			"grant_type": {"password"},
-			"username":   {cfg.Username},
-			"password":   {cfg.Password},
-			"client_id":  {cfg.ClientID},
+			"grant_type":     {"password"},
+			"username":       {cfg.Username},
+			"password":       {cfg.Password},
+			oauthKeyClientID: {cfg.ClientID},
 		}
 	} else {
 		form = url.Values{
@@ -1023,7 +1023,7 @@ func (c *keycloakClient) DeleteUserFederationProvider(ctx context.Context, realm
 type RealmEventsConfigRepresentation struct {
 	EventsEnabled             *bool    `json:"eventsEnabled,omitempty"`
 	EventsExpiration          *int64   `json:"eventsExpiration,omitempty"`
-	EventsListeners          []string `json:"eventsListeners,omitempty"`
+	EventsListeners           []string `json:"eventsListeners,omitempty"`
 	EnabledEvents             []string `json:"enabledEvents,omitempty"`
 	AdminEventsEnabled        *bool    `json:"adminEventsEnabled,omitempty"`
 	AdminEventsDetailsEnabled *bool    `json:"adminEventsDetailsEnabled,omitempty"`
@@ -1448,15 +1448,15 @@ func (c *keycloakClient) RemoveClientOptionalScopes(ctx context.Context, realm, 
 // =============================================================================
 
 type IdentityProviderRepresentation struct {
-	InternalID              string            `json:"internalId,omitempty"`
-	Alias                   string            `json:"alias"`
-	DisplayName             string            `json:"displayName,omitempty"`
-	ProviderId              string            `json:"providerId"`
-	Enabled                 bool              `json:"enabled"`
-	TrustEmail              bool              `json:"trustEmail,omitempty"`
+	InternalID                string            `json:"internalId,omitempty"`
+	Alias                     string            `json:"alias"`
+	DisplayName               string            `json:"displayName,omitempty"`
+	ProviderId                string            `json:"providerId"`
+	Enabled                   bool              `json:"enabled"`
+	TrustEmail                bool              `json:"trustEmail,omitempty"`
 	FirstBrokerLoginFlowAlias string            `json:"firstBrokerLoginFlowAlias,omitempty"`
 	PostBrokerLoginFlowAlias  string            `json:"postBrokerLoginFlowAlias,omitempty"`
-	Config                  map[string]string `json:"config,omitempty"`
+	Config                    map[string]string `json:"config,omitempty"`
 }
 
 func (c *keycloakClient) GetIdentityProvider(ctx context.Context, realm, alias string) (*IdentityProviderRepresentation, error) {

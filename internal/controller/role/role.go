@@ -99,34 +99,47 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	if err != nil {
 		return managed.ExternalObservation{}, err
 	}
-	var r *clients.RoleRepresentation
-	if cr.Spec.ForProvider.ClientId != nil {
-		clientId, err := clientID(cr)
-		if err != nil {
-			return managed.ExternalObservation{}, err
-		}
-		r, err = e.client.GetClientRole(ctx, realmId, clientId, cr.Spec.ForProvider.Name)
-		if err != nil {
-			if strings.Contains(err.Error(), "404") {
-				return managed.ExternalObservation{ResourceExists: false}, nil
-			}
-			return managed.ExternalObservation{}, errors.Wrap(err, errGetRole)
-		}
-	} else {
-		r, err = e.client.GetRealmRole(ctx, realmId, cr.Spec.ForProvider.Name)
-		if err != nil {
-			if strings.Contains(err.Error(), "404") {
-				return managed.ExternalObservation{ResourceExists: false}, nil
-			}
-			return managed.ExternalObservation{}, errors.Wrap(err, errGetRole)
-		}
+	r, found, err := e.getRole(ctx, realmId, cr)
+	if err != nil {
+		return managed.ExternalObservation{}, err
 	}
-	if r == nil {
+	if !found {
 		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
 	cr.Status.SetConditions(xpv1.Available())
 	upToDate := cr.Spec.ForProvider.Description == nil || *cr.Spec.ForProvider.Description == r.Description
 	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
+}
+
+func (e *external) getRole(ctx context.Context, realmId string, cr *rolev1alpha1.Role) (*clients.RoleRepresentation, bool, error) {
+	if cr.Spec.ForProvider.ClientId != nil {
+		clientId, err := clientID(cr)
+		if err != nil {
+			return nil, false, err
+		}
+		r, err := e.client.GetClientRole(ctx, realmId, clientId, cr.Spec.ForProvider.Name)
+		if err != nil {
+			if strings.Contains(err.Error(), "404") {
+				return nil, false, nil
+			}
+			return nil, false, errors.Wrap(err, errGetRole)
+		}
+		if r == nil {
+			return nil, false, nil
+		}
+		return r, true, nil
+	}
+	r, err := e.client.GetRealmRole(ctx, realmId, cr.Spec.ForProvider.Name)
+	if err != nil {
+		if strings.Contains(err.Error(), "404") {
+			return nil, false, nil
+		}
+		return nil, false, errors.Wrap(err, errGetRole)
+	}
+	if r == nil {
+		return nil, false, nil
+	}
+	return r, true, nil
 }
 
 func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {

@@ -19,12 +19,12 @@ import (
 )
 
 const (
-	errNotClientCertificate   = "managed resource is not a ClientCertificate"
-	errGetProviderConfig      = "cannot get ProviderConfig"
-	errGetClient              = "cannot get Keycloak client"
-	errGenerateCertificate    = "cannot generate client certificate"
-	errListCertificates       = "cannot list client certificates"
-	errProviderNotReady       = "provider is not ready"
+	errNotClientCertificate = "managed resource is not a ClientCertificate"
+	errGetProviderConfig    = "cannot get ProviderConfig"
+	errGetClient            = "cannot get Keycloak client"
+	errGenerateCertificate  = "cannot generate client certificate"
+	errListCertificates     = "cannot list client certificates"
+	errProviderNotReady     = "provider is not ready"
 )
 
 const controllerName = "clientcertificates.clientcertificates.keycloak.crossplane.io"

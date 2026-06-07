@@ -62,7 +62,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// Get the latest version before updating to avoid conflicts
 	latest := &v1beta1.ProviderConfig{}
 	if err := r.kube.Get(ctx, req.NamespacedName, latest); err != nil {
-		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
+		return reconcile.Result{RequeueAfter: 30 * time.Second}, client.IgnoreNotFound(err)
 	}
 	latest.Status = pc.Status
 	if err := r.kube.Status().Update(ctx, latest); err != nil {

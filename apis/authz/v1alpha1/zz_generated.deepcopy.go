@@ -55,14 +55,18 @@ func (in *AuthzResource) DeepCopyInto(out *AuthzResource) {
 }
 
 func (in *AuthzResource) DeepCopy() *AuthzResource {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(AuthzResource)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *AuthzResource) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }
 
@@ -80,13 +84,17 @@ func (in *AuthzResourceList) DeepCopyInto(out *AuthzResourceList) {
 }
 
 func (in *AuthzResourceList) DeepCopy() *AuthzResourceList {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(AuthzResourceList)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *AuthzResourceList) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }

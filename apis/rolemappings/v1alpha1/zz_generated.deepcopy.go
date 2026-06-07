@@ -40,14 +40,18 @@ func (in *ClientRoleMapping) DeepCopyInto(out *ClientRoleMapping) {
 }
 
 func (in *ClientRoleMapping) DeepCopy() *ClientRoleMapping {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(ClientRoleMapping)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *ClientRoleMapping) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }
 
@@ -65,13 +69,17 @@ func (in *ClientRoleMappingList) DeepCopyInto(out *ClientRoleMappingList) {
 }
 
 func (in *ClientRoleMappingList) DeepCopy() *ClientRoleMappingList {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(ClientRoleMappingList)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *ClientRoleMappingList) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }

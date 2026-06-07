@@ -30,14 +30,18 @@ func (in *ClientInitialAccess) DeepCopyInto(out *ClientInitialAccess) {
 }
 
 func (in *ClientInitialAccess) DeepCopy() *ClientInitialAccess {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(ClientInitialAccess)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *ClientInitialAccess) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }
 
@@ -55,13 +59,17 @@ func (in *ClientInitialAccessList) DeepCopyInto(out *ClientInitialAccessList) {
 }
 
 func (in *ClientInitialAccessList) DeepCopy() *ClientInitialAccessList {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(ClientInitialAccessList)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *ClientInitialAccessList) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }

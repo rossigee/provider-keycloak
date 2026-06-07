@@ -35,14 +35,18 @@ func (in *ClientCertificate) DeepCopyInto(out *ClientCertificate) {
 }
 
 func (in *ClientCertificate) DeepCopy() *ClientCertificate {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(ClientCertificate)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *ClientCertificate) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }
 
@@ -60,13 +64,17 @@ func (in *ClientCertificateList) DeepCopyInto(out *ClientCertificateList) {
 }
 
 func (in *ClientCertificateList) DeepCopy() *ClientCertificateList {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(ClientCertificateList)
 	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *ClientCertificateList) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil { return c }
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
 	return nil
 }
