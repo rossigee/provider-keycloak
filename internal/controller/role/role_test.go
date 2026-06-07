@@ -17,6 +17,7 @@ limitations under the License.
 package role
 
 import (
+	"github.com/rossigee/provider-keycloak/internal/controller/testhelpers"
 	"context"
 	"errors"
 	"testing"
@@ -30,6 +31,7 @@ import (
 )
 
 type mockRoleClient struct {
+	*testhelpers.BaseMockClient
 	getRealmRoleFn    func(ctx context.Context, realm, name string) (*clients.RoleRepresentation, error)
 	createRealmRoleFn func(ctx context.Context, realm string, r *clients.RoleRepresentation) error
 	updateRealmRoleFn func(ctx context.Context, realm, name string, r *clients.RoleRepresentation) error

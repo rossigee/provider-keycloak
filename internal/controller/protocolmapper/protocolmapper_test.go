@@ -17,6 +17,7 @@ limitations under the License.
 package protocolmapper
 
 import (
+	"github.com/rossigee/provider-keycloak/internal/controller/testhelpers"
 	"context"
 	"errors"
 	"testing"
@@ -30,6 +31,7 @@ import (
 )
 
 type mockMapperClient struct {
+	*testhelpers.BaseMockClient
 	getClientFn    func(ctx context.Context, realm, clientID string) (*clients.ClientRepresentation, error)
 	listMappersFn  func(ctx context.Context, realm, clientUUID string) ([]clients.ProtocolMapperRepresentation, error)
 	createMapperFn func(ctx context.Context, realm, clientUUID string, p *clients.ProtocolMapperRepresentation) (string, error)

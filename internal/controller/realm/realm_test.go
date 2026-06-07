@@ -17,6 +17,7 @@ limitations under the License.
 package realm
 
 import (
+	"github.com/rossigee/provider-keycloak/internal/controller/testhelpers"
 	"context"
 	"errors"
 	"testing"
@@ -30,6 +31,7 @@ import (
 )
 
 type mockRealmClient struct {
+	*testhelpers.BaseMockClient
 	getRealmFn    func(ctx context.Context, realm string) (*clients.Realm, error)
 	createRealmFn func(ctx context.Context, r *clients.Realm) (*clients.Realm, error)
 	updateRealmFn func(ctx context.Context, r *clients.Realm) error

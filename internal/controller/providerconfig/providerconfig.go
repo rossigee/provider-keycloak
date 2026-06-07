@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -59,6 +59,18 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		pc.Status.SetConditions(xpv1.Available())
 	}
 
-	return reconcile.Result{RequeueAfter: 5 * time.Minute},
-		errors.Wrap(r.kube.Status().Update(ctx, pc), "cannot update ProviderConfig status")
+	// Get the latest version before updating to avoid conflicts
+	latest := &v1beta1.ProviderConfig{}
+	if err := r.kube.Get(ctx, req.NamespacedName, latest); err != nil {
+		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+	latest.Status = pc.Status
+	if err := r.kube.Status().Update(ctx, latest); err != nil {
+		if errors.IsConflict(err) {
+			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
+		}
+		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
+	return reconcile.Result{RequeueAfter: 5 * time.Minute}, nil
 }

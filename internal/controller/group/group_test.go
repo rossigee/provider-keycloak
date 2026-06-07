@@ -17,6 +17,7 @@ limitations under the License.
 package group
 
 import (
+	"github.com/rossigee/provider-keycloak/internal/controller/testhelpers"
 	"context"
 	"errors"
 	"testing"
@@ -30,6 +31,7 @@ import (
 )
 
 type mockGroupClient struct {
+	*testhelpers.BaseMockClient
 	searchGroupsFn func(ctx context.Context, realm, name string) ([]clients.GroupRepresentation, error)
 	createGroupFn  func(ctx context.Context, realm string, g *clients.GroupRepresentation) (*clients.GroupRepresentation, error)
 	updateGroupFn  func(ctx context.Context, realm string, g *clients.GroupRepresentation) error

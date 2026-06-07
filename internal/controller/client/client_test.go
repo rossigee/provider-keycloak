@@ -28,6 +28,7 @@ import (
 
 	openidclientv1alpha1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1alpha1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
+	"github.com/rossigee/provider-keycloak/internal/controller/testhelpers"
 )
 
 const (
@@ -38,6 +39,7 @@ const (
 
 // mockClient is a test double for clients.Client.
 type mockClient struct {
+	*testhelpers.BaseMockClient
 	getClientFn    func(ctx context.Context, realm, clientID string) (*clients.ClientRepresentation, error)
 	createClientFn func(ctx context.Context, realm string, c *clients.ClientRepresentation) (*clients.ClientRepresentation, error)
 	updateClientFn func(ctx context.Context, realm string, c *clients.ClientRepresentation) error

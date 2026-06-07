@@ -17,6 +17,7 @@ limitations under the License.
 package user
 
 import (
+	"github.com/rossigee/provider-keycloak/internal/controller/testhelpers"
 	"context"
 	"errors"
 	"testing"
@@ -30,6 +31,7 @@ import (
 )
 
 type mockUserClient struct {
+	*testhelpers.BaseMockClient
 	getUserFn    func(ctx context.Context, realm, username string) (*clients.UserRepresentation, error)
 	createUserFn func(ctx context.Context, realm string, u *clients.UserRepresentation) (*clients.UserRepresentation, error)
 	updateUserFn func(ctx context.Context, realm string, u *clients.UserRepresentation) error
