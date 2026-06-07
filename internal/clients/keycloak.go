@@ -99,6 +99,32 @@ type Client interface {
 	UpdateClientProtocolMapper(ctx context.Context, realm, clientUUID string, mapper *ProtocolMapperRepresentation) error
 	DeleteClientProtocolMapper(ctx context.Context, realm, clientUUID, mapperID string) error
 	ListClientProtocolMappers(ctx context.Context, realm, clientUUID string) ([]ProtocolMapperRepresentation, error)
+
+	// User Federation operations
+	GetUserFederationProvider(ctx context.Context, realm, providerID string) (*UserFederationProviderRepresentation, error)
+	CreateUserFederationProvider(ctx context.Context, realm string, provider *UserFederationProviderRepresentation) (string, error)
+	UpdateUserFederationProvider(ctx context.Context, realm, providerID string, provider *UserFederationProviderRepresentation) error
+	DeleteUserFederationProvider(ctx context.Context, realm, providerID string) error
+	ListUserFederationProviders(ctx context.Context, realm string) ([]UserFederationProviderRepresentation, error)
+
+	// Events configuration operations
+	GetRealmEventsConfig(ctx context.Context, realm string) (*RealmEventsConfigRepresentation, error)
+	UpdateRealmEventsConfig(ctx context.Context, realm string, config *RealmEventsConfigRepresentation) error
+
+	// Realm Import operations
+	ImportRealm(ctx context.Context, realmJSON string, ifNotExists bool) error
+
+	// Authorization (UMA) operations
+	GetAuthzResource(ctx context.Context, realm, clientID, resourceID string) (*AuthzResourceRepresentation, error)
+	CreateAuthzResource(ctx context.Context, realm, clientID string, resource *AuthzResourceRepresentation) (string, error)
+	UpdateAuthzResource(ctx context.Context, realm, clientID, resourceID string, resource *AuthzResourceRepresentation) error
+	DeleteAuthzResource(ctx context.Context, realm, clientID, resourceID string) error
+	ListAuthzResources(ctx context.Context, realm, clientID string) ([]AuthzResourceRepresentation, error)
+
+	// Client Certificate operations
+	GetClientCertificate(ctx context.Context, realm, clientID, certID string) (*ClientCertificateRepresentation, error)
+	GenerateClientCertificate(ctx context.Context, realm, clientID string, format string) (*ClientCertificateRepresentation, error)
+	ListClientCertificates(ctx context.Context, realm, clientID string) ([]ClientCertificateRepresentation, error)
 }
 
 // keycloakClient implements Client
@@ -806,4 +832,215 @@ func (c *keycloakClient) DeleteClientProtocolMapper(ctx context.Context, realm, 
 	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/protocol-mappers/models/" + url.PathEscape(mapperID)
 	_, err := c.doRequest(ctx, http.MethodDelete, path, nil)
 	return err
+}
+
+// =============================================================================
+// User Federation Operations
+// =============================================================================
+
+type UserFederationProviderRepresentation struct {
+	ID           string            `json:"id,omitempty"`
+	Name         string            `json:"name"`
+	ProviderName string            `json:"providerName"`
+	Priority     int32             `json:"priority,omitempty"`
+	Config       map[string]string `json:"config,omitempty"`
+	Enabled      *bool             `json:"enabled,omitempty"`
+}
+
+func (c *keycloakClient) ListUserFederationProviders(ctx context.Context, realm string) ([]UserFederationProviderRepresentation, error) {
+	path := realmPath(realm) + "/user-federation/instances"
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var providers []UserFederationProviderRepresentation
+	if err := json.Unmarshal(respBody, &providers); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal user federation providers")
+	}
+	return providers, nil
+}
+
+func (c *keycloakClient) GetUserFederationProvider(ctx context.Context, realm, providerID string) (*UserFederationProviderRepresentation, error) {
+	path := realmPath(realm) + "/user-federation/instances/" + url.PathEscape(providerID)
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var p UserFederationProviderRepresentation
+	if err := json.Unmarshal(respBody, &p); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal user federation provider")
+	}
+	return &p, nil
+}
+
+func (c *keycloakClient) CreateUserFederationProvider(ctx context.Context, realm string, provider *UserFederationProviderRepresentation) (string, error) {
+	path := realmPath(realm) + "/user-federation/instances"
+	return c.doCreate(ctx, path, provider)
+}
+
+func (c *keycloakClient) UpdateUserFederationProvider(ctx context.Context, realm, providerID string, provider *UserFederationProviderRepresentation) error {
+	path := realmPath(realm) + "/user-federation/instances/" + url.PathEscape(providerID)
+	_, err := c.doRequest(ctx, http.MethodPut, path, provider)
+	return err
+}
+
+func (c *keycloakClient) DeleteUserFederationProvider(ctx context.Context, realm, providerID string) error {
+	path := realmPath(realm) + "/user-federation/instances/" + url.PathEscape(providerID)
+	_, err := c.doRequest(ctx, http.MethodDelete, path, nil)
+	return err
+}
+
+// =============================================================================
+// Events Configuration Operations
+// =============================================================================
+
+type RealmEventsConfigRepresentation struct {
+	EventsEnabled             *bool    `json:"eventsEnabled,omitempty"`
+	EventsExpiration          *int64   `json:"eventsExpiration,omitempty"`
+	EventsListeners          []string `json:"eventsListeners,omitempty"`
+	EnabledEvents             []string `json:"enabledEvents,omitempty"`
+	AdminEventsEnabled        *bool    `json:"adminEventsEnabled,omitempty"`
+	AdminEventsDetailsEnabled *bool    `json:"adminEventsDetailsEnabled,omitempty"`
+}
+
+func (c *keycloakClient) GetRealmEventsConfig(ctx context.Context, realm string) (*RealmEventsConfigRepresentation, error) {
+	path := realmPath(realm) + "/events/config"
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var config RealmEventsConfigRepresentation
+	if err := json.Unmarshal(respBody, &config); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal events config")
+	}
+	return &config, nil
+}
+
+func (c *keycloakClient) UpdateRealmEventsConfig(ctx context.Context, realm string, config *RealmEventsConfigRepresentation) error {
+	path := realmPath(realm) + "/events/config"
+	_, err := c.doRequest(ctx, http.MethodPut, path, config)
+	return err
+}
+
+// =============================================================================
+// Realm Import Operations
+// =============================================================================
+
+func (c *keycloakClient) ImportRealm(ctx context.Context, realmJSON string, ifNotExists bool) error {
+	path := adminPath + "/import"
+	if ifNotExists {
+		path += "?ifNotExists=true"
+	}
+	_, err := c.doRequest(ctx, http.MethodPost, path, realmJSON)
+	return err
+}
+
+// =============================================================================
+// Authorization (UMA) Operations
+// =============================================================================
+
+type AuthzResourceRepresentation struct {
+	ID          string   `json:"id,omitempty"`
+	Name        string   `json:"name"`
+	URIs        []string `json:"uri,omitempty"`
+	Type        *string  `json:"type,omitempty"`
+	Scopes      []string `json:"scopes,omitempty"`
+	DisplayName *string  `json:"displayName,omitempty"`
+	IconURI     *string  `json:"iconUri,omitempty"`
+}
+
+func (c *keycloakClient) ListAuthzResources(ctx context.Context, realm, clientID string) ([]AuthzResourceRepresentation, error) {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientID) + "/authz/resource"
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resources []AuthzResourceRepresentation
+	if err := json.Unmarshal(respBody, &resources); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal authz resources")
+	}
+	return resources, nil
+}
+
+func (c *keycloakClient) GetAuthzResource(ctx context.Context, realm, clientID, resourceID string) (*AuthzResourceRepresentation, error) {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientID) + "/authz/resource/" + url.PathEscape(resourceID)
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var r AuthzResourceRepresentation
+	if err := json.Unmarshal(respBody, &r); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal authz resource")
+	}
+	return &r, nil
+}
+
+func (c *keycloakClient) CreateAuthzResource(ctx context.Context, realm, clientID string, resource *AuthzResourceRepresentation) (string, error) {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientID) + "/authz/resource"
+	return c.doCreate(ctx, path, resource)
+}
+
+func (c *keycloakClient) UpdateAuthzResource(ctx context.Context, realm, clientID, resourceID string, resource *AuthzResourceRepresentation) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientID) + "/authz/resource/" + url.PathEscape(resourceID)
+	_, err := c.doRequest(ctx, http.MethodPut, path, resource)
+	return err
+}
+
+func (c *keycloakClient) DeleteAuthzResource(ctx context.Context, realm, clientID, resourceID string) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientID) + "/authz/resource/" + url.PathEscape(resourceID)
+	_, err := c.doRequest(ctx, http.MethodDelete, path, nil)
+	return err
+}
+
+// =============================================================================
+// Client Certificate Operations
+// =============================================================================
+
+type ClientCertificateRepresentation struct {
+	ID          string `json:"id,omitempty"`
+	Certificate string `json:"certificate,omitempty"`
+	PrivateKey  string `json:"privateKey,omitempty"`
+	Format      string `json:"format,omitempty"`
+}
+
+func (c *keycloakClient) ListClientCertificates(ctx context.Context, realm, clientID string) ([]ClientCertificateRepresentation, error) {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientID) + "/certificates"
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var certs []ClientCertificateRepresentation
+	if err := json.Unmarshal(respBody, &certs); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal client certificates")
+	}
+	return certs, nil
+}
+
+func (c *keycloakClient) GetClientCertificate(ctx context.Context, realm, clientID, certID string) (*ClientCertificateRepresentation, error) {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientID) + "/certificates/" + url.PathEscape(certID)
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var cert ClientCertificateRepresentation
+	if err := json.Unmarshal(respBody, &cert); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal client certificate")
+	}
+	return &cert, nil
+}
+
+func (c *keycloakClient) GenerateClientCertificate(ctx context.Context, realm, clientID string, format string) (*ClientCertificateRepresentation, error) {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientID) + "/certificates/generate"
+	if format != "" {
+		path += "?format=" + url.QueryEscape(format)
+	}
+	respBody, err := c.doRequest(ctx, http.MethodPost, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var cert ClientCertificateRepresentation
+	if err := json.Unmarshal(respBody, &cert); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal generated client certificate")
+	}
+	return &cert, nil
 }

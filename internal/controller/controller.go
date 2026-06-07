@@ -21,12 +21,17 @@ import (
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
 
+	"github.com/rossigee/provider-keycloak/internal/controller/authz"
 	"github.com/rossigee/provider-keycloak/internal/controller/client"
+	"github.com/rossigee/provider-keycloak/internal/controller/clientcertificates"
+	"github.com/rossigee/provider-keycloak/internal/controller/events"
 	"github.com/rossigee/provider-keycloak/internal/controller/group"
 	"github.com/rossigee/provider-keycloak/internal/controller/protocolmapper"
 	"github.com/rossigee/provider-keycloak/internal/controller/realm"
+	"github.com/rossigee/provider-keycloak/internal/controller/realmimpexp"
 	"github.com/rossigee/provider-keycloak/internal/controller/role"
 	"github.com/rossigee/provider-keycloak/internal/controller/user"
+	"github.com/rossigee/provider-keycloak/internal/controller/userfederation"
 )
 
 // Setup sets up Keycloak provider controllers.
@@ -39,6 +44,11 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 		group.Setup,
 		role.Setup,
 		protocolmapper.Setup,
+		authz.Setup,
+		clientcertificates.Setup,
+		events.Setup,
+		realmimpexp.Setup,
+		userfederation.Setup,
 	} {
 		if err := setup(mgr, o); err != nil {
 			return err
