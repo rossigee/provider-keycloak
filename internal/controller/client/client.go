@@ -92,8 +92,7 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 		return nil, errors.Wrap(err, errGetProviderConfig)
 	}
 
-	ready := pc.Status.GetCondition(xpv1.TypeReady)
-	if ready.Status != corev1.ConditionTrue {
+	if pc.Status.GetCondition(xpv1.TypeReady).Status != "True" {
 		return nil, errors.New(errProviderNotReady)
 	}
 

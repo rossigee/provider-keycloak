@@ -27,6 +27,7 @@ import (
 	"github.com/rossigee/provider-keycloak/internal/controller/events"
 	"github.com/rossigee/provider-keycloak/internal/controller/group"
 	"github.com/rossigee/provider-keycloak/internal/controller/protocolmapper"
+	"github.com/rossigee/provider-keycloak/internal/controller/providerconfig"
 	"github.com/rossigee/provider-keycloak/internal/controller/realm"
 	"github.com/rossigee/provider-keycloak/internal/controller/realmimpexp"
 	"github.com/rossigee/provider-keycloak/internal/controller/role"
@@ -35,8 +36,10 @@ import (
 )
 
 // Setup sets up Keycloak provider controllers.
-// Note: ProviderConfig controller setup is handled by crossplane-runtime
 func Setup(mgr ctrl.Manager, o controller.Options) error {
+	if err := providerconfig.Setup(mgr); err != nil {
+		return err
+	}
 	for _, setup := range []func(ctrl.Manager, controller.Options) error{
 		client.Setup,
 		realm.Setup,

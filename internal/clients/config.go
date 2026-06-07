@@ -19,6 +19,7 @@ package clients
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -31,21 +32,27 @@ import (
 // ProviderCredentials holds the parsed connection details from the credentials secret.
 // The secret value must be a JSON object with these keys.
 type ProviderCredentials struct {
-	URL               string `json:"url"`
-	BasePath          string `json:"base_path"`
-	Realm             string `json:"realm"`
-	ClientID          string `json:"client_id"`
-	ClientSecret      string `json:"client_secret"`
-	RootCACertificate string `json:"root_ca_certificate"`
+	URL                   string `json:"url"`
+	BasePath              string `json:"base_path"`
+	Realm                 string `json:"realm"`
+	ClientID              string `json:"client_id"`
+	ClientSecret          string `json:"client_secret"`
+	RootCACertificate     string `json:"root_ca_certificate"`
+	TLSInsecureSkipVerify bool   `json:"tls_insecure_skip_verify"`
+	Username              string `json:"username"`
+	Password              string `json:"password"`
 }
 
 // Config contains the resolved connection details for the Keycloak API.
 type Config struct {
-	BaseURL           string
-	Realm             string
-	ClientID          string
-	ClientSecret      string
-	RootCACertificate string
+	BaseURL                string
+	Realm                  string
+	ClientID               string
+	ClientSecret           string
+	RootCACertificate      string
+	TLSInsecureSkipVerify bool
+	Username              string
+	Password              string
 }
 
 // GetConfig extracts the Keycloak connection config from a ProviderConfig.
@@ -89,11 +96,17 @@ func parseCredentials(raw []byte) (*Config, error) {
 	if creds.URL == "" {
 		return nil, errors.New("credentials JSON missing required field: url")
 	}
+	parsed, err := url.Parse(creds.URL)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return nil, errors.New("credentials: url must be a valid http or https URL")
+	}
 	if creds.ClientID == "" {
 		return nil, errors.New("credentials JSON missing required field: client_id")
 	}
-	if creds.ClientSecret == "" {
-		return nil, errors.New("credentials JSON missing required field: client_secret")
+	hasClientSecret := creds.ClientSecret != ""
+	hasUserPass := creds.Username != "" && creds.Password != ""
+	if !hasClientSecret && !hasUserPass {
+		return nil, errors.New("credentials must include either client_secret or both username and password")
 	}
 	if creds.Realm == "" {
 		creds.Realm = defaultRealm
@@ -102,11 +115,14 @@ func parseCredentials(raw []byte) (*Config, error) {
 		creds.BasePath = "/auth"
 	}
 	return &Config{
-		BaseURL:           creds.URL + creds.BasePath,
-		Realm:             creds.Realm,
-		ClientID:          creds.ClientID,
-		ClientSecret:      creds.ClientSecret,
-		RootCACertificate: creds.RootCACertificate,
+		BaseURL:                creds.URL + creds.BasePath,
+		Realm:                  creds.Realm,
+		ClientID:               creds.ClientID,
+		ClientSecret:           creds.ClientSecret,
+		RootCACertificate:      creds.RootCACertificate,
+		TLSInsecureSkipVerify:  creds.TLSInsecureSkipVerify,
+		Username:              creds.Username,
+		Password:              creds.Password,
 	}, nil
 }
 

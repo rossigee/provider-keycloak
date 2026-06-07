@@ -10,7 +10,6 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -73,8 +72,7 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 		return nil, errors.Wrap(err, errGetProviderConfig)
 	}
 
-	ready := pc.Status.GetCondition(xpv1.TypeReady)
-	if ready.Status != corev1.ConditionTrue {
+	if pc.Status.GetCondition(xpv1.TypeReady).Status != "True" {
 		return nil, errors.New(errProviderNotReady)
 	}
 

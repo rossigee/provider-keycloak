@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -129,6 +130,7 @@ type Client interface {
 
 // keycloakClient implements Client
 type keycloakClient struct {
+	mu         sync.Mutex
 	httpClient *http.Client
 	baseURL    string
 	token      string
@@ -147,12 +149,20 @@ func NewClient(ctx context.Context, pc *v1beta1.ProviderConfig, kube client.Clie
 
 // NewClientFromConfig creates a new Keycloak API client from a resolved Config.
 func NewClientFromConfig(ctx context.Context, cfg *Config) (*keycloakClient, error) {
-	transport := http.DefaultTransport
-	if cfg.RootCACertificate != "" {
-		pool := x509.NewCertPool()
-		pool.AppendCertsFromPEM([]byte(cfg.RootCACertificate))
+	var transport http.RoundTripper = http.DefaultTransport
+	if cfg.RootCACertificate != "" || cfg.TLSInsecureSkipVerify {
+		tlsConfig := &tls.Config{
+			InsecureSkipVerify: cfg.TLSInsecureSkipVerify,
+		}
+		if cfg.RootCACertificate != "" {
+			pool := x509.NewCertPool()
+			if ok := pool.AppendCertsFromPEM([]byte(cfg.RootCACertificate)); !ok {
+				return nil, errors.New("failed to parse root CA certificate PEM: no valid PEM blocks found")
+			}
+			tlsConfig.RootCAs = pool
+		}
 		transport = &http.Transport{
-			TLSClientConfig: &tls.Config{RootCAs: pool},
+			TLSClientConfig: tlsConfig,
 		}
 	}
 
@@ -190,10 +200,21 @@ type tokenResponse struct {
 func fetchOAuth2Token(ctx context.Context, hc *http.Client, baseURL string, cfg *Config) (string, time.Time, error) {
 	tokenURL := fmt.Sprintf("%s/realms/%s/protocol/openid-connect/token", baseURL, url.PathEscape(cfg.Realm))
 
-	form := url.Values{
-		"grant_type":         {"client_credentials"},
-		oauthKeyClientID:     {cfg.ClientID},
-		oauthKeyClientSecret: {cfg.ClientSecret},
+	var form url.Values
+	// Use password grant if username/password are provided, otherwise use client_credentials
+	if cfg.Username != "" && cfg.Password != "" {
+		form = url.Values{
+			"grant_type": {"password"},
+			"username":   {cfg.Username},
+			"password":   {cfg.Password},
+			"client_id":  {cfg.ClientID},
+		}
+	} else {
+		form = url.Values{
+			"grant_type":         {"client_credentials"},
+			oauthKeyClientID:     {cfg.ClientID},
+			oauthKeyClientSecret: {cfg.ClientSecret},
+		}
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(form.Encode()))
@@ -208,7 +229,7 @@ func fetchOAuth2Token(ctx context.Context, hc *http.Client, baseURL string, cfg 
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
 	if err != nil {
 		return "", time.Time{}, errors.Wrap(err, "failed to read token response")
 	}
@@ -233,6 +254,9 @@ func fetchOAuth2Token(ctx context.Context, hc *http.Client, baseURL string, cfg 
 // refreshToken checks if the access token is expired and fetches a new one if necessary.
 // If no config is available (e.g. in tests), it skips refresh.
 func (k *keycloakClient) refreshToken(ctx context.Context) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+
 	if time.Now().Before(k.tokenExp) {
 		return nil // token still valid
 	}
@@ -271,7 +295,11 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 		return nil, errors.Wrap(err, "failed to create request")
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	c.mu.Lock()
+	token := c.token
+	c.mu.Unlock()
+
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -280,7 +308,7 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 16*1024*1024))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read response body")
 	}
