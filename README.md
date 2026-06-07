@@ -1,8 +1,29 @@
 # provider-keycloak
 
-A native [Crossplane](https://crossplane.io/) provider for [Keycloak](https://www.keycloak.org/) that manages Keycloak resources using the Keycloak Admin REST API directly — no Terraform, no Upjet.
+[![CI](https://img.shields.io/github/actions/workflow/status/rossigee/provider-keycloak/ci.yml?branch=master)][build]
+[![Version](https://img.shields.io/github/v/release/rossigee/provider-keycloak)][releases]
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+[build]: https://github.com/rossigee/provider-keycloak/actions/workflows/ci.yml
+[releases]: https://github.com/rossigee/provider-keycloak/releases
+
+A native [Crossplane](https://crossplane.io/) provider for [Keycloak](https://www.keycloak.org/) that manages Keycloak resources using the Keycloak Admin REST API directly.
+
+## Container Registry
+
+- **Primary**: `ghcr.io/rossigee/provider-keycloak:v0.2.0`
+
+## Overview
 
 The provider implements the same API surface as [crossplane-contrib/provider-keycloak](https://github.com/crossplane-contrib/provider-keycloak) so that existing manifests written for that provider work without modification.
+
+## Features
+
+- **Client Management**: OpenID Connect client lifecycle management
+- **Realm Management**: Keycloak realm configuration
+- **User Management**: User accounts and group memberships
+- **Role Management**: Realm and client roles
+- **Group Management**: Keycloak groups and hierarchies
 
 ## Managed Resource Types
 
@@ -158,3 +179,11 @@ cd apis && go generate ./...
 ```
 
 The `zz_generated.deepcopy.go` and `zz_generated.managed.go` files are maintained by hand — do not regenerate them with `controller-gen object:...` or `angryjet`.
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## License
+
+provider-keycloak is under the Apache 2.0 license.
