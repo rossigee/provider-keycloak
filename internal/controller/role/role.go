@@ -99,12 +99,27 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	if err != nil {
 		return managed.ExternalObservation{}, err
 	}
-	r, err := e.client.GetRealmRole(ctx, realmId, cr.Spec.ForProvider.Name)
-	if err != nil {
-		if strings.Contains(err.Error(), "404") {
-			return managed.ExternalObservation{ResourceExists: false}, nil
+	var r *clients.RoleRepresentation
+	if cr.Spec.ForProvider.ClientId != nil {
+		clientId, err := clientID(cr)
+		if err != nil {
+			return managed.ExternalObservation{}, err
 		}
-		return managed.ExternalObservation{}, errors.Wrap(err, errGetRole)
+		r, err = e.client.GetClientRole(ctx, realmId, clientId, cr.Spec.ForProvider.Name)
+		if err != nil {
+			if strings.Contains(err.Error(), "404") {
+				return managed.ExternalObservation{ResourceExists: false}, nil
+			}
+			return managed.ExternalObservation{}, errors.Wrap(err, errGetRole)
+		}
+	} else {
+		r, err = e.client.GetRealmRole(ctx, realmId, cr.Spec.ForProvider.Name)
+		if err != nil {
+			if strings.Contains(err.Error(), "404") {
+				return managed.ExternalObservation{ResourceExists: false}, nil
+			}
+			return managed.ExternalObservation{}, errors.Wrap(err, errGetRole)
+		}
 	}
 	if r == nil {
 		return managed.ExternalObservation{ResourceExists: false}, nil
@@ -124,8 +139,18 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalCreation{}, err
 	}
 	rep := roleParamsToRepresentation(&cr.Spec.ForProvider)
-	if err := e.client.CreateRealmRole(ctx, realmId, rep); err != nil {
-		return managed.ExternalCreation{}, errors.Wrap(err, errCreateRole)
+	if cr.Spec.ForProvider.ClientId != nil {
+		clientId, err := clientID(cr)
+		if err != nil {
+			return managed.ExternalCreation{}, err
+		}
+		if err := e.client.CreateClientRole(ctx, realmId, clientId, rep); err != nil {
+			return managed.ExternalCreation{}, errors.Wrap(err, errCreateRole)
+		}
+	} else {
+		if err := e.client.CreateRealmRole(ctx, realmId, rep); err != nil {
+			return managed.ExternalCreation{}, errors.Wrap(err, errCreateRole)
+		}
 	}
 	cr.Status.SetConditions(xpv1.Creating())
 	return managed.ExternalCreation{}, nil
@@ -141,8 +166,18 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalUpdate{}, err
 	}
 	rep := roleParamsToRepresentation(&cr.Spec.ForProvider)
-	if err := e.client.UpdateRealmRole(ctx, realmId, cr.Spec.ForProvider.Name, rep); err != nil {
-		return managed.ExternalUpdate{}, errors.Wrap(err, errUpdateRole)
+	if cr.Spec.ForProvider.ClientId != nil {
+		clientId, err := clientID(cr)
+		if err != nil {
+			return managed.ExternalUpdate{}, err
+		}
+		if err := e.client.UpdateClientRole(ctx, realmId, clientId, cr.Spec.ForProvider.Name, rep); err != nil {
+			return managed.ExternalUpdate{}, errors.Wrap(err, errUpdateRole)
+		}
+	} else {
+		if err := e.client.UpdateRealmRole(ctx, realmId, cr.Spec.ForProvider.Name, rep); err != nil {
+			return managed.ExternalUpdate{}, errors.Wrap(err, errUpdateRole)
+		}
 	}
 	return managed.ExternalUpdate{}, nil
 }
@@ -156,9 +191,18 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	if err != nil {
 		return managed.ExternalDelete{}, err
 	}
-	err = e.client.DeleteRealmRole(ctx, realmId, cr.Spec.ForProvider.Name)
-	if err != nil && !strings.Contains(err.Error(), "404") {
-		return managed.ExternalDelete{}, errors.Wrap(err, errDeleteRole)
+	var delErr error
+	if cr.Spec.ForProvider.ClientId != nil {
+		clientId, err := clientID(cr)
+		if err != nil {
+			return managed.ExternalDelete{}, err
+		}
+		delErr = e.client.DeleteClientRole(ctx, realmId, clientId, cr.Spec.ForProvider.Name)
+	} else {
+		delErr = e.client.DeleteRealmRole(ctx, realmId, cr.Spec.ForProvider.Name)
+	}
+	if delErr != nil && !strings.Contains(delErr.Error(), "404") {
+		return managed.ExternalDelete{}, errors.Wrap(delErr, errDeleteRole)
 	}
 	cr.Status.SetConditions(xpv1.Deleting())
 	return managed.ExternalDelete{}, nil
@@ -169,6 +213,13 @@ func realmID(cr *rolev1alpha1.Role) (string, error) {
 		return "", errors.New("realmId is required")
 	}
 	return *cr.Spec.ForProvider.RealmId, nil
+}
+
+func clientID(cr *rolev1alpha1.Role) (string, error) {
+	if cr.Spec.ForProvider.ClientId == nil || *cr.Spec.ForProvider.ClientId == "" {
+		return "", errors.New("clientId is required")
+	}
+	return *cr.Spec.ForProvider.ClientId, nil
 }
 
 func roleParamsToRepresentation(p *rolev1alpha1.RoleParameters) *clients.RoleRepresentation {

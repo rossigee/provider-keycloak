@@ -24,12 +24,17 @@ import (
 	"github.com/rossigee/provider-keycloak/internal/controller/authz"
 	"github.com/rossigee/provider-keycloak/internal/controller/client"
 	"github.com/rossigee/provider-keycloak/internal/controller/clientcertificates"
+	"github.com/rossigee/provider-keycloak/internal/controller/clientinitialaccess"
+	"github.com/rossigee/provider-keycloak/internal/controller/clientrolemapping"
+	"github.com/rossigee/provider-keycloak/internal/controller/clientscopemapping"
+	"github.com/rossigee/provider-keycloak/internal/controller/component"
 	"github.com/rossigee/provider-keycloak/internal/controller/events"
 	"github.com/rossigee/provider-keycloak/internal/controller/group"
 	"github.com/rossigee/provider-keycloak/internal/controller/protocolmapper"
 	"github.com/rossigee/provider-keycloak/internal/controller/providerconfig"
 	"github.com/rossigee/provider-keycloak/internal/controller/realm"
 	"github.com/rossigee/provider-keycloak/internal/controller/realmimpexp"
+	"github.com/rossigee/provider-keycloak/internal/controller/realmkeys"
 	"github.com/rossigee/provider-keycloak/internal/controller/role"
 	"github.com/rossigee/provider-keycloak/internal/controller/user"
 	"github.com/rossigee/provider-keycloak/internal/controller/userfederation"
@@ -52,6 +57,11 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 		events.Setup,
 		realmimpexp.Setup,
 		userfederation.Setup,
+		clientrolemapping.Setup,
+		clientscopemapping.Setup,
+		clientinitialaccess.Setup,
+		component.Setup,
+		realmkeys.Setup,
 	} {
 		if err := setup(mgr, o); err != nil {
 			return err

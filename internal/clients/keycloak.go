@@ -88,11 +88,17 @@ type Client interface {
 	RemoveUserFromGroup(ctx context.Context, realm, userUUID, groupUUID string) error
 	SearchUsers(ctx context.Context, realm, username string) ([]UserRepresentation, error)
 
-	// Role operations
+	// Role operations (realm-scoped)
 	GetRealmRole(ctx context.Context, realm, name string) (*RoleRepresentation, error)
 	CreateRealmRole(ctx context.Context, realm string, role *RoleRepresentation) error
 	UpdateRealmRole(ctx context.Context, realm, name string, role *RoleRepresentation) error
 	DeleteRealmRole(ctx context.Context, realm, name string) error
+
+	// Role operations (client-scoped)
+	GetClientRole(ctx context.Context, realm, clientUUID, name string) (*RoleRepresentation, error)
+	CreateClientRole(ctx context.Context, realm, clientUUID string, role *RoleRepresentation) error
+	UpdateClientRole(ctx context.Context, realm, clientUUID, name string, role *RoleRepresentation) error
+	DeleteClientRole(ctx context.Context, realm, clientUUID, name string) error
 
 	// Protocol mapper operations
 	GetClientProtocolMapper(ctx context.Context, realm, clientUUID, mapperID string) (*ProtocolMapperRepresentation, error)
@@ -126,6 +132,31 @@ type Client interface {
 	GetClientCertificate(ctx context.Context, realm, clientID, certID string) (*ClientCertificateRepresentation, error)
 	GenerateClientCertificate(ctx context.Context, realm, clientID string, format string) (*ClientCertificateRepresentation, error)
 	ListClientCertificates(ctx context.Context, realm, clientID string) ([]ClientCertificateRepresentation, error)
+
+	// Role Mapping operations (user-to-client-role assignments)
+	ListUserClientRoleMappings(ctx context.Context, realm, userID, clientUUID string) ([]RoleRepresentation, error)
+	AddUserClientRoleMappings(ctx context.Context, realm, userID, clientUUID string, roles []RoleRepresentation) error
+	RemoveUserClientRoleMappings(ctx context.Context, realm, userID, clientUUID string, roles []RoleRepresentation) error
+
+	// Client Scope Mapping operations (realm-level scopes for a client)
+	ListClientScopeMappings(ctx context.Context, realm, clientUUID string) ([]RoleRepresentation, error)
+	AddClientScopeMappings(ctx context.Context, realm, clientUUID string, scopes []RoleRepresentation) error
+	RemoveClientScopeMappings(ctx context.Context, realm, clientUUID string, scopes []RoleRepresentation) error
+
+	// Client Initial Access operations
+	CreateClientInitialAccess(ctx context.Context, realm string, count, expiration int32) (*ClientInitialAccessRepresentation, error)
+	ListClientInitialAccess(ctx context.Context, realm string) ([]ClientInitialAccessRepresentation, error)
+	DeleteClientInitialAccess(ctx context.Context, realm, id string) error
+
+	// Component operations
+	GetComponent(ctx context.Context, realm, id string) (*ComponentRepresentation, error)
+	CreateComponent(ctx context.Context, realm string, c *ComponentRepresentation) (string, error)
+	UpdateComponent(ctx context.Context, realm, id string, c *ComponentRepresentation) error
+	DeleteComponent(ctx context.Context, realm, id string) error
+	ListComponentsByType(ctx context.Context, realm, providerType, name string) ([]ComponentRepresentation, error)
+
+	// Realm Keys operations (read-only)
+	GetRealmKeys(ctx context.Context, realm string) (*RealmKeysRepresentation, error)
 }
 
 // keycloakClient implements Client
@@ -803,6 +834,37 @@ func (c *keycloakClient) DeleteRealmRole(ctx context.Context, realm, name string
 	return err
 }
 
+func (c *keycloakClient) GetClientRole(ctx context.Context, realm, clientUUID, name string) (*RoleRepresentation, error) {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/roles/" + url.PathEscape(name)
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var r RoleRepresentation
+	if err := json.Unmarshal(respBody, &r); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal client role")
+	}
+	return &r, nil
+}
+
+func (c *keycloakClient) CreateClientRole(ctx context.Context, realm, clientUUID string, role *RoleRepresentation) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/roles"
+	_, err := c.doRequest(ctx, http.MethodPost, path, role)
+	return err
+}
+
+func (c *keycloakClient) UpdateClientRole(ctx context.Context, realm, clientUUID, name string, role *RoleRepresentation) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/roles/" + url.PathEscape(name)
+	_, err := c.doRequest(ctx, http.MethodPut, path, role)
+	return err
+}
+
+func (c *keycloakClient) DeleteClientRole(ctx context.Context, realm, clientUUID, name string) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/roles/" + url.PathEscape(name)
+	_, err := c.doRequest(ctx, http.MethodDelete, path, nil)
+	return err
+}
+
 // =============================================================================
 // Protocol Mapper Operations
 // =============================================================================
@@ -1071,4 +1133,193 @@ func (c *keycloakClient) GenerateClientCertificate(ctx context.Context, realm, c
 		return nil, errors.Wrap(err, "failed to unmarshal generated client certificate")
 	}
 	return &cert, nil
+}
+
+// =============================================================================
+// Role Mapping Operations
+// =============================================================================
+
+func (c *keycloakClient) ListUserClientRoleMappings(ctx context.Context, realm, userID, clientUUID string) ([]RoleRepresentation, error) {
+	path := realmPath(realm) + "/users/" + url.PathEscape(userID) + "/role-mappings/clients/" + url.PathEscape(clientUUID)
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var roles []RoleRepresentation
+	if err := json.Unmarshal(respBody, &roles); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal user client role mappings")
+	}
+	return roles, nil
+}
+
+func (c *keycloakClient) AddUserClientRoleMappings(ctx context.Context, realm, userID, clientUUID string, roles []RoleRepresentation) error {
+	path := realmPath(realm) + "/users/" + url.PathEscape(userID) + "/role-mappings/clients/" + url.PathEscape(clientUUID)
+	_, err := c.doRequest(ctx, http.MethodPost, path, roles)
+	return err
+}
+
+func (c *keycloakClient) RemoveUserClientRoleMappings(ctx context.Context, realm, userID, clientUUID string, roles []RoleRepresentation) error {
+	path := realmPath(realm) + "/users/" + url.PathEscape(userID) + "/role-mappings/clients/" + url.PathEscape(clientUUID)
+	_, err := c.doRequest(ctx, http.MethodDelete, path, roles)
+	return err
+}
+
+func (c *keycloakClient) ListClientScopeMappings(ctx context.Context, realm, clientUUID string) ([]RoleRepresentation, error) {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/scope-mappings/realm"
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var scopes []RoleRepresentation
+	if err := json.Unmarshal(respBody, &scopes); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal client scope mappings")
+	}
+	return scopes, nil
+}
+
+func (c *keycloakClient) AddClientScopeMappings(ctx context.Context, realm, clientUUID string, scopes []RoleRepresentation) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/scope-mappings/realm"
+	_, err := c.doRequest(ctx, http.MethodPost, path, scopes)
+	return err
+}
+
+func (c *keycloakClient) RemoveClientScopeMappings(ctx context.Context, realm, clientUUID string, scopes []RoleRepresentation) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/scope-mappings/realm"
+	_, err := c.doRequest(ctx, http.MethodDelete, path, scopes)
+	return err
+}
+
+// =============================================================================
+// Client Initial Access Operations
+// =============================================================================
+
+type ClientInitialAccessRepresentation struct {
+	ID             string `json:"id,omitempty"`
+	Token          string `json:"token,omitempty"`
+	Count          int32  `json:"count"`
+	Expiration     int32  `json:"expiration"`
+	Timestamp      int64  `json:"timestamp,omitempty"`
+	RemainingCount int32  `json:"remainingCount,omitempty"`
+}
+
+func (c *keycloakClient) CreateClientInitialAccess(ctx context.Context, realm string, count, expiration int32) (*ClientInitialAccessRepresentation, error) {
+	path := realmPath(realm) + "/clients-initial-access"
+	body := map[string]interface{}{"count": count, "expiration": expiration}
+	respBody, err := c.doRequest(ctx, http.MethodPost, path, body)
+	if err != nil {
+		return nil, err
+	}
+	var cia ClientInitialAccessRepresentation
+	if err := json.Unmarshal(respBody, &cia); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal client initial access")
+	}
+	return &cia, nil
+}
+
+func (c *keycloakClient) ListClientInitialAccess(ctx context.Context, realm string) ([]ClientInitialAccessRepresentation, error) {
+	path := realmPath(realm) + "/clients-initial-access"
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var access []ClientInitialAccessRepresentation
+	if err := json.Unmarshal(respBody, &access); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal client initial access list")
+	}
+	return access, nil
+}
+
+func (c *keycloakClient) DeleteClientInitialAccess(ctx context.Context, realm, id string) error {
+	path := realmPath(realm) + "/clients-initial-access/" + url.PathEscape(id)
+	_, err := c.doRequest(ctx, http.MethodDelete, path, nil)
+	return err
+}
+
+// =============================================================================
+// Component Operations
+// =============================================================================
+
+type ComponentRepresentation struct {
+	ID           string              `json:"id,omitempty"`
+	Name         string              `json:"name"`
+	ProviderType string              `json:"providerType"`
+	ProviderID   string              `json:"providerId,omitempty"`
+	SubType      string              `json:"subType,omitempty"`
+	Config       map[string][]string `json:"config,omitempty"`
+}
+
+func (c *keycloakClient) GetComponent(ctx context.Context, realm, id string) (*ComponentRepresentation, error) {
+	path := realmPath(realm) + "/components/" + url.PathEscape(id)
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var comp ComponentRepresentation
+	if err := json.Unmarshal(respBody, &comp); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal component")
+	}
+	return &comp, nil
+}
+
+func (c *keycloakClient) CreateComponent(ctx context.Context, realm string, comp *ComponentRepresentation) (string, error) {
+	id, err := c.doCreate(ctx, realmPath(realm)+"/components", comp)
+	return id, err
+}
+
+func (c *keycloakClient) UpdateComponent(ctx context.Context, realm, id string, comp *ComponentRepresentation) error {
+	path := realmPath(realm) + "/components/" + url.PathEscape(id)
+	_, err := c.doRequest(ctx, http.MethodPut, path, comp)
+	return err
+}
+
+func (c *keycloakClient) DeleteComponent(ctx context.Context, realm, id string) error {
+	path := realmPath(realm) + "/components/" + url.PathEscape(id)
+	_, err := c.doRequest(ctx, http.MethodDelete, path, nil)
+	return err
+}
+
+func (c *keycloakClient) ListComponentsByType(ctx context.Context, realm, providerType, name string) ([]ComponentRepresentation, error) {
+	path := realmPath(realm) + "/components?type=" + url.QueryEscape(providerType)
+	if name != "" {
+		path += "&name=" + url.QueryEscape(name)
+	}
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var comps []ComponentRepresentation
+	if err := json.Unmarshal(respBody, &comps); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal components")
+	}
+	return comps, nil
+}
+
+// =============================================================================
+// Realm Keys Operations
+// =============================================================================
+
+type KeyInfoRepresentation struct {
+	Kid         string `json:"kid,omitempty"`
+	Type        string `json:"type,omitempty"`
+	Algorithm   string `json:"algorithm,omitempty"`
+	Status      string `json:"status,omitempty"`
+	Certificate string `json:"certificate,omitempty"`
+}
+
+type RealmKeysRepresentation struct {
+	Active map[string]string       `json:"active,omitempty"`
+	Keys   []KeyInfoRepresentation `json:"keys,omitempty"`
+}
+
+func (c *keycloakClient) GetRealmKeys(ctx context.Context, realm string) (*RealmKeysRepresentation, error) {
+	path := realmPath(realm) + "/keys"
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var keys RealmKeysRepresentation
+	if err := json.Unmarshal(respBody, &keys); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal realm keys")
+	}
+	return &keys, nil
 }
