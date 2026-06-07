@@ -1,6 +1,6 @@
 module github.com/rossigee/provider-keycloak
 
-go 1.26.3
+go 1.26.4
 
 require (
 	github.com/crossplane/crossplane-runtime/v2 v2.4.0-rc.0.0.20260522024312-ccb404ad65f6
