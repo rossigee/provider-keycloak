@@ -32,6 +32,7 @@ import (
 	"github.com/rossigee/provider-keycloak/internal/controller/component"
 	"github.com/rossigee/provider-keycloak/internal/controller/events"
 	"github.com/rossigee/provider-keycloak/internal/controller/group"
+	"github.com/rossigee/provider-keycloak/internal/controller/identityprovider"
 	"github.com/rossigee/provider-keycloak/internal/controller/protocolmapper"
 	"github.com/rossigee/provider-keycloak/internal/controller/providerconfig"
 	"github.com/rossigee/provider-keycloak/internal/controller/realm"
@@ -66,6 +67,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 		clientinitialaccess.Setup,
 		component.Setup,
 		realmkeys.Setup,
+		identityprovider.Setup,
 	} {
 		if err := setup(mgr, o); err != nil {
 			return err

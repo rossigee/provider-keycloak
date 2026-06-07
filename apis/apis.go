@@ -26,6 +26,7 @@ import (
 	componentv1alpha1 "github.com/rossigee/provider-keycloak/apis/component/v1alpha1"
 	eventv1alpha1 "github.com/rossigee/provider-keycloak/apis/events/v1alpha1"
 	groupv1alpha1 "github.com/rossigee/provider-keycloak/apis/group/v1alpha1"
+	identityproviderv1alpha1 "github.com/rossigee/provider-keycloak/apis/identityprovider/v1alpha1"
 	keys "github.com/rossigee/provider-keycloak/apis/keys/v1alpha1"
 	authzv1alpha1 "github.com/rossigee/provider-keycloak/apis/authz/v1alpha1"
 	openidclientv1alpha1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1alpha1"
@@ -48,6 +49,7 @@ func init() {
 		componentv1alpha1.SchemeBuilder.AddToScheme,
 		eventv1alpha1.SchemeBuilder.AddToScheme,
 		groupv1alpha1.SchemeBuilder.AddToScheme,
+		identityproviderv1alpha1.SchemeBuilder.AddToScheme,
 		keys.SchemeBuilder.AddToScheme,
 		authzv1alpha1.SchemeBuilder.AddToScheme,
 		openidclientv1alpha1.SchemeBuilder.AddToScheme,

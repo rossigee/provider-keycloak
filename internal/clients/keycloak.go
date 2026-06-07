@@ -167,6 +167,13 @@ type Client interface {
 	ListClientOptionalScopes(ctx context.Context, realm, clientUUID string) ([]ClientScopeRepresentation, error)
 	AddClientOptionalScopes(ctx context.Context, realm, clientUUID string, scopes []ClientScopeRepresentation) error
 	RemoveClientOptionalScopes(ctx context.Context, realm, clientUUID string, scopes []ClientScopeRepresentation) error
+
+	// Identity Provider operations
+	GetIdentityProvider(ctx context.Context, realm, alias string) (*IdentityProviderRepresentation, error)
+	CreateIdentityProvider(ctx context.Context, realm string, provider *IdentityProviderRepresentation) (string, error)
+	UpdateIdentityProvider(ctx context.Context, realm, alias string, provider *IdentityProviderRepresentation) error
+	DeleteIdentityProvider(ctx context.Context, realm, alias string) error
+	ListIdentityProviders(ctx context.Context, realm string) ([]IdentityProviderRepresentation, error)
 }
 
 // keycloakClient implements Client
@@ -1415,4 +1422,64 @@ func (c *keycloakClient) RemoveClientOptionalScopes(ctx context.Context, realm, 
 		}
 	}
 	return nil
+}
+
+// =============================================================================
+// Identity Provider Operations
+// =============================================================================
+
+type IdentityProviderRepresentation struct {
+	InternalID              string            `json:"internalId,omitempty"`
+	Alias                   string            `json:"alias"`
+	DisplayName             string            `json:"displayName,omitempty"`
+	ProviderId              string            `json:"providerId"`
+	Enabled                 bool              `json:"enabled"`
+	TrustEmail              bool              `json:"trustEmail,omitempty"`
+	FirstBrokerLoginFlowAlias string            `json:"firstBrokerLoginFlowAlias,omitempty"`
+	PostBrokerLoginFlowAlias  string            `json:"postBrokerLoginFlowAlias,omitempty"`
+	Config                  map[string]string `json:"config,omitempty"`
+}
+
+func (c *keycloakClient) GetIdentityProvider(ctx context.Context, realm, alias string) (*IdentityProviderRepresentation, error) {
+	path := realmPath(realm) + "/identity-provider/instances/" + url.PathEscape(alias)
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var idp IdentityProviderRepresentation
+	if err := json.Unmarshal(respBody, &idp); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal identity provider")
+	}
+	return &idp, nil
+}
+
+func (c *keycloakClient) CreateIdentityProvider(ctx context.Context, realm string, provider *IdentityProviderRepresentation) (string, error) {
+	path := realmPath(realm) + "/identity-provider/instances"
+	id, err := c.doCreate(ctx, path, provider)
+	return id, err
+}
+
+func (c *keycloakClient) UpdateIdentityProvider(ctx context.Context, realm, alias string, provider *IdentityProviderRepresentation) error {
+	path := realmPath(realm) + "/identity-provider/instances/" + url.PathEscape(alias)
+	_, err := c.doRequest(ctx, http.MethodPut, path, provider)
+	return err
+}
+
+func (c *keycloakClient) DeleteIdentityProvider(ctx context.Context, realm, alias string) error {
+	path := realmPath(realm) + "/identity-provider/instances/" + url.PathEscape(alias)
+	_, err := c.doRequest(ctx, http.MethodDelete, path, nil)
+	return err
+}
+
+func (c *keycloakClient) ListIdentityProviders(ctx context.Context, realm string) ([]IdentityProviderRepresentation, error) {
+	path := realmPath(realm) + "/identity-provider/instances"
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var providers []IdentityProviderRepresentation
+	if err := json.Unmarshal(respBody, &providers); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal identity providers")
+	}
+	return providers, nil
 }
