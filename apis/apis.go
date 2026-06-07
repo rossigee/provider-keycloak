@@ -20,24 +20,44 @@ package apis
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 
+	clientcertificatesv1alpha1 "github.com/rossigee/provider-keycloak/apis/clientcertificates/v1alpha1"
+	clientinitialaccessv1alpha1 "github.com/rossigee/provider-keycloak/apis/clientinitialaccess/v1alpha1"
 	clientv1alpha1 "github.com/rossigee/provider-keycloak/apis/client/v1alpha1"
+	componentv1alpha1 "github.com/rossigee/provider-keycloak/apis/component/v1alpha1"
+	eventv1alpha1 "github.com/rossigee/provider-keycloak/apis/events/v1alpha1"
 	groupv1alpha1 "github.com/rossigee/provider-keycloak/apis/group/v1alpha1"
+	keys "github.com/rossigee/provider-keycloak/apis/keys/v1alpha1"
+	authzv1alpha1 "github.com/rossigee/provider-keycloak/apis/authz/v1alpha1"
 	openidclientv1alpha1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1alpha1"
 	realmv1alpha1 "github.com/rossigee/provider-keycloak/apis/realm/v1alpha1"
+	realmimpexpv1alpha1 "github.com/rossigee/provider-keycloak/apis/realmimpexp/v1alpha1"
 	rolev1alpha1 "github.com/rossigee/provider-keycloak/apis/role/v1alpha1"
+	rolemappingsv1alpha1 "github.com/rossigee/provider-keycloak/apis/rolemappings/v1alpha1"
+	scopesv1alpha1 "github.com/rossigee/provider-keycloak/apis/scopes/v1alpha1"
 	userv1alpha1 "github.com/rossigee/provider-keycloak/apis/user/v1alpha1"
+	userfederationv1alpha1 "github.com/rossigee/provider-keycloak/apis/userfederation/v1alpha1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 )
 
 func init() {
 	AddToSchemes = append(AddToSchemes,
 		v1beta1.SchemeBuilder.AddToScheme,
+		clientcertificatesv1alpha1.SchemeBuilder.AddToScheme,
+		clientinitialaccessv1alpha1.SchemeBuilder.AddToScheme,
+		clientv1alpha1.SchemeBuilder.AddToScheme,
+		componentv1alpha1.SchemeBuilder.AddToScheme,
+		eventv1alpha1.SchemeBuilder.AddToScheme,
+		groupv1alpha1.SchemeBuilder.AddToScheme,
+		keys.SchemeBuilder.AddToScheme,
+		authzv1alpha1.SchemeBuilder.AddToScheme,
 		openidclientv1alpha1.SchemeBuilder.AddToScheme,
 		realmv1alpha1.SchemeBuilder.AddToScheme,
-		userv1alpha1.SchemeBuilder.AddToScheme,
-		groupv1alpha1.SchemeBuilder.AddToScheme,
+		realmimpexpv1alpha1.SchemeBuilder.AddToScheme,
 		rolev1alpha1.SchemeBuilder.AddToScheme,
-		clientv1alpha1.SchemeBuilder.AddToScheme,
+		rolemappingsv1alpha1.SchemeBuilder.AddToScheme,
+		scopesv1alpha1.SchemeBuilder.AddToScheme,
+		userv1alpha1.SchemeBuilder.AddToScheme,
+		userfederationv1alpha1.SchemeBuilder.AddToScheme,
 	)
 }
 
