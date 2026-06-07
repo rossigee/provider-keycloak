@@ -174,6 +174,13 @@ type Client interface {
 	UpdateIdentityProvider(ctx context.Context, realm, alias string, provider *IdentityProviderRepresentation) error
 	DeleteIdentityProvider(ctx context.Context, realm, alias string) error
 	ListIdentityProviders(ctx context.Context, realm string) ([]IdentityProviderRepresentation, error)
+
+	// Authentication Flow operations
+	GetAuthenticationFlow(ctx context.Context, realm, alias string) (*AuthenticationFlowRepresentation, error)
+	CreateAuthenticationFlow(ctx context.Context, realm string, flow *AuthenticationFlowRepresentation) (string, error)
+	UpdateAuthenticationFlow(ctx context.Context, realm, alias string, flow *AuthenticationFlowRepresentation) error
+	DeleteAuthenticationFlow(ctx context.Context, realm, alias string) error
+	ListAuthenticationFlows(ctx context.Context, realm string) ([]AuthenticationFlowRepresentation, error)
 }
 
 // keycloakClient implements Client
@@ -549,6 +556,8 @@ func (c *keycloakClient) UpdateClient(ctx context.Context, realm string, client 
 	if client.ID == "" {
 		return errors.New("client ID is required for update")
 	}
+	// Keycloak API doesn't accept homeUrl in update requests
+	client.HomeURL = ""
 	path := realmPath(realm) + "/clients/" + url.PathEscape(client.ID)
 	_, err := c.doRequest(ctx, http.MethodPut, path, client)
 	return err
@@ -1482,4 +1491,61 @@ func (c *keycloakClient) ListIdentityProviders(ctx context.Context, realm string
 		return nil, errors.Wrap(err, "failed to unmarshal identity providers")
 	}
 	return providers, nil
+}
+
+// =============================================================================
+// Authentication Flow Operations
+// =============================================================================
+
+type AuthenticationFlowRepresentation struct {
+	ID          string `json:"id,omitempty"`
+	Alias       string `json:"alias"`
+	Description string `json:"description,omitempty"`
+	ProviderId  string `json:"providerId"`
+	BuiltIn     bool   `json:"builtIn,omitempty"`
+	TopLevel    bool   `json:"topLevel,omitempty"`
+}
+
+func (c *keycloakClient) GetAuthenticationFlow(ctx context.Context, realm, alias string) (*AuthenticationFlowRepresentation, error) {
+	path := realmPath(realm) + "/authentication/flows/" + url.PathEscape(alias)
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var flow AuthenticationFlowRepresentation
+	if err := json.Unmarshal(respBody, &flow); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal authentication flow")
+	}
+	return &flow, nil
+}
+
+func (c *keycloakClient) CreateAuthenticationFlow(ctx context.Context, realm string, flow *AuthenticationFlowRepresentation) (string, error) {
+	path := realmPath(realm) + "/authentication/flows"
+	id, err := c.doCreate(ctx, path, flow)
+	return id, err
+}
+
+func (c *keycloakClient) UpdateAuthenticationFlow(ctx context.Context, realm, alias string, flow *AuthenticationFlowRepresentation) error {
+	path := realmPath(realm) + "/authentication/flows/" + url.PathEscape(alias)
+	_, err := c.doRequest(ctx, http.MethodPut, path, flow)
+	return err
+}
+
+func (c *keycloakClient) DeleteAuthenticationFlow(ctx context.Context, realm, alias string) error {
+	path := realmPath(realm) + "/authentication/flows/" + url.PathEscape(alias)
+	_, err := c.doRequest(ctx, http.MethodDelete, path, nil)
+	return err
+}
+
+func (c *keycloakClient) ListAuthenticationFlows(ctx context.Context, realm string) ([]AuthenticationFlowRepresentation, error) {
+	path := realmPath(realm) + "/authentication/flows"
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var flows []AuthenticationFlowRepresentation
+	if err := json.Unmarshal(respBody, &flows); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal authentication flows")
+	}
+	return flows, nil
 }

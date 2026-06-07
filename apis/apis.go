@@ -20,6 +20,7 @@ package apis
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 
+	authenticationflowv1alpha1 "github.com/rossigee/provider-keycloak/apis/authenticationflow/v1alpha1"
 	clientcertificatesv1alpha1 "github.com/rossigee/provider-keycloak/apis/clientcertificates/v1alpha1"
 	clientinitialaccessv1alpha1 "github.com/rossigee/provider-keycloak/apis/clientinitialaccess/v1alpha1"
 	clientv1alpha1 "github.com/rossigee/provider-keycloak/apis/client/v1alpha1"
@@ -43,6 +44,7 @@ import (
 func init() {
 	AddToSchemes = append(AddToSchemes,
 		v1beta1.SchemeBuilder.AddToScheme,
+		authenticationflowv1alpha1.SchemeBuilder.AddToScheme,
 		clientcertificatesv1alpha1.SchemeBuilder.AddToScheme,
 		clientinitialaccessv1alpha1.SchemeBuilder.AddToScheme,
 		clientv1alpha1.SchemeBuilder.AddToScheme,
