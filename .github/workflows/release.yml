@@ -1,5 +1,5 @@
 # Standardized Release Template for Crossplane Providers
-# Version: 2025-10-26 - Complete verification and BRANCH_NAME fix - Go 1.26.3
+# Version: 2025-10-26 - Complete verification and BRANCH_NAME fix - Go 1.26.4
 #
 # This template handles ALL publishing for releases
 # - Only runs on version tag creation to avoid conflicts with CI
@@ -27,7 +27,7 @@ on:
         type: string
 
 env:
-  GO_VERSION: '1.26.3'
+  GO_VERSION: '1.26.4'
 
 jobs:
   release:
