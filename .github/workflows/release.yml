@@ -174,7 +174,7 @@ jobs:
 #    - Ensures reproducible builds
 #
 # 5. PROPER AUTHENTICATION
-#    - Uses PAT_TOKEN (canonical variable name)
+#    - Uses github.token for authentication (OIDC, no PAT required)
 #    - Required permissions: contents:write, packages:write, id-token:write
 #    - Proper permissions for package publishing and GitHub release creation
 #
@@ -190,7 +190,7 @@ jobs:
 #
 # To apply this template:
 # 1. Copy this structure to .github/workflows/release.yml
-# 2. Ensure PAT_TOKEN secret is configured in repository settings
+# 2. Ensure github.token has packages:write permission
 # 3. Ensure Dockerfile and package/crossplane.yaml exist
 # 4. Test with a version tag (e.g., v1.0.0)
 # 5. Verify workflow passes all verification checks
