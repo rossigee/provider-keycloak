@@ -197,11 +197,9 @@ jobs:
           make build
           echo "✅ Binary build successful"
 
-          # Build Docker image locally (without push)
-          make docker.build
-          echo "✅ Docker image build successful"
-
-          # Note: xpkg.build is validated in release workflow, not CI
+          # Build Crossplane package locally (without push)
+          make xpkg.build
+          echo "✅ Crossplane package build successful"
 
           # Verify build artifacts exist
           ls -la _output/bin/linux_amd64/provider 2>/dev/null && echo "✅ Provider binary exists" || echo "❌ Provider binary missing"
