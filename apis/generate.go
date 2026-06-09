@@ -29,7 +29,7 @@ limitations under the License.
 // types from crossplane/crossplane/apis/v2.
 // Note: We specify explicit paths to avoid controller-gen trying to generate
 // CRDs for ProviderConfigUsage in each API group package.
-//go:generate go run -tags generate sigs.k8s.io/controller-tools/cmd/controller-gen crd:crdVersions=v1 paths=./v1beta1 paths=./authenticationflow/v1alpha1 paths=./authorizationpolicy/v1alpha1 paths=./clientinitialaccess/v1alpha1 paths=./component/v1alpha1 paths=./identityprovider/v1alpha1 paths=./keys/v1alpha1 paths=./rolemappings/v1alpha1 paths=./scopes/v1alpha1 output:artifacts:config=../package/crds
+//go:generate go run -tags generate sigs.k8s.io/controller-tools/cmd/controller-gen crd:crdVersions=v1 paths=./v1beta1 paths=./authenticationflow/v1alpha1 paths=./authorizationpolicy/v1alpha1 paths=./client/v1alpha1 paths=./clientinitialaccess/v1alpha1 paths=./component/v1alpha1 paths=./group/v1alpha1 paths=./identityprovider/v1alpha1 paths=./keys/v1alpha1 paths=./openidclient/v1alpha1 paths=./realm/v1alpha1 paths=./role/v1alpha1 paths=./rolemappings/v1alpha1 paths=./scopes/v1alpha1 paths=./user/v1alpha1 output:artifacts:config=../package/crds
 
 package apis
 
