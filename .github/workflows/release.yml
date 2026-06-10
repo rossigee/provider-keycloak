@@ -52,6 +52,17 @@ jobs:
       - name: Vendor Dependencies
         run: go mod vendor
 
+      - name: Init build submodule
+        run: git submodule update --init --depth 1 build
+
+      - name: Install Crossplane CLI
+        run: |
+          PLATFORM=$(go env GOOS)_$(go env GOARCH)
+          mkdir -p .cache/tools/${PLATFORM}
+          curl -sSL "https://releases.crossplane.io/stable/v2.0.2/bin/${PLATFORM}/crank" -o .cache/tools/${PLATFORM}/crossplane-cli-v2.0.2
+          chmod +x .cache/tools/${PLATFORM}/crossplane-cli-v2.0.2
+          ln -sf .cache/tools/${PLATFORM}/crossplane-cli-v2.0.2 .cache/tools/${PLATFORM}/crossplane-cli
+
       - name: Determine Version
         id: version
         run: |
