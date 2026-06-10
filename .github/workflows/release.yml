@@ -57,7 +57,7 @@ jobs:
 
       - name: Install Crossplane CLI
         run: |
-          PLATFORM=$(go env GOOS)_$(go env GOARCH)
+          PLATFORM="linux_amd64"
           mkdir -p .cache/tools/${PLATFORM}
           curl -sSL "https://releases.crossplane.io/stable/v2.0.2/bin/${PLATFORM}/crank" -o .cache/tools/${PLATFORM}/crossplane-cli-v2.0.2
           chmod +x .cache/tools/${PLATFORM}/crossplane-cli-v2.0.2
