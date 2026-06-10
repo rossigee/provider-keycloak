@@ -59,9 +59,9 @@ jobs:
         run: |
           PLATFORM="linux_amd64"
           mkdir -p .cache/tools/${PLATFORM}
-          curl -sSL "https://releases.crossplane.io/stable/v2.0.2/bin/${PLATFORM}/crank" -o .cache/tools/${PLATFORM}/crossplane-cli-v2.0.2
-          chmod +x .cache/tools/${PLATFORM}/crossplane-cli-v2.0.2
-          ln -sf .cache/tools/${PLATFORM}/crossplane-cli-v2.0.2 .cache/tools/${PLATFORM}/crossplane-cli
+          curl -sSL "https://releases.crossplane.io/stable/v2.3.2/bin/${PLATFORM}/crossplane" -o .cache/tools/${PLATFORM}/crossplane-cli-v2.3.2
+          chmod +x .cache/tools/${PLATFORM}/crossplane-cli-v2.3.2
+          ln -sf .cache/tools/${PLATFORM}/crossplane-cli-v2.3.2 .cache/tools/${PLATFORM}/crossplane-cli
 
       - name: Determine Version
         id: version
