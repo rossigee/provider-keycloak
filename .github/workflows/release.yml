@@ -57,14 +57,13 @@ jobs:
 
       - name: Install Crossplane CLI
         run: |
-          PLATFORM="linux_amd64"
-          mkdir -p .cache/tools/${PLATFORM}
-          mkdir -p .cache/tools/linux_x86_64
-          curl -sSL "https://releases.crossplane.io/stable/v2.3.2/bin/${PLATFORM}/crossplane" -o .cache/tools/${PLATFORM}/crossplane-cli-v2.3.2
-          chmod +x .cache/tools/${PLATFORM}/crossplane-cli-v2.3.2
-          ln -sf .cache/tools/${PLATFORM}/crossplane-cli-v2.3.2 .cache/tools/${PLATFORM}/crossplane-cli
-          ln -sf .cache/tools/${PLATFORM}/crossplane-cli-v2.3.2 .cache/tools/linux_x86_64/crossplane-cli-v2.3.2
-          ln -sf .cache/tools/${PLATFORM}/crossplane-cli-v2.3.2 .cache/tools/linux_x86_64/crossplane-cli
+          # Download to both amd64 and x86_64 directories since the build system uses different paths
+          for plat in linux_amd64 linux_x86_64; do
+            mkdir -p .cache/tools/${plat}
+            curl -sSL "https://releases.crossplane.io/stable/v2.3.2/bin/linux_amd64/crossplane" -o .cache/tools/${plat}/crossplane-cli-v2.3.2
+            chmod +x .cache/tools/${plat}/crossplane-cli-v2.3.2
+            ln -sf crossplane-cli-v2.3.2 .cache/tools/${plat}/crossplane-cli
+          done
 
       - name: Determine Version
         id: version
