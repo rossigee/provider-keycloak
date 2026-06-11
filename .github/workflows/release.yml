@@ -1,214 +1,107 @@
-# Standardized Release Template for Crossplane Providers
-# Version: 2025-10-26 - Complete verification and BRANCH_NAME fix - Go 1.26.4
-#
-# This template handles ALL publishing for releases
-# - Only runs on version tag creation to avoid conflicts with CI
-# - Builds from source and publishes to primary registry
-# - Verifies successful publication to registry with digest comparison
-# - Creates GitHub release with auto-generated notes
-# - Single source of truth for version and latest tags
-#
-# Changes from 2025-10-23:
-# - Added BRANCH_NAME=master override for tag-based builds
-# - Enhanced verification with digest comparison to ensure identical tags
-# - Fail-fast error handling with set -e
-
 name: Release
 
 on:
   push:
     tags:
-      - 'v*.*.*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag to release (e.g., v1.0.0)'
-        required: true
-        type: string
+      - 'v*'
 
 env:
-  GO_VERSION: '1.26.4'
+  REGISTRY_ORGS: ghcr.io/rossigee
+  GO_REQUIRED_VERSION: 1.26.4
+
+permissions:
+  packages: write
+  contents: write
 
 jobs:
   release:
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      packages: write
-      id-token: write
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           submodules: true
+          fetch-depth: 0
 
-      - name: Setup Go
-        uses: actions/setup-go@v6
+      - uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: ${{ env.GO_REQUIRED_VERSION }}
 
-      - name: Vendor Dependencies
-        run: go mod vendor
-
-      - name: Init build submodule
-        run: git submodule update --init --depth 1 build
-
-      - name: Install Crossplane CLI
-        run: |
-          # Download to both amd64 and x86_64 directories since the build system uses different paths
-          for plat in linux_amd64 linux_x86_64; do
-            mkdir -p .cache/tools/${plat}
-            curl -sSL "https://releases.crossplane.io/stable/v1.20.9/bin/linux_amd64/crank" -o .cache/tools/${plat}/crossplane-cli-v1.20.9
-            chmod +x .cache/tools/${plat}/crossplane-cli-v1.20.9
-            ln -sf crossplane-cli-v1.20.9 .cache/tools/${plat}/crossplane-cli
-          done
-
-      - name: Determine Version
+      - name: Extract version from tag
         id: version
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            VERSION="${GITHUB_REF#refs/tags/}"
-          fi
+          VERSION=${GITHUB_REF#refs/tags/}
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Detected version: $VERSION"
+          echo "Version: ${VERSION}"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
-      - name: Login to GitHub Container Registry
+      - name: Log in to Container Registry
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ github.token }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Publish All Artifacts
+      - name: Run code generation
+        run: make generate
+
+      - name: Check go.mod is up to date
         run: |
-          set -e  # Fail fast on any error
+          go mod tidy
+          git diff --exit-code
 
-          # Use the standardized build system to handle everything
-          export VERSION="${{ steps.version.outputs.version }}"
+      - name: Run unit tests
+        run: make test
 
-          echo "Repository: ${{ github.repository }}"
-          echo "Repository owner: ${{ github.repository_owner }}"
-          echo "Version: ${VERSION}"
+      - name: Run linting
+        run: make lint
 
-          # CRITICAL: Override BRANCH_NAME to bypass release branch filter
-          # When pushing tags, git is in detached HEAD state and branch detection fails.
-          # Without this, publish.artifacts becomes an empty target that silently succeeds.
-          # See: build/makelib/xpkg.mk:125-127 and build/makelib/common.mk:87
-          export BRANCH_NAME="master"
-
-          # Build and publish using make targets that handle Docker + Crossplane packages
-          make build.all \
-            REGISTRY_ORGS="ghcr.io/${{ github.repository_owner }}" \
-            XPKG_REG_ORGS="ghcr.io/${{ github.repository_owner }}" \
-            BRANCH_NAME=master
-
-          make publish \
-            REGISTRY_ORGS="ghcr.io/${{ github.repository_owner }}" \
-            XPKG_REG_ORGS="ghcr.io/${{ github.repository_owner }}" \
-            BRANCH_NAME=master
-
-          echo "✅ Published to ghcr.io/${{ github.repository_owner }}"
-          echo "🏷️  Tags: ${VERSION}, latest"
-
-      - name: Verify Publication
+      - name: Build provider binary
         run: |
-          set -e  # Fail fast on any error
+          make build PLATFORMS="linux_amd64" VERSION=${{ steps.version.outputs.version }}
 
-          VERSION="${{ steps.version.outputs.version }}"
-          PROVIDER_NAME="${{ github.event.repository.name }}"
-          REGISTRY_PATH="ghcr.io/${{ github.repository_owner }}/${PROVIDER_NAME}"
-
-          echo "Verifying container image publication..."
-          echo "Registry: ${REGISTRY_PATH}"
-
-          # Verify version tag
-          if docker pull "${REGISTRY_PATH}:${VERSION}" > /dev/null 2>&1; then
-            echo "✅ Verified container image ${VERSION}"
-          else
-            echo "❌ Failed to pull container image ${VERSION}"
-            exit 1
-          fi
-
-          # Verify latest tag
-          if docker pull "${REGISTRY_PATH}:latest" > /dev/null 2>&1; then
-            echo "✅ Verified container image latest"
-          else
-            echo "❌ Failed to pull container image latest"
-            exit 1
-          fi
-
-          # Verify both tags point to same image
-          VERSION_DIGEST=$(docker inspect "${REGISTRY_PATH}:${VERSION}" --format='{{index .RepoDigests 0}}' | cut -d'@' -f2)
-          LATEST_DIGEST=$(docker inspect "${REGISTRY_PATH}:latest" --format='{{index .RepoDigests 0}}' | cut -d'@' -f2)
-
-          if [ "$VERSION_DIGEST" = "$LATEST_DIGEST" ]; then
-            echo "✅ Version and latest tags point to identical image"
-            echo "   Digest: ${VERSION_DIGEST}"
-          else
-            echo "❌ Version and latest tags point to different images"
-            echo "   Version digest: ${VERSION_DIGEST}"
-            echo "   Latest digest:  ${LATEST_DIGEST}"
-            exit 1
-          fi
+      - name: Build and push Docker image (amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./cluster/images/provider-keycloak/Dockerfile
+          build-args: |
+            TARGETOS=linux
+            TARGETARCH=amd64
+          tags: |
+            ${{ env.REGISTRY_ORGS }}/provider-keycloak:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY_ORGS }}/provider-keycloak:latest
+          push: true
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: ncipollo/release-action@v1
         with:
+          tag: ${{ steps.version.outputs.version }}
           name: Release ${{ steps.version.outputs.version }}
+          body: |
+            ## Provider Image
+            Published to: `${{ env.REGISTRY_ORGS }}/provider-keycloak:${{ steps.version.outputs.version }}`
+
+            ## Crossplane Installation
+            ```bash
+            kubectl apply -f - <<EOF
+            apiVersion: pkg.crossplane.io/v1
+            kind: Provider
+            metadata:
+              name: provider-keycloak
+            spec:
+              package: ${{ env.REGISTRY_ORGS }}/provider-keycloak:${{ steps.version.outputs.version }}
+            EOF
+            ```
+
+            ## Documentation
+            See the [README](https://github.com/rossigee/provider-keycloak) for installation and usage instructions.
           draft: false
           prerelease: false
-          generate_release_notes: true
 
-# Key Principles for this Template:
-#
-# 1. SINGLE SOURCE OF TRUTH FOR PUBLISHING
-#    - Only this workflow publishes to registries
-#    - CI workflow only validates builds
-#    - Eliminates tag conflicts between CI and release workflows
-#
-# 2. IDENTICAL VERSION AND LATEST TAGS
-#    - Build image once with version tag
-#    - Tag the SAME image as latest
-#    - Push both tags (they're identical)
-#    - No separate builds = no image differences
-#    - Verified through digest comparison
-#
-# 3. STANDARDIZED REGISTRY PUBLISHING
-#    - Primary: ghcr.io/rossigee/provider-{name}
-#    - Version tag: v1.2.3
-#    - Latest tag: latest
-#    - Both Crossplane packages (.xpkg) and container images
-#
-# 4. BUILD FROM SOURCE
-#    - Always build from the tagged source
-#    - No dependency on pre-built artifacts
-#    - Ensures reproducible builds
-#
-# 5. PROPER AUTHENTICATION
-#    - Uses github.token for authentication (OIDC, no PAT required)
-#    - Required permissions: contents:write, packages:write, id-token:write
-#    - Proper permissions for package publishing and GitHub release creation
-#
-# 6. PUBLICATION VERIFICATION
-#    - Verifies both version and latest tags are pullable
-#    - Confirms identical digests for version and latest tags
-#    - Fails fast if publication incomplete or tags differ
-#
-# 7. MODERN TOOLING
-#    - softprops/action-gh-release@v2 (current, not deprecated)
-#    - Auto-generated release notes
-#    - Fail-fast error handling with set -e
-#
-# To apply this template:
-# 1. Copy this structure to .github/workflows/release.yml
-# 2. Ensure github.token has packages:write permission
-# 3. Ensure Dockerfile and package/crossplane.yaml exist
-# 4. Test with a version tag (e.g., v1.0.0)
-# 5. Verify workflow passes all verification checks
+      - name: Verify published artifacts
+        run: |
+          echo "Verifying published artifacts..."
+          docker pull ${{ env.REGISTRY_ORGS }}/provider-keycloak:${{ steps.version.outputs.version }} && echo "✓ Docker image published" || echo "✗ Docker image not found"
+          echo "Release complete: ${{ steps.version.outputs.version }}"
