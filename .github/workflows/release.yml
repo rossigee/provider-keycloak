@@ -104,6 +104,11 @@ jobs:
           export BRANCH_NAME="master"
 
           # Build and publish using make targets that handle Docker + Crossplane packages
+          make build.all \
+            REGISTRY_ORGS="ghcr.io/${{ github.repository_owner }}" \
+            XPKG_REG_ORGS="ghcr.io/${{ github.repository_owner }}" \
+            BRANCH_NAME=master
+
           make publish \
             REGISTRY_ORGS="ghcr.io/${{ github.repository_owner }}" \
             XPKG_REG_ORGS="ghcr.io/${{ github.repository_owner }}" \
