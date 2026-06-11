@@ -1,6 +1,15 @@
-FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
-ADD bin/linux_amd64/provider /bin/provider
-ADD package/crds /crds
-ADD package/crossplane.yaml /package.yaml
-ENTRYPOINT ["/bin/provider"]
+FROM gcr.io/distroless/static:nonroot
+
+LABEL org.opencontainers.image.title="provider-keycloak"
+LABEL org.opencontainers.image.description="Crossplane provider for Keycloak management"
+LABEL org.opencontainers.image.vendor="rossigee"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.source="https://github.com/rossigee/provider-keycloak"
+
+ARG TARGETOS
+ARG TARGETARCH
+
+COPY --chmod=0755 _output/bin/${TARGETOS}_${TARGETARCH}/provider /usr/local/bin/provider
+
+USER 65532:65532
+ENTRYPOINT ["/usr/local/bin/provider"]
