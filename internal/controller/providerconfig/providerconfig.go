@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,7 +36,7 @@ const controllerName = "providerconfig.keycloak.crossplane.io"
 
 // Setup registers the ProviderConfig controller.
 func Setup(mgr ctrl.Manager) error {
-	r := &reconciler{kube: mgr.GetClient()}
+	r := &reconciler{kube: mgr.GetClient(), logger: mgr.GetLogger()}
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		For(&v1beta1.ProviderConfig{}).
@@ -43,34 +44,55 @@ func Setup(mgr ctrl.Manager) error {
 }
 
 type reconciler struct {
-	kube client.Client
+	kube   client.Client
+	logger logr.Logger
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log := r.logger.WithValues("providerconfig", req.Name)
+	log.Info("reconciling ProviderConfig")
+
 	pc := &v1beta1.ProviderConfig{}
 	if err := r.kube.Get(ctx, req.NamespacedName, pc); err != nil {
+		log.Error(err, "failed to get ProviderConfig")
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
 
-	_, err := clients.NewClient(ctx, pc, r.kube)
+	log.Info("attempting to connect to Keycloak")
+	kc, err := clients.NewClient(ctx, pc, r.kube)
 	if err != nil {
+		log.Error(err, "failed to connect to Keycloak")
 		pc.Status.SetConditions(xpv1.Unavailable().WithMessage(err.Error()))
 	} else {
+		log.Info("successfully connected to Keycloak")
 		pc.Status.SetConditions(xpv1.Available())
+		_ = kc // avoid unused warning
 	}
 
-	// Get the latest version before updating to avoid conflicts
-	latest := &v1beta1.ProviderConfig{}
-	if err := r.kube.Get(ctx, req.NamespacedName, latest); err != nil {
+	// The CRD doesn't have status subresource enabled
+	// Try updating with the entire object including status
+	// Fetch fresh copy to avoid conflicts
+	fresh := &v1beta1.ProviderConfig{}
+	if err := r.kube.Get(ctx, client.ObjectKey{Name: pc.GetName()}, fresh); err != nil {
+		log.Error(err, "failed to get latest ProviderConfig for status update")
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, client.IgnoreNotFound(err)
 	}
-	latest.Status = pc.Status
-	if err := r.kube.Status().Update(ctx, latest); err != nil {
+	
+	log.Info("Updating ProviderConfig", "name", fresh.GetName(), "status", pc.Status)
+	fresh.Status = pc.Status
+	
+	// Try using client.Update which updates the entire object
+	if err := r.kube.Update(ctx, fresh); err != nil {
+		log.Error(err, "failed to update ProviderConfig", "error", err)
 		if errors.IsConflict(err) {
+			log.Info("conflict updating, will retry", "error", err)
 			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 		}
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	}
+	log.Info("ProviderConfig updated successfully")
+
+	log.Info("ProviderConfig status updated successfully")
 
 	return reconcile.Result{RequeueAfter: 5 * time.Minute}, nil
 }

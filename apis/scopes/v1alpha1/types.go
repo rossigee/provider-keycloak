@@ -89,5 +89,60 @@ type ClientScopeMappingList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&ClientScopeMapping{}, &ClientScopeMappingList{})
+	SchemeBuilder.Register(&ClientScopeMapping{}, &ClientScopeMappingList{}, &ClientScope{}, &ClientScopeList{})
+}
+type ClientScopeParameters struct {
+	// RealmId is the ID of the realm.
+	// +kubebuilder:validation:Required
+	RealmId string `json:"realmId"`
+
+	// Name is the name of the client scope.
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// Description is the description of the client scope.
+	// +optional
+	Description *string `json:"description,omitempty"`
+
+	// Protocol is the protocol of the client scope (openid-connect or saml).
+	// +optional
+	Protocol *string `json:"protocol,omitempty"`
+
+	// IncludeInTokenScope indicates if this scope should be included in the token scope.
+	// +optional
+	IncludeInTokenScope *bool `json:"includeInTokenScope,omitempty"`
+}
+
+// ClientScopeSpec defines the desired state of ClientScope.
+type ClientScopeSpec struct {
+	xpv1.ManagedResourceSpec `json:",inline"`
+	ForProvider              ClientScopeParameters `json:"forProvider"`
+}
+
+// ClientScopeStatus defines the observed state of ClientScope.
+type ClientScopeStatus struct {
+	xpv1.ManagedResourceStatus `json:",inline"`
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Namespaced,categories={crossplane,managed,keycloak}
+// +kubebuilder:storageversion
+
+// ClientScope manages client scope definitions in Keycloak.
+type ClientScope struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   ClientScopeSpec   `json:"spec"`
+	Status ClientScopeStatus `json:"status,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+
+// ClientScopeList contains a list of ClientScope.
+type ClientScopeList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ClientScope `json:"items"`
 }

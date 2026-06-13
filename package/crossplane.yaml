@@ -1,4 +1,4 @@
-apiVersion: meta.pkg.crossplane.io/v1alpha1
+apiVersion: meta.pkg.crossplane.io/v1
 kind: Provider
 metadata:
   name: provider-keycloak
@@ -7,6 +7,7 @@ metadata:
     meta.crossplane.io/source: github.com/rossigee/provider-keycloak
     meta.crossplane.io/license: Apache-2.0
     meta.crossplane.io/description: |
-      A template that can be used to create Crossplane providers.
+      Crossplane provider for Keycloak
 spec:
-  version: "0.1.0-test-51f0dce"
+  package: ghcr.io/rossigee/provider-keycloak:dev-cd7b0fe
+  packagePullPolicy: IfNotPresent

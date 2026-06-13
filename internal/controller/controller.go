@@ -30,6 +30,7 @@ import (
 	"github.com/rossigee/provider-keycloak/internal/controller/clientinitialaccess"
 	"github.com/rossigee/provider-keycloak/internal/controller/clientoptionalscopes"
 	"github.com/rossigee/provider-keycloak/internal/controller/clientrolemapping"
+	"github.com/rossigee/provider-keycloak/internal/controller/clientscope"
 	"github.com/rossigee/provider-keycloak/internal/controller/clientscopemapping"
 	"github.com/rossigee/provider-keycloak/internal/controller/component"
 	"github.com/rossigee/provider-keycloak/internal/controller/events"
@@ -66,6 +67,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 		userfederation.Setup,
 		clientrolemapping.Setup,
 		clientscopemapping.Setup,
+		clientscope.Setup,
 		clientdefaultscopes.Setup,
 		clientoptionalscopes.Setup,
 		clientinitialaccess.Setup,

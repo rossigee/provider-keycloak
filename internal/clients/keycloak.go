@@ -168,6 +168,12 @@ type Client interface {
 	AddClientOptionalScopes(ctx context.Context, realm, clientUUID string, scopes []ClientScopeRepresentation) error
 	RemoveClientOptionalScopes(ctx context.Context, realm, clientUUID string, scopes []ClientScopeRepresentation) error
 
+	// Client Scope definition operations (create/read/update/delete scope definitions)
+	GetClientScope(ctx context.Context, realm, name string) (*ClientScopeRepresentation, error)
+	CreateClientScope(ctx context.Context, realm string, scope ClientScopeRepresentation) error
+	UpdateClientScope(ctx context.Context, realm string, scope ClientScopeRepresentation) error
+	DeleteClientScope(ctx context.Context, realm, name string) error
+
 	// Identity Provider operations
 	GetIdentityProvider(ctx context.Context, realm, alias string) (*IdentityProviderRepresentation, error)
 	CreateIdentityProvider(ctx context.Context, realm string, provider *IdentityProviderRepresentation) (string, error)
@@ -464,16 +470,16 @@ type ClientRepresentation struct {
 	ConsentRequired                        bool              `json:"consentRequired"`
 	FullScopeAllowed                       bool              `json:"fullScopeAllowed"`
 	AlwaysDisplayInConsole                 bool              `json:"alwaysDisplayInConsole"`
-	FrontchannelLogoutEnabled              bool              `json:"frontchannelLogoutEnabled"`
-	FrontchannelLogoutURL                  string            `json:"frontchannelLogoutUrl,omitempty"`
+	FrontchannelLogoutEnabled              *bool             `json:"frontchannelLogoutEnabled,omitempty"`
+	FrontchannelLogoutURL                  *string            `json:"frontchannelLogoutUrl,omitempty"`
 	BackchannelLogoutURL                   string            `json:"backchannelLogoutUrl,omitempty"`
-	BackchannelLogoutSessionRequired       bool              `json:"backchannelLogoutSessionRequired"`
-	BackchannelLogoutRevokeOfflineSessions bool              `json:"backchannelLogoutRevokeOfflineSessions"`
+	BackchannelLogoutSessionRequired       *bool             `json:"backchannelLogoutSessionRequired,omitempty"`
+	BackchannelLogoutRevokeOfflineSessions *bool             `json:"backchannelLogoutRevokeOfflineSessions,omitempty"`
 	Protocol                               string            `json:"protocol,omitempty"`
-	AuthorizationServicesEnabled           bool              `json:"authorizationServicesEnabled"`
-	OAuth2DeviceAuthorizationGrantEnabled  bool              `json:"oauth2DeviceAuthorizationGrantEnabled"`
-	StandardTokenExchangeEnabled           bool              `json:"standardTokenExchangeEnabled"`
-	UseRefreshTokens                       bool              `json:"useRefreshTokens"`
+	AuthorizationServicesEnabled           *bool             `json:"authorizationServicesEnabled,omitempty"`
+	OAuth2DeviceAuthorizationGrantEnabled  *bool             `json:"oauth2DeviceAuthorizationGrantEnabled,omitempty"`
+	StandardTokenExchangeEnabled           *bool             `json:"standardTokenExchangeEnabled,omitempty"`
+	UseRefreshTokens                       *bool             `json:"useRefreshTokens,omitempty"`
 	ClientSessionIdleTimeout               string            `json:"clientSessionIdleTimeout,omitempty"`
 	ClientSessionMaxLifespan               string            `json:"clientSessionMaxLifespan,omitempty"`
 	ClientOfflineSessionIdleTimeout        string            `json:"clientOfflineSessionIdleTimeout,omitempty"`
@@ -568,6 +574,21 @@ func (c *keycloakClient) UpdateClient(ctx context.Context, realm string, client 
 	client.ValidRedirectURIs = nil
 	client.WebOrigins = nil
 	client.RootURL = ""
+	// These fields may not be supported by all Keycloak versions - set to nil to omit from JSON
+	client.FrontchannelLogoutEnabled = nil
+	client.FrontchannelLogoutURL = nil
+	client.BackchannelLogoutRevokeOfflineSessions = nil
+	client.BackchannelLogoutSessionRequired = nil
+	client.BackchannelLogoutURL = ""
+	client.Protocol = ""
+	client.AuthorizationServicesEnabled = nil
+	client.OAuth2DeviceAuthorizationGrantEnabled = nil
+	client.StandardTokenExchangeEnabled = nil
+	client.UseRefreshTokens = nil
+	client.ClientSessionIdleTimeout = ""
+	client.ClientSessionMaxLifespan = ""
+	client.ClientOfflineSessionIdleTimeout = ""
+	client.ClientOfflineSessionMaxLifespan = ""
 	path := realmPath(realm) + "/clients/" + url.PathEscape(client.ID)
 	_, err := c.doRequest(ctx, http.MethodPut, path, client)
 	return err
@@ -1365,8 +1386,11 @@ func (c *keycloakClient) GetRealmKeys(ctx context.Context, realm string) (*Realm
 // =============================================================================
 
 type ClientScopeRepresentation struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
+	ID                 string `json:"id,omitempty"`
+	Name               string `json:"name,omitempty"`
+	Description        string `json:"description,omitempty"`
+	Protocol           string `json:"protocol,omitempty"`
+	IncludeInTokenScope bool   `json:"includeInTokenScope,omitempty"`
 }
 
 func (c *keycloakClient) ListClientDefaultScopes(ctx context.Context, realm, clientUUID string) ([]ClientScopeRepresentation, error) {
@@ -1615,4 +1639,38 @@ func (c *keycloakClient) ListAuthorizationPolicies(ctx context.Context, realm, c
 		return nil, errors.Wrap(err, "failed to unmarshal authorization policies")
 	}
 	return policies, nil
+}
+
+func (c *keycloakClient) GetClientScope(ctx context.Context, realm, name string) (*ClientScopeRepresentation, error) {
+	path := realmPath(realm) + "/client-scopes/" + url.PathEscape(name)
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		if strings.Contains(err.Error(), "404") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var scope ClientScopeRepresentation
+	if err := json.Unmarshal(respBody, &scope); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal client scope")
+	}
+	return &scope, nil
+}
+
+func (c *keycloakClient) CreateClientScope(ctx context.Context, realm string, scope ClientScopeRepresentation) error {
+	path := realmPath(realm) + "/client-scopes"
+	_, err := c.doRequest(ctx, http.MethodPost, path, scope)
+	return err
+}
+
+func (c *keycloakClient) UpdateClientScope(ctx context.Context, realm string, scope ClientScopeRepresentation) error {
+	path := realmPath(realm) + "/client-scopes/" + url.PathEscape(scope.Name)
+	_, err := c.doRequest(ctx, http.MethodPut, path, scope)
+	return err
+}
+
+func (c *keycloakClient) DeleteClientScope(ctx context.Context, realm, name string) error {
+	path := realmPath(realm) + "/client-scopes/" + url.PathEscape(name)
+	_, err := c.doRequest(ctx, http.MethodDelete, path, nil)
+	return err
 }

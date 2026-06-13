@@ -92,10 +92,8 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 		return nil, errors.Wrap(err, errGetProviderConfig)
 	}
 
-	if pc.Status.GetCondition(xpv1.TypeReady).Status != "True" {
-		return nil, errors.New(errProviderNotReady)
-	}
-
+	// Try to connect to Keycloak - this will determine if provider is ready
+	// We don't check ProviderConfig status because CRD may not have status subresource
 	kc, err := clients.NewClient(ctx, pc, c.kube)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create Keycloak client")
@@ -159,24 +157,52 @@ func clientFlagsUpToDate(desired *openidclientv1alpha1.ClientParameters, actual 
 		{desired.ConsentRequired, actual.ConsentRequired},
 		{desired.FullScopeAllowed, actual.FullScopeAllowed},
 		{desired.AlwaysDisplayInConsole, actual.AlwaysDisplayInConsole},
-		{desired.FrontchannelLogoutEnabled, actual.FrontchannelLogoutEnabled},
-		{desired.BackchannelLogoutSessionRequired, actual.BackchannelLogoutSessionRequired},
-		{desired.BackchannelLogoutRevokeOfflineSessions, actual.BackchannelLogoutRevokeOfflineSessions},
-		{desired.AuthorizationServicesEnabled, actual.AuthorizationServicesEnabled},
-		{desired.OAuth2DeviceAuthorizationGrantEnabled, actual.OAuth2DeviceAuthorizationGrantEnabled},
-		{desired.StandardTokenExchangeEnabled, actual.StandardTokenExchangeEnabled},
-		{desired.UseRefreshTokens, actual.UseRefreshTokens},
 	}
 	for _, f := range flags {
 		if boolChanged(f.desired, f.actual) {
 			return false
 		}
 	}
+	// Check fields that are now pointers
+	if pointerBoolChanged(desired.FrontchannelLogoutEnabled, actual.FrontchannelLogoutEnabled) {
+		return false
+	}
+	if pointerBoolChanged(desired.BackchannelLogoutSessionRequired, actual.BackchannelLogoutSessionRequired) {
+		return false
+	}
+	if pointerBoolChanged(desired.BackchannelLogoutRevokeOfflineSessions, actual.BackchannelLogoutRevokeOfflineSessions) {
+		return false
+	}
+	if pointerBoolChanged(desired.AuthorizationServicesEnabled, actual.AuthorizationServicesEnabled) {
+		return false
+	}
+	if pointerBoolChanged(desired.OAuth2DeviceAuthorizationGrantEnabled, actual.OAuth2DeviceAuthorizationGrantEnabled) {
+		return false
+	}
+	if pointerBoolChanged(desired.StandardTokenExchangeEnabled, actual.StandardTokenExchangeEnabled) {
+		return false
+	}
+	if pointerBoolChanged(desired.UseRefreshTokens, actual.UseRefreshTokens) {
+		return false
+	}
 	return true
 }
 
 func stringChanged(desired *string, actual string) bool {
 	return desired != nil && *desired != actual
+}
+
+func pointerStringChanged(desired, actual *string) bool {
+	// If desired is nil, we don't want to change anything - treat as up to date
+	if desired == nil {
+		return false
+	}
+	// If actual is nil, treat as empty string
+	actualVal := ""
+	if actual != nil {
+		actualVal = *actual
+	}
+	return *desired != actualVal
 }
 
 func clientURLsUpToDate(desired *openidclientv1alpha1.ClientParameters, actual *clients.ClientRepresentation) bool {
@@ -189,7 +215,6 @@ func clientURLsUpToDate(desired *openidclientv1alpha1.ClientParameters, actual *
 		{desired.BaseUrl, actual.BaseURL},
 		{desired.AdminUrl, actual.AdminURL},
 		{desired.Protocol, actual.Protocol},
-		{desired.FrontchannelLogoutUrl, actual.FrontchannelLogoutURL},
 		{desired.BackchannelLogoutUrl, actual.BackchannelLogoutURL},
 		{desired.PkceCodeChallengeMethod, actual.PkceCodeChallengeMethod},
 		{desired.AccessTokenLifespan, actual.AccessTokenLifespan},
@@ -202,6 +227,10 @@ func clientURLsUpToDate(desired *openidclientv1alpha1.ClientParameters, actual *
 		if stringChanged(f.desired, f.actual) {
 			return false
 		}
+	}
+	// Check FrontchannelLogoutUrl separately since it's a pointer now
+	if pointerStringChanged(desired.FrontchannelLogoutUrl, actual.FrontchannelLogoutURL) {
+		return false
 	}
 	if desired.ValidRedirectUris != nil && !stringSlicesEqual(desired.ValidRedirectUris, actual.ValidRedirectURIs) {
 		return false
@@ -367,13 +396,13 @@ func clientParamsToRepresentation(p *openidclientv1alpha1.ClientParameters) *cli
 		ConsentRequired:                        boolVal(p.ConsentRequired, false),
 		FullScopeAllowed:                       boolVal(p.FullScopeAllowed, false),
 		AlwaysDisplayInConsole:                 boolVal(p.AlwaysDisplayInConsole, false),
-		FrontchannelLogoutEnabled:              boolVal(p.FrontchannelLogoutEnabled, false),
-		BackchannelLogoutSessionRequired:       boolVal(p.BackchannelLogoutSessionRequired, false),
-		BackchannelLogoutRevokeOfflineSessions: boolVal(p.BackchannelLogoutRevokeOfflineSessions, false),
-		AuthorizationServicesEnabled:           boolVal(p.AuthorizationServicesEnabled, false),
-		OAuth2DeviceAuthorizationGrantEnabled:  boolVal(p.OAuth2DeviceAuthorizationGrantEnabled, false),
-		StandardTokenExchangeEnabled:           boolVal(p.StandardTokenExchangeEnabled, false),
-		UseRefreshTokens:                       boolVal(p.UseRefreshTokens, true),
+		FrontchannelLogoutEnabled:              p.FrontchannelLogoutEnabled,
+		BackchannelLogoutSessionRequired:       p.BackchannelLogoutSessionRequired,
+		BackchannelLogoutRevokeOfflineSessions: p.BackchannelLogoutRevokeOfflineSessions,
+		AuthorizationServicesEnabled:           p.AuthorizationServicesEnabled,
+		OAuth2DeviceAuthorizationGrantEnabled:  p.OAuth2DeviceAuthorizationGrantEnabled,
+		StandardTokenExchangeEnabled:           p.StandardTokenExchangeEnabled,
+		UseRefreshTokens:                       p.UseRefreshTokens,
 	}
 	setClientStrings(rep, p)
 	setClientSlices(rep, p)
@@ -398,13 +427,18 @@ func setClientStrings(rep *clients.ClientRepresentation, p *openidclientv1alpha1
 		{p.ClientSessionMaxLifespan, &rep.ClientSessionMaxLifespan},
 		{p.ClientOfflineSessionIdleTimeout, &rep.ClientOfflineSessionIdleTimeout},
 		{p.ClientOfflineSessionMaxLifespan, &rep.ClientOfflineSessionMaxLifespan},
-		{p.FrontchannelLogoutUrl, &rep.FrontchannelLogoutURL},
 		{p.BackchannelLogoutUrl, &rep.BackchannelLogoutURL},
 	}
 	for _, f := range stringFields {
 		if f.source != nil {
 			*f.target = *f.source
 		}
+	}
+	// Handle FrontchannelLogoutUrl specially - it's a pointer now
+	if p.FrontchannelLogoutUrl != nil {
+		rep.FrontchannelLogoutURL = p.FrontchannelLogoutUrl
+	} else {
+		rep.FrontchannelLogoutURL = nil
 	}
 }
 
@@ -422,4 +456,17 @@ func boolVal(p *bool, def bool) bool {
 		return def
 	}
 	return *p
+}
+
+func pointerBoolChanged(desired, actual *bool) bool {
+	// If desired is nil, we don't want to change anything - treat as up to date
+	if desired == nil {
+		return false
+	}
+	// If actual is nil, treat as false
+	actualVal := false
+	if actual != nil {
+		actualVal = *actual
+	}
+	return *desired != actualVal
 }

@@ -83,3 +83,113 @@ func (in *ClientScopeMappingList) DeepCopyObject() runtime.Object {
 	}
 	return nil
 }
+
+func (in *ClientScopeParameters) DeepCopyInto(out *ClientScopeParameters) {
+	*out = *in
+	if in.Description != nil {
+		in, out := &in.Description, &out.Description
+		*out = new(string)
+		**out = **in
+	}
+	if in.Protocol != nil {
+		in, out := &in.Protocol, &out.Protocol
+		*out = new(string)
+		**out = **in
+	}
+	if in.IncludeInTokenScope != nil {
+		in, out := &in.IncludeInTokenScope, &out.IncludeInTokenScope
+		*out = new(bool)
+		**out = **in
+	}
+}
+
+func (in *ClientScopeParameters) DeepCopy() *ClientScopeParameters {
+	if in == nil {
+		return nil
+	}
+	out := new(ClientScopeParameters)
+	in.DeepCopyInto(out)
+	return out
+}
+
+func (in *ClientScopeSpec) DeepCopyInto(out *ClientScopeSpec) {
+	*out = *in
+	in.ManagedResourceSpec.DeepCopyInto(&out.ManagedResourceSpec)
+	in.ForProvider.DeepCopyInto(&out.ForProvider)
+}
+
+func (in *ClientScopeSpec) DeepCopy() *ClientScopeSpec {
+	if in == nil {
+		return nil
+	}
+	out := new(ClientScopeSpec)
+	in.DeepCopyInto(out)
+	return out
+}
+
+func (in *ClientScopeStatus) DeepCopyInto(out *ClientScopeStatus) {
+	*out = *in
+	in.ManagedResourceStatus.DeepCopyInto(&out.ManagedResourceStatus)
+}
+
+func (in *ClientScopeStatus) DeepCopy() *ClientScopeStatus {
+	if in == nil {
+		return nil
+	}
+	out := new(ClientScopeStatus)
+	in.DeepCopyInto(out)
+	return out
+}
+
+func (in *ClientScope) DeepCopyInto(out *ClientScope) {
+	*out = *in
+	out.TypeMeta = in.TypeMeta
+	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
+	in.Spec.DeepCopyInto(&out.Spec)
+	in.Status.DeepCopyInto(&out.Status)
+}
+
+func (in *ClientScope) DeepCopy() *ClientScope {
+	if in == nil {
+		return nil
+	}
+	out := new(ClientScope)
+	in.DeepCopyInto(out)
+	return out
+}
+
+func (in *ClientScope) DeepCopyObject() runtime.Object {
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
+	return nil
+}
+
+func (in *ClientScopeList) DeepCopyInto(out *ClientScopeList) {
+	*out = *in
+	out.TypeMeta = in.TypeMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]ClientScope, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+}
+
+func (in *ClientScopeList) DeepCopy() *ClientScopeList {
+	if in == nil {
+		return nil
+	}
+	out := new(ClientScopeList)
+	in.DeepCopyInto(out)
+	return out
+}
+
+func (in *ClientScopeList) DeepCopyObject() runtime.Object {
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
+	return nil
+}
