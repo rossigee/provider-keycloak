@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -37,6 +38,7 @@ import (
 
 	"github.com/rossigee/provider-keycloak/apis"
 	"github.com/rossigee/provider-keycloak/internal/controller"
+	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
 func main() {
@@ -54,7 +56,12 @@ func main() {
 
 	zl := zap.New(zap.UseDevMode(*debug))
 	log := logging.NewLogrLogger(zl.WithName("provider-keycloak"))
+
+	shutdownTracing := tracing.Init("provider-keycloak")
+	defer shutdownTracing(context.Background())
 	ctrl.SetLogger(zl)
+
+	shutdownTracing(context.Background())
 
 	log.Info("Provider starting up",
 		"provider", "provider-keycloak",
