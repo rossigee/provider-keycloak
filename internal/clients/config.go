@@ -132,6 +132,10 @@ func applyDefaults(creds *ProviderCredentials) {
 	if creds.Realm == "" {
 		creds.Realm = defaultRealm
 	}
+	if creds.BasePath == "" {
+		creds.BasePath = defaultBasePath
+	}
 }
 
 const defaultRealm = "master"
+const defaultBasePath = "/auth"

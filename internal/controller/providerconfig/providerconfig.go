@@ -77,10 +77,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		log.Error(err, "failed to get latest ProviderConfig for status update")
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, client.IgnoreNotFound(err)
 	}
-	
+
 	log.Info("Updating ProviderConfig", "name", fresh.GetName(), "status", pc.Status)
 	fresh.Status = pc.Status
-	
+
 	// Try using client.Update which updates the entire object
 	if err := r.kube.Update(ctx, fresh); err != nil {
 		log.Error(err, "failed to update ProviderConfig", "error", err)

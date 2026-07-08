@@ -91,6 +91,7 @@ type ClientScopeMappingList struct {
 func init() {
 	SchemeBuilder.Register(&ClientScopeMapping{}, &ClientScopeMappingList{}, &ClientScope{}, &ClientScopeList{})
 }
+
 type ClientScopeParameters struct {
 	// RealmId is the ID of the realm.
 	// +kubebuilder:validation:Required

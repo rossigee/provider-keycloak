@@ -178,6 +178,126 @@ func (m *mockUserClient) GenerateClientCertificate(_ context.Context, _, _ strin
 func (m *mockUserClient) ListClientCertificates(_ context.Context, _, _ string) ([]clients.ClientCertificateRepresentation, error) {
 	return nil, nil
 }
+func (m *mockUserClient) GetClientRole(_ context.Context, _, _, _ string) (*clients.RoleRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) CreateClientRole(_ context.Context, _, _ string, _ *clients.RoleRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) UpdateClientRole(_ context.Context, _, _, _ string, _ *clients.RoleRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) DeleteClientRole(_ context.Context, _, _, _ string) error { return nil }
+func (m *mockUserClient) ListUserClientRoleMappings(_ context.Context, _, _, _ string) ([]clients.RoleRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) AddUserClientRoleMappings(_ context.Context, _, _, _ string, _ []clients.RoleRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) RemoveUserClientRoleMappings(_ context.Context, _, _, _ string, _ []clients.RoleRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) ListClientScopeMappings(_ context.Context, _, _ string) ([]clients.RoleRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) AddClientScopeMappings(_ context.Context, _, _ string, _ []clients.RoleRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) RemoveClientScopeMappings(_ context.Context, _, _ string, _ []clients.RoleRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) CreateClientInitialAccess(_ context.Context, _ string, _, _ int32) (*clients.ClientInitialAccessRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) ListClientInitialAccess(_ context.Context, _ string) ([]clients.ClientInitialAccessRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) DeleteClientInitialAccess(_ context.Context, _, _ string) error { return nil }
+func (m *mockUserClient) GetComponent(_ context.Context, _, _ string) (*clients.ComponentRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) CreateComponent(_ context.Context, _ string, _ *clients.ComponentRepresentation) (string, error) {
+	return "", nil
+}
+func (m *mockUserClient) UpdateComponent(_ context.Context, _, _ string, _ *clients.ComponentRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) DeleteComponent(_ context.Context, _, _ string) error { return nil }
+func (m *mockUserClient) ListComponentsByType(_ context.Context, _, _, _ string) ([]clients.ComponentRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) GetRealmKeys(_ context.Context, _ string) (*clients.RealmKeysRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) ListClientDefaultScopes(_ context.Context, _, _ string) ([]clients.ClientScopeRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) AddClientDefaultScopes(_ context.Context, _, _ string, _ []clients.ClientScopeRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) RemoveClientDefaultScopes(_ context.Context, _, _ string, _ []clients.ClientScopeRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) ListClientOptionalScopes(_ context.Context, _, _ string) ([]clients.ClientScopeRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) AddClientOptionalScopes(_ context.Context, _, _ string, _ []clients.ClientScopeRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) RemoveClientOptionalScopes(_ context.Context, _, _ string, _ []clients.ClientScopeRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) GetClientScope(_ context.Context, _, _ string) (*clients.ClientScopeRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) CreateClientScope(_ context.Context, _ string, _ clients.ClientScopeRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) UpdateClientScope(_ context.Context, _ string, _ clients.ClientScopeRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) DeleteClientScope(_ context.Context, _, _ string) error { return nil }
+func (m *mockUserClient) GetIdentityProvider(_ context.Context, _, _ string) (*clients.IdentityProviderRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) CreateIdentityProvider(_ context.Context, _ string, _ *clients.IdentityProviderRepresentation) (string, error) {
+	return "", nil
+}
+func (m *mockUserClient) UpdateIdentityProvider(_ context.Context, _, _ string, _ *clients.IdentityProviderRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) DeleteIdentityProvider(_ context.Context, _, _ string) error { return nil }
+func (m *mockUserClient) ListIdentityProviders(_ context.Context, _ string) ([]clients.IdentityProviderRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) GetAuthenticationFlow(_ context.Context, _, _ string) (*clients.AuthenticationFlowRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) CreateAuthenticationFlow(_ context.Context, _ string, _ *clients.AuthenticationFlowRepresentation) (string, error) {
+	return "", nil
+}
+func (m *mockUserClient) UpdateAuthenticationFlow(_ context.Context, _, _ string, _ *clients.AuthenticationFlowRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) DeleteAuthenticationFlow(_ context.Context, _, _ string) error { return nil }
+func (m *mockUserClient) ListAuthenticationFlows(_ context.Context, _ string) ([]clients.AuthenticationFlowRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) GetAuthorizationPolicy(_ context.Context, _, _, _ string) (*clients.AuthorizationPolicyRepresentation, error) {
+	return nil, nil
+}
+func (m *mockUserClient) CreateAuthorizationPolicy(_ context.Context, _, _ string, _ *clients.AuthorizationPolicyRepresentation) (string, error) {
+	return "", nil
+}
+func (m *mockUserClient) UpdateAuthorizationPolicy(_ context.Context, _, _, _ string, _ *clients.AuthorizationPolicyRepresentation) error {
+	return nil
+}
+func (m *mockUserClient) DeleteAuthorizationPolicy(_ context.Context, _, _, _ string) error {
+	return nil
+}
+func (m *mockUserClient) ListAuthorizationPolicies(_ context.Context, _, _ string) ([]clients.AuthorizationPolicyRepresentation, error) {
+	return nil, nil
+}
 
 func newUserCR(realmId, username string) *userv1alpha1.User {
 	cr := &userv1alpha1.User{

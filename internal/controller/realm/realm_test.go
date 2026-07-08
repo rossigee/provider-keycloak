@@ -180,6 +180,10 @@ func (m *mockRealmClient) GenerateClientCertificate(_ context.Context, _, _ stri
 func (m *mockRealmClient) ListClientCertificates(_ context.Context, _, _ string) ([]clients.ClientCertificateRepresentation, error) {
 	return nil, nil
 }
+func (m *mockRealmClient) CreateClientScope(_ context.Context, _ string, _ clients.ClientScopeRepresentation) error {
+	return nil
+}
+func (m *mockRealmClient) DeleteClientScope(_ context.Context, _, _ string) error { return nil }
 
 func newRealmCR(name string) *realmv1alpha1.Realm {
 	return &realmv1alpha1.Realm{

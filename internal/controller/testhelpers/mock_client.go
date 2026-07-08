@@ -136,3 +136,13 @@ func (m *BaseMockClient) ListComponentsByType(context.Context, string, string, s
 func (m *BaseMockClient) GetRealmKeys(context.Context, string) (*clients.RealmKeysRepresentation, error) {
 	return nil, nil
 }
+func (m *BaseMockClient) GetClientScope(_ context.Context, _, _ string) (*clients.ClientScopeRepresentation, error) {
+	return nil, nil
+}
+func (m *BaseMockClient) CreateClientScope(_ context.Context, _ string, _ clients.ClientScopeRepresentation) error {
+	return nil
+}
+func (m *BaseMockClient) UpdateClientScope(_ context.Context, _ string, _ clients.ClientScopeRepresentation) error {
+	return nil
+}
+func (m *BaseMockClient) DeleteClientScope(_ context.Context, _, _ string) error { return nil }

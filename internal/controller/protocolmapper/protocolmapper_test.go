@@ -179,6 +179,10 @@ func (m *mockMapperClient) GenerateClientCertificate(_ context.Context, _, _ str
 func (m *mockMapperClient) ListClientCertificates(_ context.Context, _, _ string) ([]clients.ClientCertificateRepresentation, error) {
 	return nil, nil
 }
+func (m *mockMapperClient) CreateClientScope(_ context.Context, _ string, _ clients.ClientScopeRepresentation) error {
+	return nil
+}
+func (m *mockMapperClient) DeleteClientScope(_ context.Context, _, _ string) error { return nil }
 
 func newMapperCR(realmId, clientId, name string) *clientv1alpha1.ProtocolMapper {
 	cr := &clientv1alpha1.ProtocolMapper{

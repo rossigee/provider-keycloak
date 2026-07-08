@@ -178,6 +178,10 @@ func (m *mockGroupClient) GenerateClientCertificate(_ context.Context, _, _ stri
 func (m *mockGroupClient) ListClientCertificates(_ context.Context, _, _ string) ([]clients.ClientCertificateRepresentation, error) {
 	return nil, nil
 }
+func (m *mockGroupClient) CreateClientScope(_ context.Context, _ string, _ clients.ClientScopeRepresentation) error {
+	return nil
+}
+func (m *mockGroupClient) DeleteClientScope(_ context.Context, _, _ string) error { return nil }
 
 func newGroupCR(realmId, name string) *groupv1alpha1.Group {
 	cr := &groupv1alpha1.Group{

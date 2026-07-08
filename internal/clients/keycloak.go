@@ -471,7 +471,7 @@ type ClientRepresentation struct {
 	FullScopeAllowed                       bool              `json:"fullScopeAllowed"`
 	AlwaysDisplayInConsole                 bool              `json:"alwaysDisplayInConsole"`
 	FrontchannelLogoutEnabled              *bool             `json:"frontchannelLogoutEnabled,omitempty"`
-	FrontchannelLogoutURL                  *string            `json:"frontchannelLogoutUrl,omitempty"`
+	FrontchannelLogoutURL                  *string           `json:"frontchannelLogoutUrl,omitempty"`
 	BackchannelLogoutURL                   string            `json:"backchannelLogoutUrl,omitempty"`
 	BackchannelLogoutSessionRequired       *bool             `json:"backchannelLogoutSessionRequired,omitempty"`
 	BackchannelLogoutRevokeOfflineSessions *bool             `json:"backchannelLogoutRevokeOfflineSessions,omitempty"`
@@ -1386,10 +1386,10 @@ func (c *keycloakClient) GetRealmKeys(ctx context.Context, realm string) (*Realm
 // =============================================================================
 
 type ClientScopeRepresentation struct {
-	ID                 string `json:"id,omitempty"`
-	Name               string `json:"name,omitempty"`
-	Description        string `json:"description,omitempty"`
-	Protocol           string `json:"protocol,omitempty"`
+	ID                  string `json:"id,omitempty"`
+	Name                string `json:"name,omitempty"`
+	Description         string `json:"description,omitempty"`
+	Protocol            string `json:"protocol,omitempty"`
 	IncludeInTokenScope bool   `json:"includeInTokenScope,omitempty"`
 }
 

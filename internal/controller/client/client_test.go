@@ -182,6 +182,10 @@ func (m *mockClient) GenerateClientCertificate(_ context.Context, _, _ string, _
 func (m *mockClient) ListClientCertificates(_ context.Context, _, _ string) ([]clients.ClientCertificateRepresentation, error) {
 	return nil, nil
 }
+func (m *mockClient) CreateClientScope(_ context.Context, _ string, _ clients.ClientScopeRepresentation) error {
+	return nil
+}
+func (m *mockClient) DeleteClientScope(_ context.Context, _, _ string) error { return nil }
 
 // newCR returns a minimal Client CR for testing.
 func newCR(realmId, clientId string) *openidclientv1alpha1.Client {

@@ -34,10 +34,10 @@ import (
 )
 
 const (
-	errNotClientScope     = "managed resource is not a ClientScope"
-	errGetProviderConfig  = "cannot get ProviderConfig"
-	errProviderNotReady   = "provider is not ready"
-	controllerName        = "clientscopes.scopes.keycloak.crossplane.io"
+	errNotClientScope    = "managed resource is not a ClientScope"
+	errGetProviderConfig = "cannot get ProviderConfig"
+	errProviderNotReady  = "provider is not ready"
+	controllerName       = "clientscopes.scopes.keycloak.crossplane.io"
 )
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
