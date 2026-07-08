@@ -9,9 +9,8 @@
 package v1alpha1
 
 import (
-	runtime "k8s.io/apimachinery/pkg/runtime"
-
 	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // DeepCopyInto copies all properties of this object into another object of the same type.

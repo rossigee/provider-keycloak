@@ -23,22 +23,19 @@ import (
 	"runtime"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
-
-	"gopkg.in/alecthomas/kingpin.v2"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
 	xpcontroller "github.com/crossplane/crossplane-runtime/v2/pkg/controller"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/feature"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/logging"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/ratelimiter"
-
 	"github.com/rossigee/provider-keycloak/apis"
-	"github.com/rossigee/provider-keycloak/internal/controller"
+	controller "github.com/rossigee/provider-keycloak/internal/controller"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
+	"gopkg.in/alecthomas/kingpin.v2"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 func main() {
@@ -60,7 +57,6 @@ func main() {
 	shutdownTracing := tracing.Init("provider-keycloak")
 	defer shutdownTracing(context.Background())
 	ctrl.SetLogger(zl)
-
 
 	log.Info("Provider starting up",
 		"provider", "provider-keycloak",

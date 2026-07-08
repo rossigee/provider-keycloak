@@ -18,8 +18,6 @@ limitations under the License.
 package apis
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
-
 	authenticationflowv1alpha1 "github.com/rossigee/provider-keycloak/apis/authenticationflow/v1alpha1"
 	authorizationpolicyv1alpha1 "github.com/rossigee/provider-keycloak/apis/authorizationpolicy/v1alpha1"
 	authzv1alpha1 "github.com/rossigee/provider-keycloak/apis/authz/v1alpha1"
@@ -39,7 +37,8 @@ import (
 	scopesv1alpha1 "github.com/rossigee/provider-keycloak/apis/scopes/v1alpha1"
 	userv1alpha1 "github.com/rossigee/provider-keycloak/apis/user/v1alpha1"
 	userfederationv1alpha1 "github.com/rossigee/provider-keycloak/apis/userfederation/v1alpha1"
-	"github.com/rossigee/provider-keycloak/apis/v1beta1"
+	v1beta1 "github.com/rossigee/provider-keycloak/apis/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func init() {

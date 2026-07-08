@@ -19,11 +19,10 @@ package v1alpha1
 import (
 	"reflect"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
-// Package type metadata.
 const (
 	Group   = "authorizationpolicy.keycloak.crossplane.io"
 	Version = "v1alpha1"
@@ -31,7 +30,7 @@ const (
 
 var (
 	SchemeGroupVersion = schema.GroupVersion{Group: Group, Version: Version}
-	SchemeBuilder      = &scheme.Builder{GroupVersion: SchemeGroupVersion}
+	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
 	AddToScheme        = SchemeBuilder.AddToScheme
 )
 
@@ -42,3 +41,11 @@ var (
 	AuthorizationPolicyKindAPIVersion   = AuthorizationPolicyKind + "." + SchemeGroupVersion.String()
 	AuthorizationPolicyGroupVersionKind = SchemeGroupVersion.WithKind(AuthorizationPolicyKind)
 )
+
+func addKnownTypes(s *runtime.Scheme) error {
+	s.AddKnownTypes(SchemeGroupVersion,
+		&AuthorizationPolicy{},
+		&AuthorizationPolicyList{},
+	)
+	return nil
+}

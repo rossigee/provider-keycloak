@@ -17,10 +17,7 @@ limitations under the License.
 package controller
 
 import (
-	ctrl "sigs.k8s.io/controller-runtime"
-
 	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
-
 	"github.com/rossigee/provider-keycloak/internal/controller/authenticationflow"
 	"github.com/rossigee/provider-keycloak/internal/controller/authorizationpolicy"
 	"github.com/rossigee/provider-keycloak/internal/controller/authz"
@@ -44,6 +41,7 @@ import (
 	"github.com/rossigee/provider-keycloak/internal/controller/role"
 	"github.com/rossigee/provider-keycloak/internal/controller/user"
 	"github.com/rossigee/provider-keycloak/internal/controller/userfederation"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // Setup sets up Keycloak provider controllers.

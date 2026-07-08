@@ -17,9 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"reflect"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 // Group and Version for this API.
@@ -30,15 +31,32 @@ const (
 
 var (
 	SchemeGroupVersion = schema.GroupVersion{Group: Group, Version: Version}
-	SchemeBuilder      = &scheme.Builder{GroupVersion: SchemeGroupVersion}
+	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
+	AddToScheme        = SchemeBuilder.AddToScheme
 )
 
-func init() {
-	SchemeBuilder.Register(&User{}, &UserList{})
-	SchemeBuilder.Register(&Groups{}, &GroupsList{})
-}
+// User type metadata.
+var (
+	UserKind             = reflect.TypeOf(User{}).Name()
+	UserGroupKind        = schema.GroupKind{Group: Group, Kind: UserKind}.String()
+	UserKindAPIVersion   = UserKind + "." + SchemeGroupVersion.String()
+	UserGroupVersionKind = SchemeGroupVersion.WithKind(UserKind)
+)
 
-// AddToScheme adds all types of this group into the given scheme.
-func AddToScheme(s *runtime.Scheme) error {
-	return SchemeBuilder.AddToScheme(s)
+// Groups type metadata.
+var (
+	GroupsKind             = reflect.TypeOf(Groups{}).Name()
+	GroupsGroupKind        = schema.GroupKind{Group: Group, Kind: GroupsKind}.String()
+	GroupsKindAPIVersion   = GroupsKind + "." + SchemeGroupVersion.String()
+	GroupsGroupVersionKind = SchemeGroupVersion.WithKind(GroupsKind)
+)
+
+func addKnownTypes(s *runtime.Scheme) error {
+	s.AddKnownTypes(SchemeGroupVersion,
+		&User{},
+		&UserList{},
+		&Groups{},
+		&GroupsList{},
+	)
+	return nil
 }

@@ -17,9 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"reflect"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 // Group and Version for this API.
@@ -30,14 +31,22 @@ const (
 
 var (
 	SchemeGroupVersion = schema.GroupVersion{Group: Group, Version: Version}
-	SchemeBuilder      = &scheme.Builder{GroupVersion: SchemeGroupVersion}
+	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
+	AddToScheme        = SchemeBuilder.AddToScheme
 )
 
-func init() {
-	SchemeBuilder.Register(&Realm{}, &RealmList{})
-}
+// Realm type metadata.
+var (
+	RealmKind             = reflect.TypeOf(Realm{}).Name()
+	RealmGroupKind        = schema.GroupKind{Group: Group, Kind: RealmKind}.String()
+	RealmKindAPIVersion   = RealmKind + "." + SchemeGroupVersion.String()
+	RealmGroupVersionKind = SchemeGroupVersion.WithKind(RealmKind)
+)
 
-// AddToScheme adds all types of this group into the given scheme.
-func AddToScheme(s *runtime.Scheme) error {
-	return SchemeBuilder.AddToScheme(s)
+func addKnownTypes(s *runtime.Scheme) error {
+	s.AddKnownTypes(SchemeGroupVersion,
+		&Realm{},
+		&RealmList{},
+	)
+	return nil
 }

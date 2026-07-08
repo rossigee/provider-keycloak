@@ -81,22 +81,29 @@ func Init(serviceName string) func(context.Context) {
 	}
 }
 
-func StartSpan(ctx context.Context, name string, attrs ...attribute.KeyValue) (context.Context, trace.Span) {
-	return tracer.Start(ctx, name,
+func StartSpan(ctx context.Context, name string, attrs ...attribute.KeyValue) (context.Context, trace.Span) { //nolint:spancheck
+	if tracer == nil {
+		return ctx, trace.SpanFromContext(ctx)
+	}
+	ctx, span := tracer.Start(ctx, name, //nolint:spancheck
 		trace.WithAttributes(attrs...),
 	)
+	return ctx, span //nolint:spancheck
 }
 
-func StartSpanWithAttrs(ctx context.Context, name, resourceType, resourceName, operation string) (context.Context, trace.Span) {
-	return tracer.Start(ctx, name,
+func StartSpanWithAttrs(ctx context.Context, name, resourceType, resourceName, operation string) (context.Context, trace.Span) { //nolint:spancheck
+	if tracer == nil {
+		return ctx, trace.SpanFromContext(ctx)
+	}
+	ctx, span := tracer.Start(ctx, name, //nolint:spancheck
 		trace.WithAttributes(
 			attribute.String(resourceTypeAttr, resourceType),
 			attribute.String(resourceNameAttr, resourceName),
 			attribute.String(operationAttr, operation),
 		),
 	)
+	return ctx, span //nolint:spancheck
 }
-
 func SpanAttrs(resourceType, resourceName, operation string) []attribute.KeyValue {
 	return []attribute.KeyValue{
 		attribute.String(resourceTypeAttr, resourceType),

@@ -17,9 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"reflect"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 // APIGroup is the API group for this package.
@@ -30,14 +31,22 @@ const (
 
 var (
 	SchemeGroupVersion = schema.GroupVersion{Group: APIGroup, Version: Version}
-	SchemeBuilder      = &scheme.Builder{GroupVersion: SchemeGroupVersion}
+	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
+	AddToScheme        = SchemeBuilder.AddToScheme
 )
 
-func init() {
-	SchemeBuilder.Register(&Group{}, &GroupList{})
-}
+// Group type metadata.
+var (
+	GroupKind             = reflect.TypeOf(Group{}).Name()
+	GroupGroupKind        = schema.GroupKind{Group: APIGroup, Kind: GroupKind}.String()
+	GroupKindAPIVersion   = GroupKind + "." + SchemeGroupVersion.String()
+	GroupGroupVersionKind = SchemeGroupVersion.WithKind(GroupKind)
+)
 
-// AddToScheme adds all types of this group into the given scheme.
-func AddToScheme(s *runtime.Scheme) error {
-	return SchemeBuilder.AddToScheme(s)
+func addKnownTypes(s *runtime.Scheme) error {
+	s.AddKnownTypes(SchemeGroupVersion,
+		&Group{},
+		&GroupList{},
+	)
+	return nil
 }
