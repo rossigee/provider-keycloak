@@ -41,3 +41,5 @@ kubeconfig
 
 # Debug
 __debug*
+# Cache directories
+.cache/
