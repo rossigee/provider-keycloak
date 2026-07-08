@@ -31,6 +31,7 @@ import (
 	authorizationpolicyv1alpha1 "github.com/rossigee/provider-keycloak/apis/authorizationpolicy/v1alpha1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
+	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
 const (
@@ -84,6 +85,10 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 func (e *external) Disconnect(_ context.Context) error { return nil }
 
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
+	_, span := tracing.StartSpan(ctx, "authorizationpolicy.observe",
+		tracing.SpanAttrs("AuthorizationPolicy", mg.GetName(), "observe")...)
+	defer span.End()
+
 	cr, ok := mg.(*authorizationpolicyv1alpha1.AuthorizationPolicy)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotAuthorizationPolicy)
@@ -98,6 +103,10 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 }
 
 func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
+	_, span := tracing.StartSpan(ctx, "authorizationpolicy.create",
+		tracing.SpanAttrs("AuthorizationPolicy", mg.GetName(), "create")...)
+	defer span.End()
+
 	cr, ok := mg.(*authorizationpolicyv1alpha1.AuthorizationPolicy)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotAuthorizationPolicy)
@@ -119,6 +128,10 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	_, span := tracing.StartSpan(ctx, "authorizationpolicy.update",
+		tracing.SpanAttrs("AuthorizationPolicy", mg.GetName(), "update")...)
+	defer span.End()
+
 	cr, ok := mg.(*authorizationpolicyv1alpha1.AuthorizationPolicy)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotAuthorizationPolicy)
@@ -134,6 +147,10 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
+	_, span := tracing.StartSpan(ctx, "authorizationpolicy.delete",
+		tracing.SpanAttrs("AuthorizationPolicy", mg.GetName(), "delete")...)
+	defer span.End()
+
 	cr, ok := mg.(*authorizationpolicyv1alpha1.AuthorizationPolicy)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotAuthorizationPolicy)

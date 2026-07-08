@@ -32,6 +32,7 @@ import (
 	clientv1alpha1 "github.com/rossigee/provider-keycloak/apis/client/v1alpha1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
+	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
 const (
@@ -107,6 +108,10 @@ func (e *external) resolveClientUUID(ctx context.Context, realm, clientID string
 }
 
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
+	_, span := tracing.StartSpan(ctx, "protocolmapper.observe",
+		tracing.SpanAttrs("ProtocolMapper", mg.GetName(), "observe")...)
+	defer span.End()
+
 	cr, ok := mg.(*clientv1alpha1.ProtocolMapper)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotMapper)
@@ -133,6 +138,10 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 }
 
 func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
+	_, span := tracing.StartSpan(ctx, "protocolmapper.create",
+		tracing.SpanAttrs("ProtocolMapper", mg.GetName(), "create")...)
+	defer span.End()
+
 	cr, ok := mg.(*clientv1alpha1.ProtocolMapper)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotMapper)
@@ -155,6 +164,10 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	_, span := tracing.StartSpan(ctx, "protocolmapper.update",
+		tracing.SpanAttrs("ProtocolMapper", mg.GetName(), "update")...)
+	defer span.End()
+
 	cr, ok := mg.(*clientv1alpha1.ProtocolMapper)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotMapper)
@@ -185,6 +198,10 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
+	_, span := tracing.StartSpan(ctx, "protocolmapper.delete",
+		tracing.SpanAttrs("ProtocolMapper", mg.GetName(), "delete")...)
+	defer span.End()
+
 	cr, ok := mg.(*clientv1alpha1.ProtocolMapper)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotMapper)

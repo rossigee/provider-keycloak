@@ -32,6 +32,7 @@ import (
 	openidclientv1alpha1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1alpha1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
+	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
 const (
@@ -85,6 +86,10 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 func (e *external) Disconnect(_ context.Context) error { return nil }
 
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
+	_, span := tracing.StartSpan(ctx, "clientoptionalscopes.observe",
+		tracing.SpanAttrs("ClientOptionalScopes", mg.GetName(), "observe")...)
+	defer span.End()
+
 	cr, ok := mg.(*openidclientv1alpha1.ClientOptionalScopes)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotClientOptionalScopes)
@@ -99,6 +104,10 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 }
 
 func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
+	_, span := tracing.StartSpan(ctx, "clientoptionalscopes.create",
+		tracing.SpanAttrs("ClientOptionalScopes", mg.GetName(), "create")...)
+	defer span.End()
+
 	cr, ok := mg.(*openidclientv1alpha1.ClientOptionalScopes)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotClientOptionalScopes)
@@ -112,6 +121,10 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	_, span := tracing.StartSpan(ctx, "clientoptionalscopes.update",
+		tracing.SpanAttrs("ClientOptionalScopes", mg.GetName(), "update")...)
+	defer span.End()
+
 	cr, ok := mg.(*openidclientv1alpha1.ClientOptionalScopes)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotClientOptionalScopes)
@@ -137,6 +150,10 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
+	_, span := tracing.StartSpan(ctx, "clientoptionalscopes.delete",
+		tracing.SpanAttrs("ClientOptionalScopes", mg.GetName(), "delete")...)
+	defer span.End()
+
 	cr, ok := mg.(*openidclientv1alpha1.ClientOptionalScopes)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotClientOptionalScopes)

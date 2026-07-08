@@ -61,7 +61,6 @@ func main() {
 	defer shutdownTracing(context.Background())
 	ctrl.SetLogger(zl)
 
-	shutdownTracing(context.Background())
 
 	log.Info("Provider starting up",
 		"provider", "provider-keycloak",

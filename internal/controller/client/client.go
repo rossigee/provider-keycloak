@@ -35,6 +35,7 @@ import (
 	openidclientv1alpha1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1alpha1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
+	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
 const (
@@ -103,6 +104,10 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 }
 
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
+	_, span := tracing.StartSpan(ctx, "client.observe",
+		tracing.SpanAttrs("Client", mg.GetName(), "observe")...)
+	defer span.End()
+
 	cr, ok := mg.(*openidclientv1alpha1.Client)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotClient)
@@ -259,6 +264,10 @@ func stringSlicesEqual(a, b []string) bool {
 }
 
 func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
+	_, span := tracing.StartSpan(ctx, "client.create",
+		tracing.SpanAttrs("Client", mg.GetName(), "create")...)
+	defer span.End()
+
 	cr, ok := mg.(*openidclientv1alpha1.Client)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotClient)
@@ -318,6 +327,10 @@ func (e *external) writeClientSecret(ctx context.Context, realm, clientUUID stri
 }
 
 func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	_, span := tracing.StartSpan(ctx, "client.update",
+		tracing.SpanAttrs("Client", mg.GetName(), "update")...)
+	defer span.End()
+
 	cr, ok := mg.(*openidclientv1alpha1.Client)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotClient)
@@ -352,6 +365,10 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 func (e *external) Disconnect(_ context.Context) error { return nil }
 
 func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
+	_, span := tracing.StartSpan(ctx, "client.delete",
+		tracing.SpanAttrs("Client", mg.GetName(), "delete")...)
+	defer span.End()
+
 	cr, ok := mg.(*openidclientv1alpha1.Client)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotClient)

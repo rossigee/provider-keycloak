@@ -32,6 +32,7 @@ import (
 	ciav1alpha1 "github.com/rossigee/provider-keycloak/apis/clientinitialaccess/v1alpha1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
+	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
 const (
@@ -85,6 +86,10 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 func (e *external) Disconnect(_ context.Context) error { return nil }
 
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
+	_, span := tracing.StartSpan(ctx, "clientinitialaccess.observe",
+		tracing.SpanAttrs("ClientInitialAccess", mg.GetName(), "observe")...)
+	defer span.End()
+
 	cr, ok := mg.(*ciav1alpha1.ClientInitialAccess)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotClientInitialAccess)
@@ -108,6 +113,10 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 }
 
 func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
+	_, span := tracing.StartSpan(ctx, "clientinitialaccess.create",
+		tracing.SpanAttrs("ClientInitialAccess", mg.GetName(), "create")...)
+	defer span.End()
+
 	cr, ok := mg.(*ciav1alpha1.ClientInitialAccess)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotClientInitialAccess)
@@ -124,10 +133,18 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	_, span := tracing.StartSpan(ctx, "clientinitialaccess.update",
+		tracing.SpanAttrs("ClientInitialAccess", mg.GetName(), "update")...)
+	defer span.End()
+
 	return managed.ExternalUpdate{}, nil
 }
 
 func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
+	_, span := tracing.StartSpan(ctx, "clientinitialaccess.delete",
+		tracing.SpanAttrs("ClientInitialAccess", mg.GetName(), "delete")...)
+	defer span.End()
+
 	cr, ok := mg.(*ciav1alpha1.ClientInitialAccess)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotClientInitialAccess)

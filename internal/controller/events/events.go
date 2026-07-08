@@ -15,6 +15,7 @@ import (
 	eventv1alpha1 "github.com/rossigee/provider-keycloak/apis/events/v1alpha1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
+	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
 const (
@@ -81,6 +82,10 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 }
 
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
+	_, span := tracing.StartSpan(ctx, "events.observe",
+		tracing.SpanAttrs("RealmEventsConfig", mg.GetName(), "observe")...)
+	defer span.End()
+
 	cr, ok := mg.(*eventv1alpha1.RealmEventsConfig)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotRealmEventsConfig)
@@ -100,6 +105,10 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 }
 
 func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
+	_, span := tracing.StartSpan(ctx, "events.create",
+		tracing.SpanAttrs("RealmEventsConfig", mg.GetName(), "create")...)
+	defer span.End()
+
 	cr, ok := mg.(*eventv1alpha1.RealmEventsConfig)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotRealmEventsConfig)
@@ -117,6 +126,10 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	_, span := tracing.StartSpan(ctx, "events.update",
+		tracing.SpanAttrs("RealmEventsConfig", mg.GetName(), "update")...)
+	defer span.End()
+
 	cr, ok := mg.(*eventv1alpha1.RealmEventsConfig)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotRealmEventsConfig)
@@ -132,6 +145,10 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
+	_, span := tracing.StartSpan(ctx, "events.delete",
+		tracing.SpanAttrs("RealmEventsConfig", mg.GetName(), "delete")...)
+	defer span.End()
+
 	return managed.ExternalDelete{}, nil
 }
 
