@@ -14,24 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+// Package v1beta1 contains the v1beta1 group keycloak.crossplane.io resources of the provider.
+// +kubebuilder:object:generate=true
+// +groupName=keycloak.crossplane.io
+// +versionName=v1beta1
+package v1beta1
 
-import (
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+const (
+	Group   = "keycloak.crossplane.io"
+	Version = "v1beta1"
 )
-
-var (
-	SchemeGroupVersion = schema.GroupVersion{Group: "keys.keycloak.crossplane.io", Version: "v1alpha1"}
-	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
-	AddToScheme        = SchemeBuilder.AddToScheme
-)
-
-func addKnownTypes(s *runtime.Scheme) error {
-	s.AddKnownTypes(SchemeGroupVersion,
-		&RealmKeys{},
-		&RealmKeysList{},
-	)
-	return nil
-}
-

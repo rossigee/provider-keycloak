@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// Group and Version for this API.
 const (
 	Group   = "role.keycloak.crossplane.io"
 	Version = "v1alpha1"
@@ -38,7 +37,7 @@ var (
 // Role type metadata.
 var (
 	RoleKind             = reflect.TypeOf(Role{}).Name()
-	RoleGroupKind        = schema.GroupKind{Group: Group, Kind: RoleKind}.String()
+	RoleGroupKind        = schema.GroupKind{Group: Group, Kind: RoleKind}
 	RoleKindAPIVersion   = RoleKind + "." + SchemeGroupVersion.String()
 	RoleGroupVersionKind = SchemeGroupVersion.WithKind(RoleKind)
 )
@@ -50,3 +49,4 @@ func addKnownTypes(s *runtime.Scheme) error {
 	)
 	return nil
 }
+

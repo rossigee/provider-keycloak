@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// APIGroup is the API group for this package.
 const (
 	APIGroup = "group.keycloak.crossplane.io"
 	Version  = "v1alpha1"
@@ -50,3 +49,4 @@ func addKnownTypes(s *runtime.Scheme) error {
 	)
 	return nil
 }
+

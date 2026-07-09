@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// Group and Version for this API.
 const (
 	Group   = "client.keycloak.crossplane.io"
 	Version = "v1alpha1"
@@ -50,3 +49,4 @@ func addKnownTypes(s *runtime.Scheme) error {
 	)
 	return nil
 }
+

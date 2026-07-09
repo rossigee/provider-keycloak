@@ -22,21 +22,19 @@ import (
 )
 
 // Group and Version for this API.
-const (
-	Group   = "keycloak.crossplane.io"
-	Version = "v1beta1"
-)
 
 var (
 	SchemeGroupVersion = schema.GroupVersion{Group: Group, Version: Version}
 	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
+	AddToScheme        = SchemeBuilder.AddToScheme
 )
 
-// AddToScheme adds all types of this group into the given scheme.
 func addKnownTypes(s *runtime.Scheme) error {
+	s.AddKnownTypes(SchemeGroupVersion,
+		&ProviderConfig{},
+		&ProviderConfigList{},
+		&ProviderConfigUsage{},
+		&ProviderConfigUsageList{},
+	)
 	return nil
-}
-
-func AddToScheme(s *runtime.Scheme) error {
-	return SchemeBuilder.AddToScheme(s)
 }
