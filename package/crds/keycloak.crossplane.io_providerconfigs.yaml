@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: providerconfigs.
+  name: providerconfigs.keycloak.crossplane.io
 spec:
-  group: ""
+  group: keycloak.crossplane.io
   names:
     kind: ProviderConfig
     listKind: ProviderConfigList
@@ -22,7 +22,7 @@ spec:
       name: SECRET-NAME
       priority: 1
       type: string
-    name: ""
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: A ProviderConfig configures a Keycloak provider.
