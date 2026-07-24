@@ -42,6 +42,11 @@ jobs:
           mkdir -p _output/bin/linux_amd64
           go build -o _output/bin/linux_amd64/provider ./cmd/provider
 
+      - name: Prepare build context
+        run: |
+          mkdir -p bin/linux_amd64
+          cp _output/bin/linux_amd64/provider bin/linux_amd64/provider
+
       - name: Build Docker image
         uses: docker/build-push-action@v7
         with:
