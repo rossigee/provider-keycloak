@@ -4,12 +4,6 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag to release (e.g., v0.2.18)'
-        required: true
-        type: string
 
 jobs:
   release:
@@ -17,8 +11,7 @@ jobs:
     permissions:
       contents: write
       packages: write
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -26,57 +19,51 @@ jobs:
           fetch-depth: 0
           submodules: true
 
-      - name: Determine Version
+      - name: Extract version
         id: version
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            VERSION="${GITHUB_REF#refs/tags/}"
-          fi
+          VERSION="${GITHUB_REF#refs/tags/}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Detected version: $VERSION"
 
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
           go-version: '1.26.4'
-          cache: true
 
-      - name: Build Crossplane CLI
-        run: go install github.com/crossplane/cli/v2/cmd/crossplane@v2.4.0
-
-      - name: Vendor Dependencies
+      - name: Vendor dependencies
         run: go mod vendor
 
-      - name: Install Build Tools
-        run: make build.init
+      - name: Install Crossplane CLI
+        run: |
+          go install github.com/crossplane/cli/v2/cmd/crossplane@v2.4.0
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
+      - name: Build binary
+        run: |
+          mkdir -p _output/bin/linux_amd64
+          go build -o _output/bin/linux_amd64/provider ./cmd/provider
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v7
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
+          context: .
+          file: ./cluster/images/provider-keycloak/Dockerfile
+          push: true
+          tags: ghcr.io/rossigee/provider-keycloak:${{ steps.version.outputs.version }}
 
-      - name: Build and Publish Artifacts
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-          BRANCH_NAME: master
-          REGISTRY_ORGS: ghcr.io/rossigee
-          XPKG_REG_ORGS: ghcr.io/rossigee
-        run: make publish.artifacts
+      - name: Build xpkg
+        run: |
+          crossplane xpkg build \
+            --package-root package/ \
+            --package-file _output/xpkg/linux_amd64/provider-keycloak-${{ steps.version.outputs.version }}.xpkg
+
+      - name: Push xpkg
+        run: |
+          crossplane xpkg push \
+            --package-files _output/xpkg/linux_amd64/provider-keycloak-${{ steps.version.outputs.version }}.xpkg \
+            ghcr.io/rossigee/provider-keycloak:${{ steps.version.outputs.version }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ steps.version.outputs.version }}
-          draft: false
-          prerelease: false
+          tag_name: ${{ steps.version.outputs.version }}
           generate_release_notes: true
-
-      - name: Verify Publication
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          echo "Verifying publication to ghcr.io/rossigee/provider-keycloak:${VERSION}"
-          docker pull "ghcr.io/rossigee/provider-keycloak:${VERSION}" && echo "✅ Verified" || echo "❌ Failed"
