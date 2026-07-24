@@ -65,6 +65,11 @@ jobs:
             -ldflags "-X github.com/rossigee/provider-keycloak/internal/version.Version=${{ steps.version.outputs.version }}" \
             ./cmd/provider
 
+      - name: Prepare build context
+        run: |
+          mkdir -p bin/linux_amd64
+          cp _output/bin/linux_amd64/provider bin/linux_amd64/provider
+
       - name: Build and push Docker image (amd64)
         uses: docker/build-push-action@v7
         with:
