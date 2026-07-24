@@ -4,113 +4,79 @@ on:
   push:
     tags:
       - 'v*'
-
-env:
-  REGISTRY_ORGS: ghcr.io/rossigee
-  GO_REQUIRED_VERSION: 1.26.4
-
-permissions:
-  packages: write
-  contents: write
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to release (e.g., v0.2.18)'
+        required: true
+        type: string
 
 jobs:
   release:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v7
         with:
-          submodules: true
           fetch-depth: 0
+          submodules: true
 
-      - uses: actions/setup-go@v6
-        with:
-          go-version: ${{ env.GO_REQUIRED_VERSION }}
-
-      - name: Extract version from tag
+      - name: Determine Version
         id: version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Version: ${VERSION}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VERSION"
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.4'
+          cache: true
 
-      - name: Log in to Container Registry
+      - name: Build Crossplane CLI
+        run: go install github.com/crossplane/cli/v2/cmd/crossplane@v2.4.0
+
+      - name: Vendor Dependencies
+        run: go mod vendor
+
+      - name: Install Build Tools
+        run: make build.init
+
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
-      - name: Run code generation
-        run: make generate
-
-      - name: Check go.mod is up to date
-        run: |
-          go mod tidy
-          git diff --exit-code
-
-      - name: Run unit tests
-        run: make test
-
-      - name: Run linting
-        run: make lint
-
-      - name: Build provider binary
-        run: |
-          mkdir -p _output/bin/linux_amd64
-          VERSION="${{ steps.version.outputs.version }}" \
-          go build -v -o _output/bin/linux_amd64/provider \
-            -ldflags "-X github.com/rossigee/provider-keycloak/internal/version.Version=${{ steps.version.outputs.version }}" \
-            ./cmd/provider
-
-      - name: Prepare build context
-        run: |
-          mkdir -p bin/linux_amd64
-          cp _output/bin/linux_amd64/provider bin/linux_amd64/provider
-
-      - name: Build and push Docker image (amd64)
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./cluster/images/provider-keycloak/Dockerfile
-          build-args: |
-            TARGETOS=linux
-            TARGETARCH=amd64
-          tags: |
-            ${{ env.REGISTRY_ORGS }}/provider-keycloak:${{ steps.version.outputs.version }}
-            ${{ env.REGISTRY_ORGS }}/provider-keycloak:latest
-          push: true
+      - name: Build and Publish Artifacts
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BRANCH_NAME: master
+          REGISTRY_ORGS: ghcr.io/rossigee
+          XPKG_REG_ORGS: ghcr.io/rossigee
+        run: make publish.artifacts
 
       - name: Create GitHub Release
-        uses: ncipollo/release-action@v1
+        uses: softprops/action-gh-release@v2
         with:
-          tag: ${{ steps.version.outputs.version }}
           name: Release ${{ steps.version.outputs.version }}
-          body: |
-            ## Provider Image
-            Published to: `${{ env.REGISTRY_ORGS }}/provider-keycloak:${{ steps.version.outputs.version }}`
-
-            ## Crossplane Installation
-            ```bash
-            kubectl apply -f - <<EOF
-            apiVersion: pkg.crossplane.io/v1
-            kind: Provider
-            metadata:
-              name: provider-keycloak
-            spec:
-              package: ${{ env.REGISTRY_ORGS }}/provider-keycloak:${{ steps.version.outputs.version }}
-            EOF
-            ```
-
-            ## Documentation
-            See the [README](https://github.com/rossigee/provider-keycloak) for installation and usage instructions.
           draft: false
           prerelease: false
+          generate_release_notes: true
 
-      - name: Verify published artifacts
+      - name: Verify Publication
         run: |
-          echo "Verifying published artifacts..."
-          docker pull ${{ env.REGISTRY_ORGS }}/provider-keycloak:${{ steps.version.outputs.version }} && echo "✓ Docker image published" || echo "✗ Docker image not found"
-          echo "Release complete: ${{ steps.version.outputs.version }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Verifying publication to ghcr.io/rossigee/provider-keycloak:${VERSION}"
+          docker pull "ghcr.io/rossigee/provider-keycloak:${VERSION}" && echo "✅ Verified" || echo "❌ Failed"
