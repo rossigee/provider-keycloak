@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// +groupName=group.keycloak.crossplane.io
+
 package v1alpha1
 
 import (
