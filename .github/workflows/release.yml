@@ -59,6 +59,9 @@ jobs:
           export IMAGE="ghcr.io/rossigee/provider-keycloak"
           make CROSSPLANE_CLI=/home/runner/go/bin/crossplane build.all build.artifacts
 
+      - name: Install Build Tools
+        run: make build.init
+
       - name: Build and Publish
         env:
           VERSION: ${{ steps.version.outputs.version }}
