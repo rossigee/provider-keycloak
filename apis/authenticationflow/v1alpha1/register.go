@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -47,6 +48,6 @@ func addKnownTypes(s *runtime.Scheme) error {
 		&AuthenticationFlow{},
 		&AuthenticationFlowList{},
 	)
+	metav1.AddToGroupVersion(s, SchemeGroupVersion)
 	return nil
 }
-
