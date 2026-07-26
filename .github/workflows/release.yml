@@ -66,6 +66,7 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
           BRANCH_NAME: master
+          PLATFORMS: linux_amd64
           REGISTRY_ORGS: ghcr.io/rossigee
           XPKG_REG_ORGS: ghcr.io/rossigee
         run: make publish.artifacts
