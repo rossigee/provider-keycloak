@@ -459,7 +459,7 @@ type ClientRepresentation struct {
 	HomeURL                                string            `json:"homeUrl,omitempty"`
 	BaseURL                                string            `json:"baseUrl,omitempty"`
 	AdminURL                               string            `json:"adminUrl,omitempty"`
-	ValidRedirectURIs                      []string          `json:"validRedirectUris,omitempty"`
+	ValidRedirectURIs                      []string          `json:"redirectUris,omitempty"`
 	WebOrigins                             []string          `json:"webOrigins,omitempty"`
 	StandardFlowEnabled                    bool              `json:"standardFlowEnabled"`
 	DirectAccessGrantsEnabled              bool              `json:"directAccessGrantsEnabled"`
@@ -470,7 +470,7 @@ type ClientRepresentation struct {
 	ConsentRequired                        bool              `json:"consentRequired"`
 	FullScopeAllowed                       bool              `json:"fullScopeAllowed"`
 	AlwaysDisplayInConsole                 bool              `json:"alwaysDisplayInConsole"`
-	FrontchannelLogoutEnabled              *bool             `json:"frontchannelLogoutEnabled,omitempty"`
+	FrontchannelLogoutEnabled              *bool             `json:"frontchannelLogout,omitempty"`
 	FrontchannelLogoutURL                  *string           `json:"frontchannelLogoutUrl,omitempty"`
 	BackchannelLogoutURL                   string            `json:"backchannelLogoutUrl,omitempty"`
 	BackchannelLogoutSessionRequired       *bool             `json:"backchannelLogoutSessionRequired,omitempty"`
