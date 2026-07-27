@@ -69,9 +69,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		_ = kc // avoid unused warning
 	}
 
-	// The CRD doesn't have status subresource enabled
-	// Try updating with the entire object including status
-	// Fetch fresh copy to avoid conflicts
+	// The CRD has the status subresource enabled, so status changes must go
+	// through the status subresource endpoint - a plain Update() silently
+	// discards .status changes in that case.
+	// Fetch fresh copy to avoid conflicts.
 	fresh := &v1beta1.ProviderConfig{}
 	if err := r.kube.Get(ctx, client.ObjectKey{Name: pc.GetName()}, fresh); err != nil {
 		log.Error(err, "failed to get latest ProviderConfig for status update")
@@ -81,9 +82,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	log.Info("Updating ProviderConfig", "name", fresh.GetName(), "status", pc.Status)
 	fresh.Status = pc.Status
 
-	// Try using client.Update which updates the entire object
-	if err := r.kube.Update(ctx, fresh); err != nil {
-		log.Error(err, "failed to update ProviderConfig", "error", err)
+	if err := r.kube.Status().Update(ctx, fresh); err != nil {
+		log.Error(err, "failed to update ProviderConfig status", "error", err)
 		if errors.IsConflict(err) {
 			log.Info("conflict updating, will retry", "error", err)
 			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
