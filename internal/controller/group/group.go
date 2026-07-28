@@ -54,6 +54,7 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 		managed.WithExternalConnector(&connector{kube: mgr.GetClient()}),
 		managed.WithLogger(o.Logger.WithValues("controller", "Group")),
 		managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorder(controllerName))),
+		managed.WithManagementPolicies(),
 	)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).

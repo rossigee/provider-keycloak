@@ -9,5 +9,13 @@ metadata:
     meta.crossplane.io/description: |
       Crossplane provider for Keycloak
 spec:
-  package: ghcr.io/rossigee/provider-keycloak:dev-cd7b0fe
+  permissionRequests:
+  - apiGroups:
+    - events.k8s.io
+    resources:
+    - events
+    verbs:
+    - "*"
+  controller: {}
+  package: ghcr.io/rossigee/provider-keycloak:dev-d003632
   packagePullPolicy: IfNotPresent
