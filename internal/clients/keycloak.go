@@ -400,11 +400,16 @@ type Realm struct {
 	Realm                  string `json:"realm"`
 	Enabled                bool   `json:"enabled"`
 	DisplayName            string `json:"displayName,omitempty"`
+	DisplayNameHtml        string `json:"displayNameHtml,omitempty"`
 	LoginWithEmailAllowed  bool   `json:"loginWithEmailAllowed"`
 	DuplicateEmailsAllowed bool   `json:"duplicateEmailsAllowed"`
 	ResetPasswordAllowed   bool   `json:"resetPasswordAllowed"`
 	EditUsernameAllowed    bool   `json:"editUsernameAllowed"`
 	BruteForceProtected    bool   `json:"bruteForceProtected"`
+	LoginTheme             string `json:"loginTheme,omitempty"`
+	AccountTheme           string `json:"accountTheme,omitempty"`
+	AdminTheme             string `json:"adminTheme,omitempty"`
+	EmailTheme             string `json:"emailTheme,omitempty"`
 }
 
 func (c *keycloakClient) GetRealm(ctx context.Context, realm string) (*Realm, error) {

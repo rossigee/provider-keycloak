@@ -157,6 +157,9 @@ func realmParamsToRepresentation(p *realmv1alpha1.RealmParameters) *clients.Real
 	if p.DisplayName != nil {
 		r.DisplayName = *p.DisplayName
 	}
+	if p.DisplayNameHtml != nil {
+		r.DisplayNameHtml = *p.DisplayNameHtml
+	}
 	if p.LoginWithEmailAllowed != nil {
 		r.LoginWithEmailAllowed = *p.LoginWithEmailAllowed
 	}
@@ -169,6 +172,18 @@ func realmParamsToRepresentation(p *realmv1alpha1.RealmParameters) *clients.Real
 	if p.ResetPasswordAllowed != nil {
 		r.ResetPasswordAllowed = *p.ResetPasswordAllowed
 	}
+	if p.LoginTheme != nil {
+		r.LoginTheme = *p.LoginTheme
+	}
+	if p.AccountTheme != nil {
+		r.AccountTheme = *p.AccountTheme
+	}
+	if p.AdminTheme != nil {
+		r.AdminTheme = *p.AdminTheme
+	}
+	if p.EmailTheme != nil {
+		r.EmailTheme = *p.EmailTheme
+	}
 	return r
 }
 
@@ -179,10 +194,25 @@ func realmUpToDate(desired *realmv1alpha1.RealmParameters, actual *clients.Realm
 	if desired.DisplayName != nil && *desired.DisplayName != actual.DisplayName {
 		return false
 	}
+	if desired.DisplayNameHtml != nil && *desired.DisplayNameHtml != actual.DisplayNameHtml {
+		return false
+	}
 	if desired.LoginWithEmailAllowed != nil && *desired.LoginWithEmailAllowed != actual.LoginWithEmailAllowed {
 		return false
 	}
 	if desired.DuplicateEmailsAllowed != nil && *desired.DuplicateEmailsAllowed != actual.DuplicateEmailsAllowed {
+		return false
+	}
+	if desired.LoginTheme != nil && *desired.LoginTheme != actual.LoginTheme {
+		return false
+	}
+	if desired.AccountTheme != nil && *desired.AccountTheme != actual.AccountTheme {
+		return false
+	}
+	if desired.AdminTheme != nil && *desired.AdminTheme != actual.AdminTheme {
+		return false
+	}
+	if desired.EmailTheme != nil && *desired.EmailTheme != actual.EmailTheme {
 		return false
 	}
 	return true
