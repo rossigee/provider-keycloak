@@ -194,6 +194,10 @@ type Client interface {
 	UpdateAuthorizationPolicy(ctx context.Context, realm, clientID, policyID string, policy *AuthorizationPolicyRepresentation) error
 	DeleteAuthorizationPolicy(ctx context.Context, realm, clientID, policyID string) error
 	ListAuthorizationPolicies(ctx context.Context, realm, clientID string) ([]AuthorizationPolicyRepresentation, error)
+
+	// Raw realm operations (for preserving all fields during updates)
+	GetRawRealm(ctx context.Context, realm string) ([]byte, error)
+	UpdateRealmRaw(ctx context.Context, realm string, realmJSON []byte) error
 }
 
 // keycloakClient implements Client
@@ -443,6 +447,40 @@ func (c *keycloakClient) CreateRealm(ctx context.Context, realm *Realm) (*Realm,
 func (c *keycloakClient) UpdateRealm(ctx context.Context, realm *Realm) error {
 	_, err := c.doRequest(ctx, http.MethodPut, realmPath(realm.Realm), realm)
 	return err
+}
+
+// GetRawRealm returns the raw JSON bytes of a realm to preserve all fields
+func (c *keycloakClient) GetRawRealm(ctx context.Context, realm string) ([]byte, error) {
+	return c.doRequest(ctx, http.MethodGet, realmPath(realm), nil)
+}
+
+// UpdateRealmRaw sends raw JSON bytes to update a realm
+func (c *keycloakClient) UpdateRealmRaw(ctx context.Context, realm string, realmJSON []byte) error {
+	if err := c.refreshToken(ctx); err != nil {
+		return errors.Wrap(err, "failed to refresh access token")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.baseURL+realmPath(realm), bytes.NewReader(realmJSON))
+	if err != nil {
+		return errors.Wrap(err, "failed to create request")
+	}
+	c.mu.Lock()
+	token := c.token
+	c.mu.Unlock()
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "failed to execute request")
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrap(err, "failed to read response body")
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return errors.New(fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(body)))
+	}
+	return nil
 }
 
 func (c *keycloakClient) DeleteRealm(ctx context.Context, realm string) error {

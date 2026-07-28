@@ -18,6 +18,8 @@ package realm
 
 import (
 	"context"
+	"encoding/json"
+	"log"
 	"strings"
 
 	xpcontroller "github.com/crossplane/crossplane-runtime/v2/pkg/controller"
@@ -107,7 +109,12 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
 	cr.Status.SetConditions(xpv1.Available())
-	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: realmUpToDate(&cr.Spec.ForProvider, r)}, nil
+	upToDate := realmUpToDate(&cr.Spec.ForProvider, r)
+	if !upToDate && cr.Spec.ForProvider.LoginTheme != nil {
+		// Log when themes mismatch
+		log.Printf("THEME MISMATCH: desired=%v, actual=%s\n", cr.Spec.ForProvider.LoginTheme, r.LoginTheme)
+	}
+	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
 
 func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
@@ -128,7 +135,58 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotRealm)
 	}
-	if err := e.client.UpdateRealm(ctx, realmParamsToRepresentation(&cr.Spec.ForProvider)); err != nil {
+	// Get raw realm JSON from Keycloak to preserve ALL fields (not just struct fields)
+	realmName := cr.Spec.ForProvider.Realm
+	currentJSON, err := e.client.GetRawRealm(ctx, realmName)
+	if err != nil {
+		return managed.ExternalUpdate{}, errors.Wrap(err, "cannot fetch current realm for update")
+	}
+
+	// Unmarshal into map to preserve unknown fields
+	currentMap := make(map[string]interface{})
+	if err := json.Unmarshal(currentJSON, &currentMap); err != nil {
+		return managed.ExternalUpdate{}, errors.Wrap(err, "failed to unmarshal realm response")
+	}
+
+	// Apply desired changes from spec
+	if cr.Spec.ForProvider.DisplayName != nil {
+		currentMap["displayName"] = *cr.Spec.ForProvider.DisplayName
+	}
+	if cr.Spec.ForProvider.DisplayNameHtml != nil {
+		currentMap["displayNameHtml"] = *cr.Spec.ForProvider.DisplayNameHtml
+	}
+	if cr.Spec.ForProvider.LoginWithEmailAllowed != nil {
+		currentMap["loginWithEmailAllowed"] = *cr.Spec.ForProvider.LoginWithEmailAllowed
+	}
+	if cr.Spec.ForProvider.DuplicateEmailsAllowed != nil {
+		currentMap["duplicateEmailsAllowed"] = *cr.Spec.ForProvider.DuplicateEmailsAllowed
+	}
+	if cr.Spec.ForProvider.ResetPasswordAllowed != nil {
+		currentMap["resetPasswordAllowed"] = *cr.Spec.ForProvider.ResetPasswordAllowed
+	}
+	if cr.Spec.ForProvider.EditUsernameAllowed != nil {
+		currentMap["editUsernameAllowed"] = *cr.Spec.ForProvider.EditUsernameAllowed
+	}
+	if cr.Spec.ForProvider.LoginTheme != nil {
+		currentMap["loginTheme"] = *cr.Spec.ForProvider.LoginTheme
+	}
+	if cr.Spec.ForProvider.AccountTheme != nil {
+		currentMap["accountTheme"] = *cr.Spec.ForProvider.AccountTheme
+	}
+	if cr.Spec.ForProvider.AdminTheme != nil {
+		currentMap["adminTheme"] = *cr.Spec.ForProvider.AdminTheme
+	}
+	if cr.Spec.ForProvider.EmailTheme != nil {
+		currentMap["emailTheme"] = *cr.Spec.ForProvider.EmailTheme
+	}
+
+	// Send updated map back to Keycloak
+	updatedJSON, err := json.Marshal(currentMap)
+	if err != nil {
+		return managed.ExternalUpdate{}, errors.Wrap(err, "failed to marshal updated realm")
+	}
+
+	if err := e.client.UpdateRealmRaw(ctx, realmName, updatedJSON); err != nil {
 		return managed.ExternalUpdate{}, errors.Wrap(err, errUpdateRealm)
 	}
 	return managed.ExternalUpdate{}, nil
@@ -203,17 +261,26 @@ func realmUpToDate(desired *realmv1alpha1.RealmParameters, actual *clients.Realm
 	if desired.DuplicateEmailsAllowed != nil && *desired.DuplicateEmailsAllowed != actual.DuplicateEmailsAllowed {
 		return false
 	}
+	log.Printf("Theme check: desired.LoginTheme=%v, actual.LoginTheme='%s'\n", desired.LoginTheme, actual.LoginTheme)
 	if desired.LoginTheme != nil && *desired.LoginTheme != actual.LoginTheme {
+		log.Printf("LoginTheme mismatch: '%s' != '%s'\n", *desired.LoginTheme, actual.LoginTheme)
 		return false
 	}
+	log.Printf("Theme check: desired.AccountTheme=%v, actual.AccountTheme='%s'\n", desired.AccountTheme, actual.AccountTheme)
 	if desired.AccountTheme != nil && *desired.AccountTheme != actual.AccountTheme {
+		log.Printf("AccountTheme mismatch: '%s' != '%s'\n", *desired.AccountTheme, actual.AccountTheme)
 		return false
 	}
+	log.Printf("Theme check: desired.AdminTheme=%v, actual.AdminTheme='%s'\n", desired.AdminTheme, actual.AdminTheme)
 	if desired.AdminTheme != nil && *desired.AdminTheme != actual.AdminTheme {
+		log.Printf("AdminTheme mismatch: '%s' != '%s'\n", *desired.AdminTheme, actual.AdminTheme)
 		return false
 	}
+	log.Printf("Theme check: desired.EmailTheme=%v, actual.EmailTheme='%s'\n", desired.EmailTheme, actual.EmailTheme)
 	if desired.EmailTheme != nil && *desired.EmailTheme != actual.EmailTheme {
+		log.Printf("EmailTheme mismatch: '%s' != '%s'\n", *desired.EmailTheme, actual.EmailTheme)
 		return false
 	}
 	return true
 }
+
