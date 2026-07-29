@@ -23,16 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ClientSecretSecretRef references a Kubernetes secret key holding the client secret.
-type ClientSecretSecretRef struct {
-	// Name of the secret.
-	Name string `json:"name"`
-	// Namespace of the secret.
-	Namespace string `json:"namespace"`
-	// Key within the secret.
-	Key string `json:"key"`
-}
-
 // ClientParameters are the configurable fields of a Client.
 type ClientParameters struct {
 	// RealmId is the ID of the realm this client belongs to.
@@ -194,9 +184,7 @@ type ClientParameters struct {
 	// +optional
 	UseRefreshTokens *bool `json:"useRefreshTokens,omitempty"`
 
-	// ClientSecretSecretRef references the Kubernetes secret that will receive the generated client secret.
-	// +optional
-	ClientSecretSecretRef *ClientSecretSecretRef `json:"clientSecretSecretRef,omitempty"`
+
 
 	// ExtraConfig is a map of additional Keycloak client configuration.
 	// +optional

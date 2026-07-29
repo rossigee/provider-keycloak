@@ -15,21 +15,6 @@ import (
 )
 
 // DeepCopyInto copies all properties of this object into another object of the same type.
-func (in *ClientSecretSecretRef) DeepCopyInto(out *ClientSecretSecretRef) {
-	*out = *in
-}
-
-// DeepCopy returns a deep copy of this ClientSecretSecretRef.
-func (in *ClientSecretSecretRef) DeepCopy() *ClientSecretSecretRef {
-	if in == nil {
-		return nil
-	}
-	out := new(ClientSecretSecretRef)
-	in.DeepCopyInto(out)
-	return out
-}
-
-// DeepCopyInto copies all properties of this object into another object of the same type.
 func (in *ClientParameters) DeepCopyInto(out *ClientParameters) {
 	*out = *in
 	if in.RealmId != nil {
@@ -165,11 +150,6 @@ func (in *ClientParameters) DeepCopyInto(out *ClientParameters) {
 	if in.PkceCodeChallengeMethod != nil {
 		in, out := &in.PkceCodeChallengeMethod, &out.PkceCodeChallengeMethod
 		*out = new(string)
-		**out = **in
-	}
-	if in.ClientSecretSecretRef != nil {
-		in, out := &in.ClientSecretSecretRef, &out.ClientSecretSecretRef
-		*out = new(ClientSecretSecretRef)
 		**out = **in
 	}
 	if in.ExtraConfig != nil {

@@ -146,3 +146,5 @@ func (m *BaseMockClient) UpdateClientScope(_ context.Context, _ string, _ client
 	return nil
 }
 func (m *BaseMockClient) DeleteClientScope(_ context.Context, _, _ string) error { return nil }
+func (m *BaseMockClient) GetRawRealm(context.Context, string) ([]byte, error)         { return nil, nil }
+func (m *BaseMockClient) UpdateRealmRaw(context.Context, string, []byte) error       { return nil }

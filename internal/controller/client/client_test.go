@@ -68,6 +68,12 @@ func (m *mockClient) CreateRealm(ctx context.Context, r *clients.Realm) (*client
 }
 func (m *mockClient) UpdateRealm(ctx context.Context, r *clients.Realm) error { return nil }
 func (m *mockClient) DeleteRealm(ctx context.Context, realm string) error     { return nil }
+func (m *mockClient) GetRawRealm(ctx context.Context, realm string) ([]byte, error) {
+	return nil, nil
+}
+func (m *mockClient) UpdateRealmRaw(ctx context.Context, realm string, realmJSON []byte) error {
+	return nil
+}
 func (m *mockClient) ListClients(ctx context.Context, realm string) ([]clients.ClientRepresentation, error) {
 	return nil, nil
 }

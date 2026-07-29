@@ -26,9 +26,6 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -287,43 +284,21 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalCreation{}, errors.Wrap(err, errCreateClient)
 	}
 
-	if created != nil && created.ID != "" && cr.Spec.ForProvider.ClientSecretSecretRef != nil {
-		if err := e.writeClientSecret(ctx, realmId, created.ID, cr.Spec.ForProvider.ClientSecretSecretRef); err != nil {
-			return managed.ExternalCreation{}, errors.Wrap(err, "cannot write client secret")
-		}
-	}
-
 	cr.Status.SetConditions(xpv1.Creating().WithMessage("creating Keycloak client"))
 
-	return managed.ExternalCreation{ConnectionDetails: managed.ConnectionDetails{}}, nil
+	details := managed.ConnectionDetails{
+		"client_id": []byte(cr.Spec.ForProvider.ClientId),
+	}
+	if created != nil && created.ID != "" {
+		secret, _ := e.client.GetClientSecret(ctx, realmId, created.ID)
+		if secret != "" {
+			details["client_secret"] = []byte(secret)
+		}
+	}
+	return managed.ExternalCreation{ConnectionDetails: details}, nil
 }
 
-func (e *external) writeClientSecret(ctx context.Context, realm, clientUUID string, ref *openidclientv1alpha1.ClientSecretSecretRef) error {
-	secretValue, err := e.client.GetClientSecret(ctx, realm, clientUUID)
-	if err != nil {
-		return errors.Wrap(err, "cannot fetch client secret from Keycloak")
-	}
 
-	secret := &corev1.Secret{}
-	nn := types.NamespacedName{Name: ref.Name, Namespace: ref.Namespace}
-	if err := e.kube.Get(ctx, nn, secret); err != nil {
-		if client.IgnoreNotFound(err) != nil {
-			return errors.Wrap(err, "cannot get target secret")
-		}
-		// Secret does not exist — create it.
-		secret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: ref.Name, Namespace: ref.Namespace},
-			Data:       map[string][]byte{ref.Key: []byte(secretValue)},
-		}
-		return errors.Wrap(e.kube.Create(ctx, secret), "cannot create target secret")
-	}
-	// Secret exists — update the key.
-	if secret.Data == nil {
-		secret.Data = make(map[string][]byte)
-	}
-	secret.Data[ref.Key] = []byte(secretValue)
-	return errors.Wrap(e.kube.Update(ctx, secret), "cannot update target secret")
-}
 
 func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
 	_, span := tracing.StartSpan(ctx, "client.update",

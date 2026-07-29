@@ -529,6 +529,7 @@ type ClientRepresentation struct {
 	ClientOfflineSessionMaxLifespan        string            `json:"clientOfflineSessionMaxLifespan,omitempty"`
 	PkceCodeChallengeMethod                string            `json:"pkceCodeChallengeMethod,omitempty"`
 	Attributes                             map[string]string `json:"attributes,omitempty"`
+	Secret                                 string            `json:"secret,omitempty"`
 }
 
 func (c *keycloakClient) GetClient(ctx context.Context, realm, clientID string) (*ClientRepresentation, error) {
