@@ -233,6 +233,45 @@ cd apis && go generate ./...
 
 The `zz_generated.deepcopy.go` and `zz_generated.managed.go` files are maintained by hand — do not regenerate them with `controller-gen object:...` or `angryjet`. They must implement the specific crossplane resource interfaces.
 
+## Deployment & Configuration
+
+### Provider Flags
+
+The provider binary supports several command-line flags for tuning behavior:
+
+```bash
+provider-keycloak \
+  --debug                      # Enable debug logging (default: false)
+  --leader-election            # Use leader election in HA deployments (default: false)
+  --sync=1h                    # Resource drift check interval (default: 1h)
+  --poll=1m                    # Individual resource poll interval (default: 1m)
+  --max-reconcile-rate=10      # Max reconciles/second globally (default: 10)
+  --cache-init-timeout=5m      # Timeout for cache initialization at startup (default: 5m)
+```
+
+#### Cache Initialization Timeout (`--cache-init-timeout`)
+
+**When to adjust**: If the provider pod fails to start with errors like `timed out waiting for cache to be synced`, increase this timeout.
+
+**Why it's needed**: The provider manages 25 Kubernetes CRDs with 22 controllers. During startup, all informer caches must sync with the API server. On clusters with:
+- High API server latency (>100ms)
+- API server under load
+- Multiple provider instances starting simultaneously
+
+The default 2-minute timeout may be exceeded. Increasing this flag allows more time for cache initialization.
+
+**Example**: For a slow cluster or during high-load periods, increase the timeout:
+```bash
+provider-keycloak --cache-init-timeout=10m
+```
+
+Or via Kubernetes environment variable (if using Crossplane's provider helm values):
+```yaml
+providerConfig:
+  args:
+    - --cache-init-timeout=10m
+```
+
 ## Architecture Highlights
 
 ### Security
