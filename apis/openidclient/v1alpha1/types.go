@@ -150,10 +150,6 @@ type ClientParameters struct {
 	// +optional
 	PkceCodeChallengeMethod *string `json:"pkceCodeChallengeMethod,omitempty"`
 
-	// AccessTokenLifespan overrides the realm access token lifespan for this client.
-	// +optional
-	AccessTokenLifespan *string `json:"accessTokenLifespan,omitempty"`
-
 	// BearerOnly indicates if the client is bearer-only.
 	// +optional
 	BearerOnly *bool `json:"bearerOnly,omitempty"`

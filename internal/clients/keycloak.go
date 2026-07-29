@@ -528,7 +528,6 @@ type ClientRepresentation struct {
 	ClientOfflineSessionIdleTimeout        string            `json:"clientOfflineSessionIdleTimeout,omitempty"`
 	ClientOfflineSessionMaxLifespan        string            `json:"clientOfflineSessionMaxLifespan,omitempty"`
 	PkceCodeChallengeMethod                string            `json:"pkceCodeChallengeMethod,omitempty"`
-	AccessTokenLifespan                    string            `json:"accessTokenLifespan,omitempty"`
 	Attributes                             map[string]string `json:"attributes,omitempty"`
 }
 
