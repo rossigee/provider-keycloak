@@ -167,11 +167,6 @@ func (in *ClientParameters) DeepCopyInto(out *ClientParameters) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.AccessTokenLifespan != nil {
-		in, out := &in.AccessTokenLifespan, &out.AccessTokenLifespan
-		*out = new(string)
-		**out = **in
-	}
 	if in.ClientSecretSecretRef != nil {
 		in, out := &in.ClientSecretSecretRef, &out.ClientSecretSecretRef
 		*out = new(ClientSecretSecretRef)

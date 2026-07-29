@@ -23,10 +23,10 @@
   - Protocol: `protocol`, `pkceCodeChallengeMethod`, `accessTokenLifespan`
 
 ### 📚 Documentation
-- CHANGELOG.md: Comprehensive change documentation
-- examples/client-advanced.yaml: 4 example client configurations
-- docs/resource-analysis.md: Analysis of all resources and expansion opportunities
-- README.md: Updated API group documentation
+- ../CHANGELOG.md: Comprehensive change documentation
+- ../examples/client-advanced.yaml: 4 example client configurations
+- resource-analysis.md: Analysis of all resources and expansion opportunities
+- ../README.md: Updated API group documentation
 
 ### 🎯 Code Quality
 - All linting passes (0 issues)

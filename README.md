@@ -197,8 +197,8 @@ realmIdRef:
 
 ## Documentation
 
-- **[API Reference](API.md)**: Complete reference for all 21 resource types with examples
-- **[Testing Guide](TESTING.md)**: How to run tests, test coverage, integration testing
+- **[API Reference](docs/API.md)**: Complete reference for all 21 resource types with examples
+- **[Testing Guide](docs/TESTING.md)**: How to run tests, test coverage, integration testing
 - **[Keycloak Documentation](https://www.keycloak.org/documentation)**: Official Keycloak docs
 
 ## Development

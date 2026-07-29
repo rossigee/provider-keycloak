@@ -62,10 +62,6 @@ spec:
               forProvider:
                 description: ClientParameters are the configurable fields of a Client.
                 properties:
-                  accessTokenLifespan:
-                    description: AccessTokenLifespan overrides the realm access token
-                      lifespan for this client.
-                    type: string
                   accessType:
                     description: AccessType specifies the client access type (CONFIDENTIAL,
                       PUBLIC, BEARER_ONLY).
