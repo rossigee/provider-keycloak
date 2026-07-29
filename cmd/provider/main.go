@@ -46,6 +46,7 @@ func main() {
 		syncInterval     = app.Flag("sync", "How often all resources will be double-checked for drift from the desired state.").Short('s').Default("1h").Duration()
 		pollInterval     = app.Flag("poll", "How often individual resources will be checked for drift from the desired state").Default("1m").Duration()
 		maxReconcileRate = app.Flag("max-reconcile-rate", "The global maximum rate per second at which resources may checked for drift from the desired state.").Default("10").Int()
+		cacheInitTimeout = app.Flag("cache-init-timeout", "Timeout for cache initialization on startup; increase this if the provider fails to start on slow Kubernetes API servers.").Default("5m").Duration()
 
 		// namespace = app.Flag("namespace", "Namespace used to set as default scope in default secret store config.").Default("crossplane-system").Envar("POD_NAMESPACE").String()
 	)
@@ -65,6 +66,7 @@ func main() {
 		"sync-interval", syncInterval.String(),
 		"poll-interval", pollInterval.String(),
 		"max-reconcile-rate", *maxReconcileRate,
+		"cache-init-timeout", cacheInitTimeout.String(),
 		"leader-election", *leaderElection,
 		"debug-mode", *debug)
 
@@ -104,5 +106,9 @@ func main() {
 	kingpin.FatalIfError(mgr.AddHealthzCheck("healthz", healthz.Ping), "Cannot add health check")
 	kingpin.FatalIfError(mgr.AddReadyzCheck("readyz", healthz.Ping), "Cannot add ready check")
 
-	kingpin.FatalIfError(mgr.Start(ctrl.SetupSignalHandler()), "Cannot start controller manager")
+	// Create context with cache initialization timeout to prevent startup failures on slow API servers
+	ctx, cancel := context.WithTimeout(ctrl.SetupSignalHandler(), *cacheInitTimeout)
+	defer cancel()
+
+	kingpin.FatalIfError(mgr.Start(ctx), "Cannot start controller manager")
 }
