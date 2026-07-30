@@ -26,6 +26,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -605,6 +606,266 @@ type ClientRepresentation struct {
 	Secret                                 string            `json:"secret,omitempty"`
 }
 
+// fieldsRoutedViaAttributes lists fields that the Keycloak 26.x Admin REST
+// API rejects as "Unrecognized field" when sent at the top level of the
+// PUT /admin/realms/{realm}/clients/{id} body, but which it DOES accept
+// when placed under attributes.<dot.notation> in the same body. Verified
+// 2026-07-30 against quay.io/keycloak/keycloak:26.x.
+//
+// The struct keeps these as top-level fields so existing controller code
+// (drift comparison, parameter mapping) does not need to change; the
+// custom MarshalJSON/UnmarshalJSON below translate between the two
+// representations transparently.
+//
+// homeUrl is also accepted via attributes.home.page.url but the Keycloak
+// representation appears to round-trip homeUrl as itself in some versions,
+// so it is left as a top-level field rather than routed via attributes.
+var fieldsRoutedViaAttributes = []struct {
+	attrKey   string
+	boolPtr   *bool
+	stringPtr *string
+	strRef    *string
+}{
+	{"frontchannel.logout.url", nil, nil, nil}, // below uses ptr
+	{"backchannel.logout.url", nil, nil, nil},
+	{"backchannel.logout.session.required", nil, nil, nil},
+	{"backchannel.logout.revoke.offline.sessions", nil, nil, nil},
+	{"oauth2.device.authorization.grant.enabled", nil, nil, nil},
+	{"standard.token.exchange.enabled", nil, nil, nil},
+	{"use.refresh.tokens", nil, nil, nil},
+	{"client.session.idle.timeout", nil, nil, nil},
+	{"client.session.max.lifespan", nil, nil, nil},
+	{"client.offline.session.idle.timeout", nil, nil, nil},
+	{"client.offline.session.max.lifespan", nil, nil, nil},
+}
+
+// MarshalJSON serialises ClientRepresentation to the wire format Keycloak 26.x
+// accepts. Fields that Keycloak rejects at the top level are moved into the
+// attributes map under their dot-notation names so the provider remains the
+// source of truth for them via the CR spec.
+func (c *ClientRepresentation) MarshalJSON() ([]byte, error) {
+	// Use a separate (non-recursive) struct to avoid triggering our own
+	// MarshalJSON. clientWire mirrors ClientRepresentation exactly; if a
+	// field is added to one it must be added to the other.
+	type clientWire = struct {
+		ID                                     string            `json:"id,omitempty"`
+		ClientID                               string            `json:"clientId"`
+		Name                                   string            `json:"name,omitempty"`
+		Description                            string            `json:"description,omitempty"`
+		Enabled                                bool              `json:"enabled"`
+		RootURL                                string            `json:"rootUrl,omitempty"`
+		HomeURL                                string            `json:"homeUrl,omitempty"`
+		BaseURL                                string            `json:"baseUrl,omitempty"`
+		AdminURL                               string            `json:"adminUrl,omitempty"`
+		ValidRedirectURIs                      []string          `json:"redirectUris,omitempty"`
+		WebOrigins                             []string          `json:"webOrigins,omitempty"`
+		StandardFlowEnabled                    bool              `json:"standardFlowEnabled"`
+		DirectAccessGrantsEnabled              bool              `json:"directAccessGrantsEnabled"`
+		ImplicitFlowEnabled                    bool              `json:"implicitFlowEnabled"`
+		ServiceAccountsEnabled                 bool              `json:"serviceAccountsEnabled"`
+		PublicClient                           bool              `json:"publicClient"`
+		BearerOnly                             bool              `json:"bearerOnly"`
+		ConsentRequired                        bool              `json:"consentRequired"`
+		FullScopeAllowed                       bool              `json:"fullScopeAllowed"`
+		AlwaysDisplayInConsole                 bool              `json:"alwaysDisplayInConsole"`
+		FrontchannelLogoutEnabled              *bool             `json:"frontchannelLogout,omitempty"`
+		FrontchannelLogoutURL                  *string           `json:"frontchannelLogoutUrl,omitempty"`
+		BackchannelLogoutURL                   string            `json:"backchannelLogoutUrl,omitempty"`
+		BackchannelLogoutSessionRequired       *bool             `json:"backchannelLogoutSessionRequired,omitempty"`
+		BackchannelLogoutRevokeOfflineSessions *bool             `json:"backchannelLogoutRevokeOfflineSessions,omitempty"`
+		Protocol                               string            `json:"protocol,omitempty"`
+		AuthorizationServicesEnabled           *bool             `json:"authorizationServicesEnabled,omitempty"`
+		OAuth2DeviceAuthorizationGrantEnabled  *bool             `json:"oauth2DeviceAuthorizationGrantEnabled,omitempty"`
+		StandardTokenExchangeEnabled           *bool             `json:"standardTokenExchangeEnabled,omitempty"`
+		UseRefreshTokens                       *bool             `json:"useRefreshTokens,omitempty"`
+		ClientSessionIdleTimeout               string            `json:"clientSessionIdleTimeout,omitempty"`
+		ClientSessionMaxLifespan               string            `json:"clientSessionMaxLifespan,omitempty"`
+		ClientOfflineSessionIdleTimeout        string            `json:"clientOfflineSessionIdleTimeout,omitempty"`
+		ClientOfflineSessionMaxLifespan        string            `json:"clientOfflineSessionMaxLifespan,omitempty"`
+		PkceCodeChallengeMethod                string            `json:"pkceCodeChallengeMethod,omitempty"`
+		Attributes                             map[string]string `json:"attributes,omitempty"`
+		Secret                                 string            `json:"secret,omitempty"`
+	}
+	tmp, err := json.Marshal(clientWire{
+		ID: c.ID,
+		ClientID: c.ClientID,
+		Name: c.Name,
+		Description: c.Description,
+		Enabled: c.Enabled,
+		RootURL: c.RootURL,
+		HomeURL: c.HomeURL,
+		BaseURL: c.BaseURL,
+		AdminURL: c.AdminURL,
+		ValidRedirectURIs: c.ValidRedirectURIs,
+		WebOrigins: c.WebOrigins,
+		StandardFlowEnabled: c.StandardFlowEnabled,
+		DirectAccessGrantsEnabled: c.DirectAccessGrantsEnabled,
+		ImplicitFlowEnabled: c.ImplicitFlowEnabled,
+		ServiceAccountsEnabled: c.ServiceAccountsEnabled,
+		PublicClient: c.PublicClient,
+		BearerOnly: c.BearerOnly,
+		ConsentRequired: c.ConsentRequired,
+		FullScopeAllowed: c.FullScopeAllowed,
+		AlwaysDisplayInConsole: c.AlwaysDisplayInConsole,
+		FrontchannelLogoutEnabled: c.FrontchannelLogoutEnabled,
+		FrontchannelLogoutURL: c.FrontchannelLogoutURL,
+		BackchannelLogoutURL: c.BackchannelLogoutURL,
+		BackchannelLogoutSessionRequired: c.BackchannelLogoutSessionRequired,
+		BackchannelLogoutRevokeOfflineSessions: c.BackchannelLogoutRevokeOfflineSessions,
+		Protocol: c.Protocol,
+		AuthorizationServicesEnabled: c.AuthorizationServicesEnabled,
+		OAuth2DeviceAuthorizationGrantEnabled: c.OAuth2DeviceAuthorizationGrantEnabled,
+		StandardTokenExchangeEnabled: c.StandardTokenExchangeEnabled,
+		UseRefreshTokens: c.UseRefreshTokens,
+		ClientSessionIdleTimeout: c.ClientSessionIdleTimeout,
+		ClientSessionMaxLifespan: c.ClientSessionMaxLifespan,
+		ClientOfflineSessionIdleTimeout: c.ClientOfflineSessionIdleTimeout,
+		ClientOfflineSessionMaxLifespan: c.ClientOfflineSessionMaxLifespan,
+		PkceCodeChallengeMethod: c.PkceCodeChallengeMethod,
+		Attributes: c.Attributes,
+		Secret: c.Secret,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]json.RawMessage{}
+	if err := json.Unmarshal(tmp, &out); err != nil {
+		return nil, err
+	}
+	attrs := map[string]string{}
+	if a, ok := out["attributes"]; ok {
+		if err := json.Unmarshal(a, &attrs); err != nil {
+			return nil, err
+		}
+	}
+	// Move routed fields into attributes.<dot.notation> and drop them from
+	// the top-level output. Each block follows the same pattern: pull the
+	// current value, drop the top-level key, write into attrs.
+	if c.HomeURL != "" {
+		attrs["home.page.url"] = c.HomeURL
+		delete(out, "homeUrl")
+	}
+	if c.FrontchannelLogoutURL != nil && *c.FrontchannelLogoutURL != "" {
+		attrs["frontchannel.logout.url"] = *c.FrontchannelLogoutURL
+		delete(out, "frontchannelLogoutUrl")
+	}
+	if c.BackchannelLogoutURL != "" {
+		attrs["backchannel.logout.url"] = c.BackchannelLogoutURL
+		delete(out, "backchannelLogoutUrl")
+	}
+	if c.BackchannelLogoutSessionRequired != nil {
+		attrs["backchannel.logout.session.required"] = strconv.FormatBool(*c.BackchannelLogoutSessionRequired)
+		delete(out, "backchannelLogoutSessionRequired")
+	}
+	if c.BackchannelLogoutRevokeOfflineSessions != nil {
+		attrs["backchannel.logout.revoke.offline.sessions"] = strconv.FormatBool(*c.BackchannelLogoutRevokeOfflineSessions)
+		delete(out, "backchannelLogoutRevokeOfflineSessions")
+	}
+	if c.OAuth2DeviceAuthorizationGrantEnabled != nil {
+		attrs["oauth2.device.authorization.grant.enabled"] = strconv.FormatBool(*c.OAuth2DeviceAuthorizationGrantEnabled)
+		delete(out, "oauth2DeviceAuthorizationGrantEnabled")
+	}
+	if c.StandardTokenExchangeEnabled != nil {
+		attrs["standard.token.exchange.enabled"] = strconv.FormatBool(*c.StandardTokenExchangeEnabled)
+		delete(out, "standardTokenExchangeEnabled")
+	}
+	if c.UseRefreshTokens != nil {
+		attrs["use.refresh.tokens"] = strconv.FormatBool(*c.UseRefreshTokens)
+		delete(out, "useRefreshTokens")
+	}
+	if c.ClientSessionIdleTimeout != "" {
+		attrs["client.session.idle.timeout"] = c.ClientSessionIdleTimeout
+		delete(out, "clientSessionIdleTimeout")
+	}
+	if c.ClientSessionMaxLifespan != "" {
+		attrs["client.session.max.lifespan"] = c.ClientSessionMaxLifespan
+		delete(out, "clientSessionMaxLifespan")
+	}
+	if c.ClientOfflineSessionIdleTimeout != "" {
+		attrs["client.offline.session.idle.timeout"] = c.ClientOfflineSessionIdleTimeout
+		delete(out, "clientOfflineSessionIdleTimeout")
+	}
+	if c.ClientOfflineSessionMaxLifespan != "" {
+		attrs["client.offline.session.max.lifespan"] = c.ClientOfflineSessionMaxLifespan
+		delete(out, "clientOfflineSessionMaxLifespan")
+	}
+	_ = fieldsRoutedViaAttributes // documentation reference
+	if len(attrs) > 0 {
+		ab, err := json.Marshal(attrs)
+		if err != nil {
+			return nil, err
+		}
+		out["attributes"] = ab
+	} else {
+		delete(out, "attributes")
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalJSON parses Keycloak 26.x GET responses. Top-level fields are
+// unmarshalled normally, then dot-notation entries under attributes are
+// promoted back to the typed struct fields so the controller's drift
+// comparison sees the actual Keycloak state instead of zero values.
+func (c *ClientRepresentation) UnmarshalJSON(data []byte) error {
+	// Avoid infinite recursion by marshalling into a local alias.
+	type alias ClientRepresentation
+	aux := (*alias)(c)
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+	if c.Attributes == nil {
+		return nil
+	}
+	if v, ok := c.Attributes["home.page.url"]; ok {
+		c.HomeURL = v
+	}
+	if v, ok := c.Attributes["frontchannel.logout.url"]; ok {
+		s := v
+		c.FrontchannelLogoutURL = &s
+	}
+	if v, ok := c.Attributes["backchannel.logout.url"]; ok {
+		c.BackchannelLogoutURL = v
+	}
+	if v, ok := c.Attributes["backchannel.logout.session.required"]; ok {
+		if b, err := strconv.ParseBool(v); err == nil {
+			c.BackchannelLogoutSessionRequired = &b
+		}
+	}
+	if v, ok := c.Attributes["backchannel.logout.revoke.offline.sessions"]; ok {
+		if b, err := strconv.ParseBool(v); err == nil {
+			c.BackchannelLogoutRevokeOfflineSessions = &b
+		}
+	}
+	if v, ok := c.Attributes["oauth2.device.authorization.grant.enabled"]; ok {
+		if b, err := strconv.ParseBool(v); err == nil {
+			c.OAuth2DeviceAuthorizationGrantEnabled = &b
+		}
+	}
+	if v, ok := c.Attributes["standard.token.exchange.enabled"]; ok {
+		if b, err := strconv.ParseBool(v); err == nil {
+			c.StandardTokenExchangeEnabled = &b
+		}
+	}
+	if v, ok := c.Attributes["use.refresh.tokens"]; ok {
+		if b, err := strconv.ParseBool(v); err == nil {
+			c.UseRefreshTokens = &b
+		}
+	}
+	if v, ok := c.Attributes["client.session.idle.timeout"]; ok {
+		c.ClientSessionIdleTimeout = v
+	}
+	if v, ok := c.Attributes["client.session.max.lifespan"]; ok {
+		c.ClientSessionMaxLifespan = v
+	}
+	if v, ok := c.Attributes["client.offline.session.idle.timeout"]; ok {
+		c.ClientOfflineSessionIdleTimeout = v
+	}
+	if v, ok := c.Attributes["client.offline.session.max.lifespan"]; ok {
+		c.ClientOfflineSessionMaxLifespan = v
+	}
+	return nil
+}
+
 func (c *keycloakClient) GetClient(ctx context.Context, realm, clientID string) (*ClientRepresentation, error) {
 	path := realmPath(realm) + "/clients?clientId=" + url.QueryEscape(clientID)
 	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
@@ -685,26 +946,6 @@ func (c *keycloakClient) UpdateClient(ctx context.Context, realm string, client 
 	if client.ID == "" {
 		return errors.New("client ID is required for update")
 	}
-	// Keycloak API doesn't accept these fields in update requests - clear them
-	client.HomeURL = ""
-	client.ValidRedirectURIs = nil
-	client.WebOrigins = nil
-	client.RootURL = ""
-	// These fields may not be supported by all Keycloak versions - set to nil to omit from JSON
-	client.FrontchannelLogoutEnabled = nil
-	client.FrontchannelLogoutURL = nil
-	client.BackchannelLogoutRevokeOfflineSessions = nil
-	client.BackchannelLogoutSessionRequired = nil
-	client.BackchannelLogoutURL = ""
-	client.Protocol = ""
-	client.AuthorizationServicesEnabled = nil
-	client.OAuth2DeviceAuthorizationGrantEnabled = nil
-	client.StandardTokenExchangeEnabled = nil
-	client.UseRefreshTokens = nil
-	client.ClientSessionIdleTimeout = ""
-	client.ClientSessionMaxLifespan = ""
-	client.ClientOfflineSessionIdleTimeout = ""
-	client.ClientOfflineSessionMaxLifespan = ""
 	path := realmPath(realm) + "/clients/" + url.PathEscape(client.ID)
 	_, err := c.doRequest(ctx, http.MethodPut, path, client)
 	return err
