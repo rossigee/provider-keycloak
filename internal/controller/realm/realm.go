@@ -33,7 +33,7 @@ import (
 	realmv1alpha1 "github.com/rossigee/provider-keycloak/apis/realm/v1alpha1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
-)
+	)
 
 const (
 	errNotRealm          = "managed resource is not a Realm"
@@ -82,12 +82,14 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	if pc.Status.GetCondition(xpv1.TypeReady).Status != "True" {
 		return nil, errors.New(errProviderNotReady)
 	}
-	kc, err := clients.NewClient(ctx, pc, c.kube)
+	shared := clients.GetConnector(c.kube)
+	kc, err := shared.Connect(ctx, pcRef.Name)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create Keycloak client")
+		return nil, errors.Wrap(err, "cannot connect to Keycloak")
 	}
 	return &external{client: kc}, nil
 }
+
 
 func (e *external) Disconnect(_ context.Context) error { return nil }
 

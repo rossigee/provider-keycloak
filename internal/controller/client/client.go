@@ -32,7 +32,7 @@ import (
 	openidclientv1alpha1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1alpha1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
-	"github.com/rossigee/provider-keycloak/internal/tracing"
+		"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
 const (
@@ -79,26 +79,22 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	if !ok {
 		return nil, errors.New(errNotClient)
 	}
-
 	pcRef := cr.Spec.ProviderConfigReference
 	if pcRef == nil {
 		return nil, errors.New(errGetProviderConfig + ": providerConfigRef is required")
 	}
-
 	pc := &v1beta1.ProviderConfig{}
 	if err := c.kube.Get(ctx, client.ObjectKey{Name: pcRef.Name}, pc); err != nil {
 		return nil, errors.Wrap(err, errGetProviderConfig)
 	}
-
-	// Try to connect to Keycloak - this will determine if provider is ready
-	// We don't check ProviderConfig status because CRD may not have status subresource
-	kc, err := clients.NewClient(ctx, pc, c.kube)
+	shared := clients.GetConnector(c.kube)
+	kc, err := shared.Connect(ctx, pcRef.Name)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create Keycloak client")
+		return nil, errors.Wrap(err, "cannot connect to Keycloak")
 	}
-
-	return &external{kube: c.kube, client: kc}, nil
+	return &external{client: kc}, nil
 }
+
 
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
 	_, span := tracing.StartSpan(ctx, "client.observe",

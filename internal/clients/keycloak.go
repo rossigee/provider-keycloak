@@ -44,6 +44,37 @@ const (
 	maxErrBodyLen        = 256
 )
 
+// Backoff schedule for token acquisition failures. We hold the cached
+// failure for at most backoffMax so a transient outage clears quickly.
+const (
+	backoffInitial = 5 * time.Second
+	backoffMax     = 5 * time.Minute
+)
+
+// ErrAuthUnavailable indicates that an access token could not be obtained
+// from Keycloak and the provider is currently in its backoff window.
+// Controllers should map this to a RequeueAfter rather than letting it
+// bubble as an unrecoverable reconcile error.
+var ErrAuthUnavailable = errors.New("Keycloak authentication unavailable")
+
+// isAuthUnavailable reports whether err (or any error in its chain)
+// represents a token-fetch failure that should be backpressured.
+func isAuthUnavailable(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Cause(err) == ErrAuthUnavailable {
+		return true
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "cannot obtain access token") ||
+		strings.Contains(msg, "failed to parse token response") ||
+		strings.Contains(msg, "failed to execute token request") ||
+		strings.Contains(msg, "failed to read token response") ||
+		strings.Contains(msg, "failed to create token request") ||
+		strings.Contains(msg, "failed to refresh access token")
+}
+
 // realmPath returns the safely encoded admin API path for a realm.
 func realmPath(realm string) string {
 	return adminPath + "/" + url.PathEscape(realm)
@@ -202,12 +233,18 @@ type Client interface {
 
 // keycloakClient implements Client
 type keycloakClient struct {
-	mu         sync.Mutex
-	httpClient *http.Client
-	baseURL    string
-	token      string
-	tokenExp   time.Time // token expiration time
-	cfg        *Config   // for token refresh
+	mu          sync.Mutex
+	httpClient  *http.Client
+	baseURL     string
+	token       string
+	tokenExp    time.Time // token expiration time
+	cfg         *Config   // for token refresh
+
+	// Failure tracking for token acquisition backoff.
+	lastFailure     error
+	lastFailureAt  time.Time
+	backoffUntil   time.Time
+	consecutiveFails int
 }
 
 // NewClient creates a new Keycloak API client using OAuth2 client credentials.
@@ -325,6 +362,11 @@ func fetchOAuth2Token(ctx context.Context, hc *http.Client, baseURL string, cfg 
 
 // refreshToken checks if the access token is expired and fetches a new one if necessary.
 // If no config is available (e.g. in tests), it skips refresh.
+//
+// While the most recent token fetch failed and the backoff window has not
+// elapsed, refreshToken returns the cached failure wrapped in
+// ErrAuthUnavailable so callers can apply backpressure (e.g. controller
+// RequeueAfter) without hammering the upstream token endpoint.
 func (k *keycloakClient) refreshToken(ctx context.Context) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
@@ -335,13 +377,44 @@ func (k *keycloakClient) refreshToken(ctx context.Context) error {
 	if k.cfg == nil {
 		return nil // no config available, skip refresh (e.g. in tests)
 	}
+
+	// If we are still inside the backoff window after a recent failure,
+	// short-circuit and surface the cached error so requesters can apply
+	// backpressure instead of issuing another token request.
+	now := time.Now()
+	if k.lastFailure != nil && now.Before(k.backoffUntil) {
+		return errors.Wrapf(ErrAuthUnavailable, "token fetch in backoff until %s (last error: %v)", k.backoffUntil.Format(time.RFC3339), k.lastFailure)
+	}
+
 	token, exp, err := fetchOAuth2Token(ctx, k.httpClient, k.baseURL, k.cfg)
 	if err != nil {
-		return err
+		k.recordFailureLocked(err, now)
+		return errors.Wrapf(ErrAuthUnavailable, "cannot obtain access token: %v", err)
 	}
+	k.recordSuccessLocked(token, exp, now)
+	return nil
+}
+
+// recordFailureLocked updates the failure/backoff state. Caller must hold k.mu.
+func (k *keycloakClient) recordFailureLocked(err error, now time.Time) {
+	k.lastFailure = err
+	k.lastFailureAt = now
+	k.consecutiveFails++
+	delay := backoffInitial << (k.consecutiveFails - 1)
+	if delay <= 0 || delay > backoffMax {
+		delay = backoffMax
+	}
+	k.backoffUntil = now.Add(delay)
+}
+
+// recordSuccessLocked clears failure state and stores the new token. Caller must hold k.mu.
+func (k *keycloakClient) recordSuccessLocked(token string, exp time.Time, _ time.Time) {
 	k.token = token
 	k.tokenExp = exp
-	return nil
+	k.lastFailure = nil
+	k.lastFailureAt = time.Time{}
+	k.backoffUntil = time.Time{}
+	k.consecutiveFails = 0
 }
 
 // =============================================================================
