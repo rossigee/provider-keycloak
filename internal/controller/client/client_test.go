@@ -25,6 +25,9 @@ import (
 	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	openidclientv1alpha1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1alpha1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
@@ -40,10 +43,11 @@ const (
 // mockClient is a test double for clients.Client.
 type mockClient struct {
 	*testhelpers.BaseMockClient
-	getClientFn    func(ctx context.Context, realm, clientID string) (*clients.ClientRepresentation, error)
-	createClientFn func(ctx context.Context, realm string, c *clients.ClientRepresentation) (*clients.ClientRepresentation, error)
-	updateClientFn func(ctx context.Context, realm string, c *clients.ClientRepresentation) error
-	deleteClientFn func(ctx context.Context, realm, clientID string) error
+	getClientFn       func(ctx context.Context, realm, clientID string) (*clients.ClientRepresentation, error)
+	createClientFn    func(ctx context.Context, realm string, c *clients.ClientRepresentation) (*clients.ClientRepresentation, error)
+	updateClientFn    func(ctx context.Context, realm string, c *clients.ClientRepresentation) error
+	deleteClientFn    func(ctx context.Context, realm, clientID string) error
+	getClientSecretFn func(ctx context.Context, realm, clientID string) (string, error)
 }
 
 func (m *mockClient) GetClient(ctx context.Context, realm, clientID string) (*clients.ClientRepresentation, error) {
@@ -57,6 +61,12 @@ func (m *mockClient) UpdateClient(ctx context.Context, realm string, c *clients.
 }
 func (m *mockClient) DeleteClient(ctx context.Context, realm, clientID string) error {
 	return m.deleteClientFn(ctx, realm, clientID)
+}
+func (m *mockClient) GetClientSecret(ctx context.Context, realm, clientID string) (string, error) {
+	if m.getClientSecretFn != nil {
+		return m.getClientSecretFn(ctx, realm, clientID)
+	}
+	return "", nil
 }
 
 // Unused interface methods — satisfy clients.Client.
@@ -106,7 +116,6 @@ func (m *mockClient) ListGroups(ctx context.Context, realm string) ([]clients.Gr
 func (m *mockClient) SearchGroups(_ context.Context, _, _ string) ([]clients.GroupRepresentation, error) {
 	return nil, nil
 }
-func (m *mockClient) GetClientSecret(_ context.Context, _, _ string) (string, error) { return "", nil }
 func (m *mockClient) GetUserGroups(_ context.Context, _, _ string) ([]clients.GroupRepresentation, error) {
 	return nil, nil
 }
@@ -205,6 +214,18 @@ func newCR(realmId, clientId string) *openidclientv1alpha1.Client {
 	}
 	if realmId != "" {
 		cr.Spec.ForProvider.RealmId = &realmId
+	}
+	return cr
+}
+
+// newCRWithSecretRef returns a Client CR configured to write the client
+// secret to the named Kubernetes secret key.
+func newCRWithSecretRef(realmId, clientId, secretName, namespace, key string) *openidclientv1alpha1.Client {
+	cr := newCR(realmId, clientId)
+	cr.Spec.ForProvider.ClientSecretSecretRef = &openidclientv1alpha1.ClientSecretSecretRef{
+		Name:      secretName,
+		Namespace: namespace,
+		Key:       key,
 	}
 	return cr
 }
@@ -347,6 +368,102 @@ func TestCreate(t *testing.T) {
 			}
 			_ = creation // ExternalCreation returned on success
 		})
+	}
+}
+
+func TestCreateWritesClientSecretRef(t *testing.T) {
+	const wantSecret = "real-secret-from-keycloak"
+	const secretName = "gitea-client-secret"
+	const secretNS = "rossgolderltd"
+	const secretKey = "client-secret"
+
+	mc := &mockClient{
+		createClientFn: func(_ context.Context, _ string, c *clients.ClientRepresentation) (*clients.ClientRepresentation, error) {
+			return &clients.ClientRepresentation{ID: "uuid-1", ClientID: c.ClientID}, nil
+		},
+		getClientSecretFn: func(_ context.Context, _, _ string) (string, error) {
+			return wantSecret, nil
+		},
+	}
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+	_ = openidclientv1alpha1.AddToScheme(scheme)
+	kube := fake.NewClientBuilder().WithScheme(scheme).Build()
+	e := &external{kube: kube, client: mc}
+
+	cr := newCRWithSecretRef("myrealm", testAppID, secretName, secretNS, secretKey)
+	creation, err := e.Create(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	secret := &corev1.Secret{}
+	if err := kube.Get(context.Background(), client.ObjectKey{Name: secretName, Namespace: secretNS}, secret); err != nil {
+		t.Fatalf("expected K8s secret %s/%s to exist: %v", secretNS, secretName, err)
+	}
+	got := string(secret.Data[secretKey])
+	if got != wantSecret {
+		t.Errorf("K8s secret key %q = %q, want %q", secretKey, got, wantSecret)
+	}
+
+	// ConnectionDetails should also carry the secret.
+	if v := string(creation.ConnectionDetails["client_secret"]); v != wantSecret {
+		t.Errorf("ConnectionDetails[client_secret] = %q, want %q", v, wantSecret)
+	}
+}
+
+func TestCreateGetClientSecretErrorPropagates(t *testing.T) {
+	mc := &mockClient{
+		createClientFn: func(_ context.Context, _ string, c *clients.ClientRepresentation) (*clients.ClientRepresentation, error) {
+			return &clients.ClientRepresentation{ID: "uuid-1", ClientID: c.ClientID}, nil
+		},
+		getClientSecretFn: func(_ context.Context, _, _ string) (string, error) {
+			return "", errors.New("keycloak unavailable")
+		},
+	}
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+	e := &external{kube: fake.NewClientBuilder().WithScheme(scheme).Build(), client: mc}
+
+	cr := newCRWithSecretRef("myrealm", testAppID, "gitea-client-secret", "rossgolderltd", "client-secret")
+	_, err := e.Create(context.Background(), cr)
+	if err == nil {
+		t.Fatal("expected error from GetClientSecret failure, got nil")
+	}
+	if !containsStr(err.Error(), "cannot fetch client secret from Keycloak") {
+		t.Errorf("error %q does not wrap GetClientSecret failure", err.Error())
+	}
+	if !containsStr(err.Error(), "keycloak unavailable") {
+		t.Errorf("error %q does not include root cause", err.Error())
+	}
+}
+
+func TestCreateNoSecretRefSkipsK8sWrite(t *testing.T) {
+	const wantSecret = "real-secret"
+	mc := &mockClient{
+		createClientFn: func(_ context.Context, _ string, c *clients.ClientRepresentation) (*clients.ClientRepresentation, error) {
+			return &clients.ClientRepresentation{ID: "uuid-1", ClientID: c.ClientID}, nil
+		},
+		getClientSecretFn: func(_ context.Context, _, _ string) (string, error) {
+			return wantSecret, nil
+		},
+	}
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+	kube := fake.NewClientBuilder().WithScheme(scheme).Build()
+	e := &external{kube: kube, client: mc}
+
+	cr := newCR("myrealm", testAppID)
+	_, err := e.Create(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	secretList := &corev1.SecretList{}
+	if err := kube.List(context.Background(), secretList); err != nil {
+		t.Fatalf("list secrets: %v", err)
+	}
+	if len(secretList.Items) != 0 {
+		t.Errorf("expected zero K8s secrets created, got %d", len(secretList.Items))
 	}
 }
 

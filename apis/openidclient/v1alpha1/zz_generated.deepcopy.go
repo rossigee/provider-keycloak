@@ -159,6 +159,25 @@ func (in *ClientParameters) DeepCopyInto(out *ClientParameters) {
 			(*out)[k] = v
 		}
 	}
+	if in.ClientSecretSecretRef != nil {
+		in, out := &in.ClientSecretSecretRef, &out.ClientSecretSecretRef
+		*out = new(ClientSecretSecretRef)
+		(*in).DeepCopyInto(*out)
+	}
+}
+
+// DeepCopy returns a deep copy of this ClientSecretSecretRef.
+func (in *ClientSecretSecretRef) DeepCopyInto(out *ClientSecretSecretRef) {
+	*out = *in
+}
+
+func (in *ClientSecretSecretRef) DeepCopy() *ClientSecretSecretRef {
+	if in == nil {
+		return nil
+	}
+	out := new(ClientSecretSecretRef)
+	in.DeepCopyInto(out)
+	return out
 }
 
 // DeepCopy returns a deep copy of this ClientParameters.
