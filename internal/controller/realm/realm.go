@@ -176,10 +176,6 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	if cr.Spec.ForProvider.EmailTheme != nil {
 		currentMap["emailTheme"] = *cr.Spec.ForProvider.EmailTheme
 	}
-	if cr.Spec.ForProvider.FrontendURL != nil {
-		currentMap["frontendUrl"] = *cr.Spec.ForProvider.FrontendURL
-	}
-
 	// Also handle attributes map
 	if cr.Spec.ForProvider.Attributes != nil && len(cr.Spec.ForProvider.Attributes) > 0 {
 		for k, v := range cr.Spec.ForProvider.Attributes {
@@ -256,7 +252,13 @@ func realmParamsToRepresentation(p *realmv1alpha1.RealmParameters) *clients.Real
 		r.Attributes["frontendUrl"] = *p.FrontendURL
 	}
 	if p.Attributes != nil && len(p.Attributes) > 0 {
-		r.Attributes = p.Attributes
+		if r.Attributes == nil {
+			r.Attributes = p.Attributes
+		} else {
+			for k, v := range p.Attributes {
+				r.Attributes[k] = v
+			}
+		}
 	}
 	return r
 }
