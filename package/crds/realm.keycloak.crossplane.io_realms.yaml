@@ -156,6 +156,11 @@ spec:
                   enabled:
                     description: Enabled indicates if the realm is enabled.
                     type: boolean
+                  frontendUrl:
+                    description: |-
+                      FrontendURL is the public URL for the realm's login pages.
+                      This affects OIDC issuer URLs and redirect URIs for vanity domains.
+                    type: string
                   loginTheme:
                     description: LoginTheme sets the login page theme.
                     type: string

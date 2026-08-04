@@ -224,6 +224,11 @@ type RealmParameters struct {
 	// +optional
 	EmailTheme *string `json:"emailTheme,omitempty"`
 
+	// FrontendURL is the public URL for the realm's login pages.
+	// This affects OIDC issuer URLs and redirect URIs for vanity domains.
+	// +optional
+	FrontendURL *string `json:"frontendUrl,omitempty"`
+
 	// SmtpServer configures the SMTP server for outgoing emails.
 	// +optional
 	SmtpServer []SmtpServer `json:"smtpServer,omitempty"`
