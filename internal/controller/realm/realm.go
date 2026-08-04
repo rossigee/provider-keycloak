@@ -176,6 +176,8 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	if cr.Spec.ForProvider.EmailTheme != nil {
 		currentMap["emailTheme"] = *cr.Spec.ForProvider.EmailTheme
 	}
+	// Remove top-level frontendUrl from currentMap - Keycloak only accepts it in attributes
+	delete(currentMap, "frontendUrl")
 	// Also handle attributes map
 	if cr.Spec.ForProvider.Attributes != nil && len(cr.Spec.ForProvider.Attributes) > 0 {
 		for k, v := range cr.Spec.ForProvider.Attributes {
