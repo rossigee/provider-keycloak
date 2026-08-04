@@ -176,6 +176,16 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	if cr.Spec.ForProvider.EmailTheme != nil {
 		currentMap["emailTheme"] = *cr.Spec.ForProvider.EmailTheme
 	}
+	if cr.Spec.ForProvider.FrontendURL != nil {
+		currentMap["frontendUrl"] = *cr.Spec.ForProvider.FrontendURL
+	}
+
+	// Also handle attributes map
+	if cr.Spec.ForProvider.Attributes != nil && len(cr.Spec.ForProvider.Attributes) > 0 {
+		for k, v := range cr.Spec.ForProvider.Attributes {
+			currentMap[k] = v
+		}
+	}
 
 	// Send updated map back to Keycloak
 	updatedJSON, err := json.Marshal(currentMap)
@@ -239,6 +249,15 @@ func realmParamsToRepresentation(p *realmv1alpha1.RealmParameters) *clients.Real
 	if p.EmailTheme != nil {
 		r.EmailTheme = *p.EmailTheme
 	}
+	if p.FrontendURL != nil {
+		if r.Attributes == nil {
+			r.Attributes = make(map[string]string)
+		}
+		r.Attributes["frontendUrl"] = *p.FrontendURL
+	}
+	if p.Attributes != nil && len(p.Attributes) > 0 {
+		r.Attributes = p.Attributes
+	}
 	return r
 }
 
@@ -269,6 +288,26 @@ func realmUpToDate(desired *realmv1alpha1.RealmParameters, actual *clients.Realm
 	}
 	if desired.EmailTheme != nil && *desired.EmailTheme != actual.EmailTheme {
 		return false
+	}
+	if desired.FrontendURL != nil {
+		actualFrontendURL := ""
+		if actual.FrontendURL != nil {
+			actualFrontendURL = *actual.FrontendURL
+		}
+		if *desired.FrontendURL != actualFrontendURL {
+			return false
+		}
+	}
+	// Check attributes
+	if desired.Attributes != nil {
+		if actual.Attributes == nil {
+			return false
+		}
+		for k, v := range desired.Attributes {
+			if actual.Attributes[k] != v {
+				return false
+			}
+		}
 	}
 	return true
 }
