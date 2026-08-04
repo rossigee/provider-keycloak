@@ -95,7 +95,7 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot connect to Keycloak")
 	}
-	return &external{client: kc}, nil
+	return &external{kube: c.kube, client: kc}, nil
 }
 
 
