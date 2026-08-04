@@ -176,5 +176,5 @@ jobs:
         run: |
           echo "⛔ PR #${{ github.event.pull_request.number }} requires human review"
           echo "   Title: ${{ github.event.pull_request.title }}"
-          echo "   Labels: $(echo '${{ join(github.event.pull_request.labels.*.name, ', ') }}' | tr -d \"'\" | tr -d '\"')"
+          echo "   Labels: $(echo '${{ join(github.event.pull_request.labels.*.name, ', ') }}' | tr -d "'" | tr -d '"')"
           echo "   Author: ${{ github.event.pull_request.user.login }}"
