@@ -58,23 +58,7 @@ const (
 // bubble as an unrecoverable reconcile error.
 var ErrAuthUnavailable = errors.New("Keycloak authentication unavailable")
 
-// isAuthUnavailable reports whether err (or any error in its chain)
-// represents a token-fetch failure that should be backpressured.
-func isAuthUnavailable(err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Cause(err) == ErrAuthUnavailable {
-		return true
-	}
-	msg := err.Error()
-	return strings.Contains(msg, "cannot obtain access token") ||
-		strings.Contains(msg, "failed to parse token response") ||
-		strings.Contains(msg, "failed to execute token request") ||
-		strings.Contains(msg, "failed to read token response") ||
-		strings.Contains(msg, "failed to create token request") ||
-		strings.Contains(msg, "failed to refresh access token")
-}
+
 
 // realmPath returns the safely encoded admin API path for a realm.
 func realmPath(realm string) string {
@@ -548,7 +532,7 @@ func (c *keycloakClient) UpdateRealmRaw(ctx context.Context, realm string, realm
 	if err != nil {
 		return errors.Wrap(err, "failed to execute request")
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return errors.Wrap(err, "failed to read response body")

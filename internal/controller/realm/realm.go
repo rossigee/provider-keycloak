@@ -179,7 +179,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	// Remove top-level frontendUrl from currentMap - Keycloak only accepts it in attributes
 	delete(currentMap, "frontendUrl")
 	// Also handle attributes map
-	if cr.Spec.ForProvider.Attributes != nil && len(cr.Spec.ForProvider.Attributes) > 0 {
+	if len(cr.Spec.ForProvider.Attributes) > 0 {
 		for k, v := range cr.Spec.ForProvider.Attributes {
 			currentMap[k] = v
 		}
@@ -253,7 +253,7 @@ func realmParamsToRepresentation(p *realmv1alpha1.RealmParameters) *clients.Real
 		}
 		r.Attributes["frontendUrl"] = *p.FrontendURL
 	}
-	if p.Attributes != nil && len(p.Attributes) > 0 {
+	if len(p.Attributes) > 0 {
 		if r.Attributes == nil {
 			r.Attributes = p.Attributes
 		} else {

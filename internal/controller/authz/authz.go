@@ -53,7 +53,6 @@ type connector struct {
 }
 
 type external struct {
-	kube   client.Client
 	client clients.Client
 }
 
