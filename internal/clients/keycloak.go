@@ -474,6 +474,10 @@ type Realm struct {
 	EmailTheme             string            `json:"emailTheme,omitempty"`
 	FrontendURL            *string           `json:"frontendUrl,omitempty"`
 	Attributes            map[string]string `json:"attributes,omitempty"`
+	// SmtpServer is Keycloak's RealmRepresentation.smtpServer map[string]string.
+	// Keycloak 26.x rejects any nested-object form ("Cannot parse the JSON");
+	// the only accepted shape is the flat string->string map.
+	SmtpServer             map[string]string `json:"smtpServer,omitempty"`
 }
 
 func (c *keycloakClient) GetRealm(ctx context.Context, realm string) (*Realm, error) {

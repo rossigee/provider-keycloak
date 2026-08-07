@@ -19,6 +19,8 @@ package realm
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strconv"
 	"strings"
 
 	xpcontroller "github.com/crossplane/crossplane-runtime/v2/pkg/controller"
@@ -27,6 +29,7 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -64,7 +67,10 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 }
 
 type connector struct{ kube client.Client }
-type external struct{ client clients.Client }
+type external struct {
+	kube   client.Client
+	client clients.Client
+}
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
 	cr, ok := mg.(*realmv1alpha1.Realm)
@@ -87,7 +93,7 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot connect to Keycloak")
 	}
-	return &external{client: kc}, nil
+	return &external{kube: c.kube, client: kc}, nil
 }
 
 
@@ -119,7 +125,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotRealm)
 	}
-	_, err := e.client.CreateRealm(ctx, realmParamsToRepresentation(&cr.Spec.ForProvider))
+	_, err := e.client.CreateRealm(ctx, realmParamsToRepresentation(ctx, e.kube, &cr.Spec.ForProvider))
 	if err != nil {
 		return managed.ExternalCreation{}, errors.Wrap(err, errCreateRealm)
 	}
@@ -176,11 +182,27 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	if cr.Spec.ForProvider.EmailTheme != nil {
 		currentMap["emailTheme"] = *cr.Spec.ForProvider.EmailTheme
 	}
+	// SMTP server config. Keycloak's RealmRepresentation.smtpServer is
+	// typed as Map[String] (flat string->string), NOT a nested object -
+	// Keycloak 26.x rejects nested-object forms with "Cannot parse the
+	// JSON". The controller resolves PasswordSecretRef via the kube
+	// client to a plaintext password before building the map.
+	if len(cr.Spec.ForProvider.SmtpServer) > 0 {
+		smtp, err := buildSmtpServerMap(ctx, e.kube, &cr.Spec.ForProvider.SmtpServer[0])
+		if err != nil {
+			return managed.ExternalUpdate{}, errors.Wrap(err, "cannot build smtp server config")
+		}
+		currentMap["smtpServer"] = smtp
+	}
 	// Remove top-level frontendUrl from currentMap - Keycloak only accepts it in attributes
 	delete(currentMap, "frontendUrl")
-	// Also handle attributes map
+	// Also handle attributes map, but skip frontendUrl and other non-standard
+	// fields - Keycloak 26.x rejects them at the top level.
 	if len(cr.Spec.ForProvider.Attributes) > 0 {
 		for k, v := range cr.Spec.ForProvider.Attributes {
+			if k == "frontendUrl" || k == "theme-sync-timestamp" {
+				continue
+			}
 			currentMap[k] = v
 		}
 	}
@@ -210,7 +232,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
-func realmParamsToRepresentation(p *realmv1alpha1.RealmParameters) *clients.Realm {
+func realmParamsToRepresentation(ctx context.Context, kube client.Client, p *realmv1alpha1.RealmParameters) *clients.Realm {
 	r := &clients.Realm{Realm: p.Realm}
 	if p.Enabled != nil {
 		r.Enabled = *p.Enabled
@@ -260,6 +282,18 @@ func realmParamsToRepresentation(p *realmv1alpha1.RealmParameters) *clients.Real
 			for k, v := range p.Attributes {
 				r.Attributes[k] = v
 			}
+		}
+	}
+	if len(p.SmtpServer) > 0 {
+		smtp, err := buildSmtpServerMap(ctx, kube, &p.SmtpServer[0])
+		if err != nil {
+			// Don't fail Create just because SMTP can't be wired - the
+			// subsequent Observe/Update cycle will retry with a properly
+			// populated kube client. We log via stderr to surface the
+			// misconfiguration during reconciliation.
+			fmt.Printf("WARN: realm %s: smtpServer build skipped: %v\n", p.Realm, err)
+		} else {
+			r.SmtpServer = smtp
 		}
 	}
 	return r
@@ -313,6 +347,86 @@ func realmUpToDate(desired *realmv1alpha1.RealmParameters, actual *clients.Realm
 			}
 		}
 	}
+	// SMTP server drift detection. We compare the spec-defined fields
+	// against the live Keycloak smtpServer map (which Keycloak
+	// serialises as a flat map[string]string). The actual password is
+	// masked by Keycloak ("**********") in GET responses, so we only
+	// compare non-secret fields here; rotation correctness is enforced
+	// by the controller pushing the new password on every Update.
+	if len(desired.SmtpServer) > 0 {
+		if actual.SmtpServer == nil {
+			return false
+		}
+		smtp := buildSmtpServerMapFields(&desired.SmtpServer[0])
+		for k, want := range smtp {
+			if actual.SmtpServer[k] != want {
+				return false
+			}
+		}
+	}
 	return true
+}
+
+// buildSmtpServerMap resolves the PasswordSecretRef via kube and returns
+// the flat map[string]string Keycloak expects for RealmRepresentation.smtpServer.
+// Keycloak 26.x rejects any nested-object form ("Cannot parse the JSON"),
+// so auth.username and auth.password are flattened to "user" / "password".
+func buildSmtpServerMap(ctx context.Context, kube client.Client, p *realmv1alpha1.SmtpServer) (map[string]string, error) {
+	m := buildSmtpServerMapFields(p)
+
+	if len(p.Auth) > 0 && p.Auth[0].PasswordSecretRef != nil {
+		if kube == nil {
+			return nil, errors.New("kube client unavailable - cannot resolve SMTP password SecretRef")
+		}
+		ref := p.Auth[0].PasswordSecretRef
+		var sec corev1.Secret
+		if err := kube.Get(ctx, client.ObjectKey{Name: ref.Name, Namespace: ref.Namespace}, &sec); err != nil {
+			return nil, errors.Wrapf(err, "cannot read SMTP password secret %s/%s", ref.Namespace, ref.Name)
+		}
+		pw, ok := sec.Data[ref.Key]
+		if !ok {
+			return nil, errors.Errorf("SMTP password secret %s/%s has no key %q", ref.Namespace, ref.Name, ref.Key)
+		}
+		m["auth"] = "true"
+		if p.Auth[0].Username != nil {
+			m["user"] = *p.Auth[0].Username
+		}
+		m["password"] = string(pw)
+	}
+	return m, nil
+}
+
+// buildSmtpServerMapFields returns the non-secret fields of an SmtpServer
+// in the flat map[string]string shape Keycloak expects.
+func buildSmtpServerMapFields(p *realmv1alpha1.SmtpServer) map[string]string {
+	m := map[string]string{}
+	if p.Host != nil {
+		m["host"] = *p.Host
+	}
+	if p.Port != nil {
+		m["port"] = *p.Port
+	}
+	if p.From != nil {
+		m["from"] = *p.From
+	}
+	if p.FromDisplayName != nil {
+		m["fromDisplayName"] = *p.FromDisplayName
+	}
+	if p.ReplyTo != nil {
+		m["replyTo"] = *p.ReplyTo
+	}
+	if p.ReplyToDisplayName != nil {
+		m["replyToDisplayName"] = *p.ReplyToDisplayName
+	}
+	if p.EnvelopeFrom != nil {
+		m["envelopeFrom"] = *p.EnvelopeFrom
+	}
+	if p.Ssl != nil {
+		m["ssl"] = strconv.FormatBool(*p.Ssl)
+	}
+	if p.Starttls != nil {
+		m["starttls"] = strconv.FormatBool(*p.Starttls)
+	}
+	return m
 }
 

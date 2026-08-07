@@ -29,13 +29,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	openidclientv1alpha1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1alpha1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
-		"github.com/rossigee/provider-keycloak/internal/tracing"
+	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
 const (
@@ -296,9 +297,11 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		}
 		secretValue = s
 		details["client_secret"] = []byte(s)
+		klog.V(2).InfoS("got client secret", "client", cr.Spec.ForProvider.ClientId, "secret_len", len(s))
 	}
 
 	if cr.Spec.ForProvider.ClientSecretSecretRef != nil && secretValue != "" {
+		klog.V(2).InfoS("writing client secret to K8s", "client", cr.Spec.ForProvider.ClientId, "secret_ref", cr.Spec.ForProvider.ClientSecretSecretRef.Name)
 		if err := e.writeClientSecret(ctx, cr.Spec.ForProvider.ClientSecretSecretRef, secretValue); err != nil {
 			return managed.ExternalCreation{}, errors.Wrap(err, "cannot write client secret to K8s")
 		}
@@ -360,6 +363,20 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 
 	if err := e.client.UpdateClient(ctx, realmId, rep); err != nil {
 		return managed.ExternalUpdate{}, errors.Wrap(err, errUpdateClient)
+	}
+
+	// Refresh the client secret on each update to ensure K8s secret is up to date
+	if cr.Spec.ForProvider.ClientSecretSecretRef != nil {
+		secretValue, err := e.client.GetClientSecret(ctx, realmId, existing.ID)
+		if err != nil {
+			klog.V(2).InfoS("failed to get client secret during update", "client", cr.Spec.ForProvider.ClientId, "error", err)
+		} else if secretValue != "" {
+			if err := e.writeClientSecret(ctx, cr.Spec.ForProvider.ClientSecretSecretRef, secretValue); err != nil {
+				klog.V(2).InfoS("failed to write client secret during update", "client", cr.Spec.ForProvider.ClientId, "error", err)
+			} else {
+				klog.V(2).InfoS("successfully refreshed client secret during update", "client", cr.Spec.ForProvider.ClientId)
+			}
+		}
 	}
 
 	return managed.ExternalUpdate{}, nil
