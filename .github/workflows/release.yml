@@ -51,6 +51,20 @@ jobs:
       - name: Vendor Dependencies
         run: go mod vendor
 
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install Crossplane CLI
+        run: |
+          mkdir -p .cache/tools
+          curl -fsSLo .cache/tools/crossplane-cli-v2.3.3 \
+            "https://releases.crossplane.io/stable/v2.3.3/bin/linux_amd64/crank?source=build"
+          chmod +x .cache/tools/crossplane-cli-v2.3.3
+          # Also create a symlink that the build system might expect
+          ln -sf .cache/tools/crossplane-cli-v2.3.3 .cache/tools/crossplane-cli
+
       - name: Determine Version
         id: version
         run: |
