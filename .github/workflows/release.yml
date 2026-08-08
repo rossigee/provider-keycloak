@@ -58,12 +58,14 @@ jobs:
 
       - name: Install Crossplane CLI
         run: |
-          mkdir -p .cache/tools
-          curl -fsSLo .cache/tools/crossplane-cli-v2.3.3 \
+          # The build system expects tools in .cache/tools/<platform>
+          mkdir -p .cache/tools/linux_amd64
+          curl -fsSLo .cache/tools/linux_amd64/crossplane-cli-v2.3.3 \
             "https://releases.crossplane.io/stable/v2.3.3/bin/linux_amd64/crank?source=build"
-          chmod +x .cache/tools/crossplane-cli-v2.3.3
-          # Also create a symlink that the build system might expect
-          ln -sf .cache/tools/crossplane-cli-v2.3.3 .cache/tools/crossplane-cli
+          chmod +x .cache/tools/linux_amd64/crossplane-cli-v2.3.3
+          # Also create symlinks the build system might expect
+          ln -sf .cache/tools/linux_amd64/crossplane-cli-v2.3.3 .cache/tools/linux_amd64/crossplane-cli
+          ln -sf .cache/tools/linux_amd64/crossplane-cli-v2.3.3 .cache/tools/crossplane-cli
 
       - name: Determine Version
         id: version
