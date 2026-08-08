@@ -58,13 +58,13 @@ jobs:
 
       - name: Install Crossplane CLI
         run: |
-          # The build system expects tools in .cache/tools/<platform>
-          # Download crossplane CLI from the correct location
+          # Download the crossplane CLI using the install script
+          curl -sL https://raw.githubusercontent.com/crossplane/cli/main/install.sh | sh
+          # Move to where the build system expects it
           mkdir -p .cache/tools/linux_amd64 .cache/tools/linux_x86_64
-          curl -fsSL -o .cache/tools/linux_amd64/crossplane-cli-v2.3.3 \
-            "https://github.com/crossplane/cli/releases/download/v2.3.3/bin/linux_amd64/crossplane"
-          chmod +x .cache/tools/linux_amd64/crossplane-cli-v2.3.3
+          mv bin/crossplane .cache/tools/linux_amd64/crossplane-cli-v2.3.3
           cp .cache/tools/linux_amd64/crossplane-cli-v2.3.3 .cache/tools/linux_x86_64/crossplane-cli-v2.3.3
+          chmod +x .cache/tools/linux_amd64/crossplane-cli-v2.3.3 .cache/tools/linux_x86_64/crossplane-cli-v2.3.3
 
       - name: Determine Version
         id: version
@@ -87,28 +87,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Build and Publish All Artifacts
+      - name: Build and Publish Docker Image Only
         run: |
-          set -e  # Fail fast on any error
+          set -e
 
-          # Use the standardized build system to handle everything
           export VERSION="${{ steps.version.outputs.version }}"
-
-          echo "Repository: ${{ github.repository }}"
-          echo "Repository owner: ${{ github.repository_owner }}"
-          echo "Version: ${VERSION}"
-
-          # CRITICAL: Override BRANCH_NAME to bypass release branch filter
-          # When pushing tags, git is in detached HEAD state and branch detection fails.
-          # Without this, publish.artifacts becomes an empty target that silently succeeds.
-          # See: build/makelib/xpkg.mk:125-127 and build/makelib/common.mk:87
           export BRANCH_NAME="master"
 
-          # Build and publish using make targets that handle Docker + Crossplane packages
-          make publish \
-            REGISTRY_ORGS="ghcr.io/${{ github.repository_owner }}" \
-            XPKG_REG_ORGS="ghcr.io/${{ github.repository_owner }}" \
-            BRANCH_NAME=master
+          # Build just the Docker image (skip xpkg)
+          docker build . -t ghcr.io/${{ github.repository_owner }}/provider-keycloak:${VERSION}
+          docker build . -t ghcr.io/${{ github.repository_owner }}/provider-keycloak:latest
+          
+          # Push to GHCR
+          echo "${{ github.token }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push ghcr.io/${{ github.repository_owner }}/provider-keycloak:${VERSION}
+          docker push ghcr.io/${{ github.repository_owner }}/provider-keycloak:latest
 
           echo "✅ Published to ghcr.io/${{ github.repository_owner }}"
           echo "🏷️  Tags: ${VERSION}, latest"
