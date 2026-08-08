@@ -56,16 +56,6 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Install Crossplane CLI
-        run: |
-          # Download the crossplane CLI using the install script
-          curl -sL https://raw.githubusercontent.com/crossplane/cli/main/install.sh | sh
-          # Move to where the build system expects it
-          mkdir -p .cache/tools/linux_amd64 .cache/tools/linux_x86_64
-          mv bin/crossplane .cache/tools/linux_amd64/crossplane-cli-v2.3.3
-          cp .cache/tools/linux_amd64/crossplane-cli-v2.3.3 .cache/tools/linux_x86_64/crossplane-cli-v2.3.3
-          chmod +x .cache/tools/linux_amd64/crossplane-cli-v2.3.3 .cache/tools/linux_x86_64/crossplane-cli-v2.3.3
-
       - name: Determine Version
         id: version
         run: |
