@@ -33,11 +33,12 @@ import (
 
 type mockMapperClient struct {
 	*testhelpers.BaseMockClient
-	getClientFn    func(ctx context.Context, realm, clientID string) (*clients.ClientRepresentation, error)
-	listMappersFn  func(ctx context.Context, realm, clientUUID string) ([]clients.ProtocolMapperRepresentation, error)
-	createMapperFn func(ctx context.Context, realm, clientUUID string, p *clients.ProtocolMapperRepresentation) (string, error)
-	updateMapperFn func(ctx context.Context, realm, clientUUID string, p *clients.ProtocolMapperRepresentation) error
-	deleteMapperFn func(ctx context.Context, realm, clientUUID, mapperID string) error
+	getClientFn           func(ctx context.Context, realm, clientID string) (*clients.ClientRepresentation, error)
+	listMappersFn        func(ctx context.Context, realm, clientUUID string) ([]clients.ProtocolMapperRepresentation, error)
+	createMapperFn       func(ctx context.Context, realm, clientUUID string, p *clients.ProtocolMapperRepresentation) (string, error)
+	updateMapperFn       func(ctx context.Context, realm, clientUUID string, p *clients.ProtocolMapperRepresentation) error
+	deleteMapperFn       func(ctx context.Context, realm, clientUUID, mapperID string) error
+	resetClientSecretFn  func(ctx context.Context, realm, clientID, secretValue string) error
 }
 
 func (m *mockMapperClient) GetClient(ctx context.Context, realm, clientID string) (*clients.ClientRepresentation, error) {
@@ -107,6 +108,12 @@ func (m *mockMapperClient) SearchGroups(ctx context.Context, realm, name string)
 }
 func (m *mockMapperClient) GetClientSecret(ctx context.Context, realm, clientID string) (string, error) {
 	return "", nil
+}
+func (m *mockMapperClient) ResetClientSecret(ctx context.Context, realm, clientID, secretValue string) error {
+	if m.resetClientSecretFn != nil {
+		return m.resetClientSecretFn(ctx, realm, clientID, secretValue)
+	}
+	return nil
 }
 func (m *mockMapperClient) GetUserGroups(ctx context.Context, realm, userID string) ([]clients.GroupRepresentation, error) {
 	return nil, nil

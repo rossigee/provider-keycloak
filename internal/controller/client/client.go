@@ -277,7 +277,39 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalCreation{}, errors.New("realmId is required")
 	}
 
+	// Validate mutual exclusivity of WriteToSecretRef and ReadFromSecretRef
+	// Handle deprecated ClientSecretSecretRef as ReadFromSecretRef
+	writeRef := cr.Spec.ForProvider.WriteToSecretRef
+	readRef := cr.Spec.ForProvider.ReadFromSecretRef
+	deprecatedRef := cr.Spec.ForProvider.ClientSecretSecretRef
+
+	hasWrite := writeRef != nil
+	hasRead := readRef != nil
+	hasDeprecated := deprecatedRef != nil
+
+	if hasWrite && (hasRead || hasDeprecated) {
+		return managed.ExternalCreation{}, errors.New("WriteToSecretRef and ReadFromSecretRef cannot both be set")
+	}
+
+	// Determine the target secret ref for reading (new or deprecated)
+	targetReadRef := readRef
+	if targetReadRef == nil && hasDeprecated {
+		targetReadRef = deprecatedRef
+	}
+
 	rep := clientParamsToRepresentation(&cr.Spec.ForProvider)
+
+	// If WriteToSecretRef is set, we need to read the secret from K8s first
+	// and include it in the client creation to push to Keycloak
+	var initialSecret string
+	if hasWrite {
+		secret, err := e.readSecretFromK8s(ctx, writeRef)
+		if err != nil {
+			return managed.ExternalCreation{}, errors.Wrap(err, "cannot read secret from K8s for WriteToSecretRef")
+		}
+		initialSecret = secret
+		klog.V(2).InfoS("using secret from K8s for client creation", "client", cr.Spec.ForProvider.ClientId, "secret_ref", writeRef.Name)
+	}
 
 	created, err := e.client.CreateClient(ctx, realmId, rep)
 	if err != nil {
@@ -289,20 +321,24 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	details := managed.ConnectionDetails{
 		"client_id": []byte(cr.Spec.ForProvider.ClientId),
 	}
-	var secretValue string
-	if created != nil && created.ID != "" {
-		s, err := e.client.GetClientSecret(ctx, realmId, created.ID)
+
+	// If WriteToSecretRef was set, push the secret to Keycloak after creation
+	if hasWrite && created != nil && created.ID != "" && initialSecret != "" {
+		if err := e.client.ResetClientSecret(ctx, realmId, created.ID, initialSecret); err != nil {
+			return managed.ExternalCreation{}, errors.Wrap(err, "cannot set client secret from WriteToSecretRef")
+		}
+		klog.V(2).InfoS("pushed client secret to Keycloak", "client", cr.Spec.ForProvider.ClientId)
+	}
+
+	// If ReadFromSecretRef (or deprecated) is set, read from Keycloak and sync to K8s
+	if targetReadRef != nil && created != nil && created.ID != "" {
+		secretValue, err := e.client.GetClientSecret(ctx, realmId, created.ID)
 		if err != nil {
 			return managed.ExternalCreation{}, errors.Wrap(err, "cannot fetch client secret from Keycloak")
 		}
-		secretValue = s
-		details["client_secret"] = []byte(s)
-		klog.V(2).InfoS("got client secret", "client", cr.Spec.ForProvider.ClientId, "secret_len", len(s))
-	}
-
-	if cr.Spec.ForProvider.ClientSecretSecretRef != nil && secretValue != "" {
-		klog.V(2).InfoS("writing client secret to K8s", "client", cr.Spec.ForProvider.ClientId, "secret_ref", cr.Spec.ForProvider.ClientSecretSecretRef.Name)
-		if err := e.writeClientSecret(ctx, cr.Spec.ForProvider.ClientSecretSecretRef, secretValue); err != nil {
+		details["client_secret"] = []byte(secretValue)
+		klog.V(2).InfoS("writing client secret to K8s", "client", cr.Spec.ForProvider.ClientId, "secret_ref", targetReadRef.Name)
+		if err := e.writeClientSecret(ctx, targetReadRef, secretValue); err != nil {
 			return managed.ExternalCreation{}, errors.Wrap(err, "cannot write client secret to K8s")
 		}
 	}
@@ -310,7 +346,23 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalCreation{ConnectionDetails: details}, nil
 }
 
-func (e *external) writeClientSecret(ctx context.Context, ref *openidclientv1alpha1.ClientSecretSecretRef, secretValue string) error {
+func (e *external) readSecretFromK8s(ctx context.Context, ref *openidclientv1alpha1.SecretRef) (string, error) {
+	secret := &corev1.Secret{}
+	nn := types.NamespacedName{Name: ref.Name, Namespace: ref.Namespace}
+	if err := e.kube.Get(ctx, nn, secret); err != nil {
+		return "", errors.Wrapf(err, "cannot read secret %s/%s", ref.Namespace, ref.Name)
+	}
+	if secret.Data == nil {
+		return "", errors.Errorf("secret %s/%s has no data", ref.Namespace, ref.Name)
+	}
+	value, ok := secret.Data[ref.Key]
+	if !ok {
+		return "", errors.Errorf("secret %s/%s has no key %q", ref.Namespace, ref.Name, ref.Key)
+	}
+	return string(value), nil
+}
+
+func (e *external) writeClientSecret(ctx context.Context, ref *openidclientv1alpha1.SecretRef, secretValue string) error {
 	secret := &corev1.Secret{}
 	nn := types.NamespacedName{Name: ref.Name, Namespace: ref.Namespace}
 	if err := e.kube.Get(ctx, nn, secret); err != nil {
@@ -366,12 +418,18 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	}
 
 	// Refresh the client secret on each update to ensure K8s secret is up to date
-	if cr.Spec.ForProvider.ClientSecretSecretRef != nil {
+	// Handle ReadFromSecretRef (new) and deprecated ClientSecretSecretRef
+	readRef := cr.Spec.ForProvider.ReadFromSecretRef
+	if readRef == nil {
+		readRef = cr.Spec.ForProvider.ClientSecretSecretRef
+	}
+
+	if readRef != nil {
 		secretValue, err := e.client.GetClientSecret(ctx, realmId, existing.ID)
 		if err != nil {
 			klog.V(2).InfoS("failed to get client secret during update", "client", cr.Spec.ForProvider.ClientId, "error", err)
 		} else if secretValue != "" {
-			if err := e.writeClientSecret(ctx, cr.Spec.ForProvider.ClientSecretSecretRef, secretValue); err != nil {
+			if err := e.writeClientSecret(ctx, readRef, secretValue); err != nil {
 				klog.V(2).InfoS("failed to write client secret during update", "client", cr.Spec.ForProvider.ClientId, "error", err)
 			} else {
 				klog.V(2).InfoS("successfully refreshed client secret during update", "client", cr.Spec.ForProvider.ClientId)

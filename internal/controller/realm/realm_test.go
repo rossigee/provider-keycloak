@@ -33,10 +33,11 @@ import (
 
 type mockRealmClient struct {
 	*testhelpers.BaseMockClient
-	getRealmFn    func(ctx context.Context, realm string) (*clients.Realm, error)
-	createRealmFn func(ctx context.Context, r *clients.Realm) (*clients.Realm, error)
-	updateRealmFn func(ctx context.Context, r *clients.Realm) error
-	deleteRealmFn func(ctx context.Context, realm string) error
+	getRealmFn           func(ctx context.Context, realm string) (*clients.Realm, error)
+	createRealmFn        func(ctx context.Context, r *clients.Realm) (*clients.Realm, error)
+	updateRealmFn        func(ctx context.Context, r *clients.Realm) error
+	deleteRealmFn        func(ctx context.Context, realm string) error
+	resetClientSecretFn  func(ctx context.Context, realm, clientID, secretValue string) error
 }
 
 func (m *mockRealmClient) GetRealm(ctx context.Context, realm string) (*clients.Realm, error) {
@@ -96,6 +97,12 @@ func (m *mockRealmClient) SearchGroups(ctx context.Context, realm, name string) 
 }
 func (m *mockRealmClient) GetClientSecret(ctx context.Context, realm, clientID string) (string, error) {
 	return "", nil
+}
+func (m *mockRealmClient) ResetClientSecret(ctx context.Context, realm, clientID, secretValue string) error {
+	if m.resetClientSecretFn != nil {
+		return m.resetClientSecretFn(ctx, realm, clientID, secretValue)
+	}
+	return nil
 }
 func (m *mockRealmClient) GetUserGroups(ctx context.Context, realm, userID string) ([]clients.GroupRepresentation, error) {
 	return nil, nil

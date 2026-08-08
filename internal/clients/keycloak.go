@@ -89,6 +89,7 @@ type Client interface {
 
 	// Client secret operations
 	GetClientSecret(ctx context.Context, realm, clientUUID string) (string, error)
+	ResetClientSecret(ctx context.Context, realm, clientUUID, secretValue string) error
 
 	// Group operations
 	GetGroup(ctx context.Context, realm, groupID string) (*GroupRepresentation, error)
@@ -1122,6 +1123,11 @@ func (c *keycloakClient) ListGroups(ctx context.Context, realm string) ([]GroupR
 // =============================================================================
 
 type clientSecretResponse struct {
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+
+type clientSecretRequest struct {
 	Value string `json:"value"`
 }
 
@@ -1136,6 +1142,16 @@ func (c *keycloakClient) GetClientSecret(ctx context.Context, realm, clientUUID 
 		return "", errors.Wrap(err, "failed to unmarshal client secret")
 	}
 	return s.Value, nil
+}
+
+func (c *keycloakClient) ResetClientSecret(ctx context.Context, realm, clientUUID, secretValue string) error {
+	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/client-secret"
+	body, err := json.Marshal(clientSecretRequest{Value: secretValue})
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal client secret request")
+	}
+	_, err = c.doRequest(ctx, http.MethodPut, path, body)
+	return err
 }
 
 // =============================================================================

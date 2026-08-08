@@ -33,10 +33,11 @@ import (
 
 type mockRoleClient struct {
 	*testhelpers.BaseMockClient
-	getRealmRoleFn    func(ctx context.Context, realm, name string) (*clients.RoleRepresentation, error)
-	createRealmRoleFn func(ctx context.Context, realm string, r *clients.RoleRepresentation) error
-	updateRealmRoleFn func(ctx context.Context, realm, name string, r *clients.RoleRepresentation) error
-	deleteRealmRoleFn func(ctx context.Context, realm, name string) error
+	getRealmRoleFn       func(ctx context.Context, realm, name string) (*clients.RoleRepresentation, error)
+	createRealmRoleFn    func(ctx context.Context, realm string, r *clients.RoleRepresentation) error
+	updateRealmRoleFn    func(ctx context.Context, realm, name string, r *clients.RoleRepresentation) error
+	deleteRealmRoleFn    func(ctx context.Context, realm, name string) error
+	resetClientSecretFn  func(ctx context.Context, realm, clientID, secretValue string) error
 }
 
 func (m *mockRoleClient) GetRealmRole(ctx context.Context, realm, name string) (*clients.RoleRepresentation, error) {
@@ -104,6 +105,9 @@ func (m *mockRoleClient) SearchGroups(ctx context.Context, realm, name string) (
 }
 func (m *mockRoleClient) GetClientSecret(ctx context.Context, realm, clientID string) (string, error) {
 	return "", nil
+}
+func (m *mockRoleClient) ResetClientSecret(ctx context.Context, realm, clientID, secretValue string) error {
+	return nil
 }
 func (m *mockRoleClient) GetUserGroups(ctx context.Context, realm, userID string) ([]clients.GroupRepresentation, error) {
 	return nil, nil

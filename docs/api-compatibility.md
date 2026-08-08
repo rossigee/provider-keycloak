@@ -66,7 +66,9 @@ provider-keycloak maintains API compatibility with [crossplane-contrib/provider-
 | standardTokenExchangeEnabled | ✅ | ⚠️ | **NEW** - Token exchange protocol |
 | useRefreshTokens | ✅ | ⚠️ | **NEW** - Issue refresh tokens |
 | **Secret Management** | | | |
-| clientSecretSecretRef | ✅ | ✅ | K8s secret reference for generated secret |
+| writeToSecretRef | ✅ | ⚠️ | **NEW** - Push K8s secret to Keycloak |
+| readFromSecretRef | ✅ | ⚠️ | **NEW** - Pull generated secret to K8s |
+| clientSecretSecretRef | ✅ | ✅ | Deprecated, use readFromSecretRef instead |
 
 ### Summary
 - **✅ Fully compatible:** All core fields supported
