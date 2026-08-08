@@ -196,15 +196,29 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	}
 	// Remove top-level frontendUrl from currentMap - Keycloak only accepts it in attributes
 	delete(currentMap, "frontendUrl")
-	// Also handle attributes map, but skip frontendUrl and other non-standard
-	// fields - Keycloak 26.x rejects them at the top level.
-	if len(cr.Spec.ForProvider.Attributes) > 0 {
-		for k, v := range cr.Spec.ForProvider.Attributes {
-			if k == "frontendUrl" || k == "theme-sync-timestamp" {
-				continue
+	// Handle both top-level FrontendURL field and attributes map
+	// Get or create attributes map in currentMap
+	attrs := map[string]string{}
+	if a, ok := currentMap["attributes"].(map[string]string); ok {
+		attrs = a
+	} else if a, ok := currentMap["attributes"].(map[string]interface{}); ok {
+		// Handle interface{} map from JSON unmarshalling
+		for k, v := range a {
+			if sv, ok := v.(string); ok {
+				attrs[k] = sv
 			}
-			currentMap[k] = v
 		}
+	}
+	// Handle top-level FrontendURL field from spec
+	if cr.Spec.ForProvider.FrontendURL != nil {
+		attrs["frontendUrl"] = *cr.Spec.ForProvider.FrontendURL
+	}
+	// Handle attributes map from spec
+	for k, v := range cr.Spec.ForProvider.Attributes {
+		attrs[k] = v
+	}
+	if len(attrs) > 0 {
+		currentMap["attributes"] = attrs
 	}
 
 	// Send updated map back to Keycloak
