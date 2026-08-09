@@ -460,25 +460,59 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 // =============================================================================
 
 type Realm struct {
-	Realm                  string            `json:"realm"`
-	Enabled                bool              `json:"enabled"`
-	DisplayName            string            `json:"displayName,omitempty"`
-	DisplayNameHtml        string            `json:"displayNameHtml,omitempty"`
-	LoginWithEmailAllowed  bool              `json:"loginWithEmailAllowed"`
-	DuplicateEmailsAllowed bool              `json:"duplicateEmailsAllowed"`
-	ResetPasswordAllowed   bool              `json:"resetPasswordAllowed"`
-	EditUsernameAllowed    bool              `json:"editUsernameAllowed"`
-	BruteForceProtected    bool              `json:"bruteForceProtected"`
-	LoginTheme             string            `json:"loginTheme,omitempty"`
-	AccountTheme           string            `json:"accountTheme,omitempty"`
-	AdminTheme             string            `json:"adminTheme,omitempty"`
-	EmailTheme             string            `json:"emailTheme,omitempty"`
-	FrontendURL            *string           `json:"frontendUrl,omitempty"`
-	Attributes            map[string]string `json:"attributes,omitempty"`
+	Realm                                string            `json:"realm"`
+	Enabled                              bool              `json:"enabled"`
+	DisplayName                          string            `json:"displayName,omitempty"`
+	DisplayNameHtml                      string            `json:"displayNameHtml,omitempty"`
+	SslRequired                          string            `json:"sslRequired,omitempty"`
+	RegistrationAllowed                  bool              `json:"registrationAllowed"`
+	RegistrationEmailAsUsername          bool              `json:"registrationEmailAsUsername"`
+	EditUsernameAllowed                  bool              `json:"editUsernameAllowed"`
+	ResetPasswordAllowed                 bool              `json:"resetPasswordAllowed"`
+	RememberMe                           bool              `json:"rememberMe"`
+	VerifyEmail                          bool              `json:"verifyEmail"`
+	LoginWithEmailAllowed                bool              `json:"loginWithEmailAllowed"`
+	DuplicateEmailsAllowed               bool              `json:"duplicateEmailsAllowed"`
+	DefaultSignatureAlgorithm            string            `json:"defaultSignatureAlgorithm,omitempty"`
+	RevokeRefreshToken                   bool              `json:"revokeRefreshToken"`
+	RefreshTokenMaxReuse                 int64             `json:"refreshTokenMaxReuse"`
+	AccessTokenLifespan                  string            `json:"accessTokenLifespan,omitempty"`
+	AccessTokenLifespanForImplicitFlow   string            `json:"accessTokenLifespanForImplicitFlow,omitempty"`
+	SsoSessionIdleTimeout                string            `json:"ssoSessionIdleTimeout,omitempty"`
+	SsoSessionMaxLifespan                string            `json:"ssoSessionMaxLifespan,omitempty"`
+	SsoSessionIdleTimeoutRememberMe      string            `json:"ssoSessionIdleTimeoutRememberMe,omitempty"`
+	SsoSessionMaxLifespanRememberMe      string            `json:"ssoSessionMaxLifespanRememberMe,omitempty"`
+	OfflineSessionIdleTimeout            string            `json:"offlineSessionIdleTimeout,omitempty"`
+	OfflineSessionMaxLifespanEnabled     bool              `json:"offlineSessionMaxLifespanEnabled"`
+	OfflineSessionMaxLifespan            string            `json:"offlineSessionMaxLifespan,omitempty"`
+	ClientSessionIdleTimeout             string            `json:"clientSessionIdleTimeout,omitempty"`
+	ClientSessionMaxLifespan             string            `json:"clientSessionMaxLifespan,omitempty"`
+	AccessCodeLifespan                   string            `json:"accessCodeLifespan,omitempty"`
+	AccessCodeLifespanUserAction         string            `json:"accessCodeLifespanUserAction,omitempty"`
+	AccessCodeLifespanLogin              string            `json:"accessCodeLifespanLogin,omitempty"`
+	ActionTokenGeneratedByAdminLifespan  string            `json:"actionTokenGeneratedByAdminLifespan,omitempty"`
+	ActionTokenGeneratedByUserLifespan   string            `json:"actionTokenGeneratedByUserLifespan,omitempty"`
+	BruteForceProtected                  bool              `json:"bruteForceProtected"`
+	PasswordPolicy                       string            `json:"passwordPolicy,omitempty"`
+	LoginTheme                           string            `json:"loginTheme,omitempty"`
+	AccountTheme                         string            `json:"accountTheme,omitempty"`
+	AdminTheme                           string            `json:"adminTheme,omitempty"`
+	EmailTheme                           string            `json:"emailTheme,omitempty"`
+	DefaultDefaultClientScopes           []string          `json:"defaultDefaultClientScopes,omitempty"`
+	DefaultOptionalClientScopes          []string          `json:"defaultOptionalClientScopes,omitempty"`
+	BrowserFlow                          string            `json:"browserFlow,omitempty"`
+	RegistrationFlow                     string            `json:"registrationFlow,omitempty"`
+	DirectGrantFlow                      string            `json:"directGrantFlow,omitempty"`
+	ResetCredentialsFlow                 string            `json:"resetCredentialsFlow,omitempty"`
+	ClientAuthenticationFlow             string            `json:"clientAuthenticationFlow,omitempty"`
+	UserManagedAccess                    bool              `json:"userManagedAccess"`
+	AdminPermissionsEnabled              bool              `json:"adminPermissionsEnabled"`
+	FrontendURL                          *string           `json:"frontendUrl,omitempty"`
+	Attributes                           map[string]string `json:"attributes,omitempty"`
 	// SmtpServer is Keycloak's RealmRepresentation.smtpServer map[string]string.
 	// Keycloak 26.x rejects any nested-object form ("Cannot parse the JSON");
 	// the only accepted shape is the flat string->string map.
-	SmtpServer             map[string]string `json:"smtpServer,omitempty"`
+	SmtpServer map[string]string `json:"smtpServer,omitempty"`
 }
 
 func (c *keycloakClient) GetRealm(ctx context.Context, realm string) (*Realm, error) {

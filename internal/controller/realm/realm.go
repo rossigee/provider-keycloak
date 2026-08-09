@@ -158,17 +158,92 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	if cr.Spec.ForProvider.DisplayNameHtml != nil {
 		currentMap["displayNameHtml"] = *cr.Spec.ForProvider.DisplayNameHtml
 	}
+	if cr.Spec.ForProvider.SslRequired != nil {
+		currentMap["sslRequired"] = *cr.Spec.ForProvider.SslRequired
+	}
+	if cr.Spec.ForProvider.RegistrationAllowed != nil {
+		currentMap["registrationAllowed"] = *cr.Spec.ForProvider.RegistrationAllowed
+	}
+	if cr.Spec.ForProvider.RegistrationEmailAsUsername != nil {
+		currentMap["registrationEmailAsUsername"] = *cr.Spec.ForProvider.RegistrationEmailAsUsername
+	}
+	if cr.Spec.ForProvider.EditUsernameAllowed != nil {
+		currentMap["editUsernameAllowed"] = *cr.Spec.ForProvider.EditUsernameAllowed
+	}
+	if cr.Spec.ForProvider.ResetPasswordAllowed != nil {
+		currentMap["resetPasswordAllowed"] = *cr.Spec.ForProvider.ResetPasswordAllowed
+	}
+	if cr.Spec.ForProvider.RememberMe != nil {
+		currentMap["rememberMe"] = *cr.Spec.ForProvider.RememberMe
+	}
+	if cr.Spec.ForProvider.VerifyEmail != nil {
+		currentMap["verifyEmail"] = *cr.Spec.ForProvider.VerifyEmail
+	}
 	if cr.Spec.ForProvider.LoginWithEmailAllowed != nil {
 		currentMap["loginWithEmailAllowed"] = *cr.Spec.ForProvider.LoginWithEmailAllowed
 	}
 	if cr.Spec.ForProvider.DuplicateEmailsAllowed != nil {
 		currentMap["duplicateEmailsAllowed"] = *cr.Spec.ForProvider.DuplicateEmailsAllowed
 	}
-	if cr.Spec.ForProvider.ResetPasswordAllowed != nil {
-		currentMap["resetPasswordAllowed"] = *cr.Spec.ForProvider.ResetPasswordAllowed
+	if cr.Spec.ForProvider.DefaultSignatureAlgorithm != nil {
+		currentMap["defaultSignatureAlgorithm"] = *cr.Spec.ForProvider.DefaultSignatureAlgorithm
 	}
-	if cr.Spec.ForProvider.EditUsernameAllowed != nil {
-		currentMap["editUsernameAllowed"] = *cr.Spec.ForProvider.EditUsernameAllowed
+	if cr.Spec.ForProvider.RevokeRefreshToken != nil {
+		currentMap["revokeRefreshToken"] = *cr.Spec.ForProvider.RevokeRefreshToken
+	}
+	if cr.Spec.ForProvider.RefreshTokenMaxReuse != nil {
+		currentMap["refreshTokenMaxReuse"] = *cr.Spec.ForProvider.RefreshTokenMaxReuse
+	}
+	if cr.Spec.ForProvider.AccessTokenLifespan != nil {
+		currentMap["accessTokenLifespan"] = *cr.Spec.ForProvider.AccessTokenLifespan
+	}
+	if cr.Spec.ForProvider.AccessTokenLifespanForImplicitFlow != nil {
+		currentMap["accessTokenLifespanForImplicitFlow"] = *cr.Spec.ForProvider.AccessTokenLifespanForImplicitFlow
+	}
+	if cr.Spec.ForProvider.SsoSessionIdleTimeout != nil {
+		currentMap["ssoSessionIdleTimeout"] = *cr.Spec.ForProvider.SsoSessionIdleTimeout
+	}
+	if cr.Spec.ForProvider.SsoSessionMaxLifespan != nil {
+		currentMap["ssoSessionMaxLifespan"] = *cr.Spec.ForProvider.SsoSessionMaxLifespan
+	}
+	if cr.Spec.ForProvider.SsoSessionIdleTimeoutRememberMe != nil {
+		currentMap["ssoSessionIdleTimeoutRememberMe"] = *cr.Spec.ForProvider.SsoSessionIdleTimeoutRememberMe
+	}
+	if cr.Spec.ForProvider.SsoSessionMaxLifespanRememberMe != nil {
+		currentMap["ssoSessionMaxLifespanRememberMe"] = *cr.Spec.ForProvider.SsoSessionMaxLifespanRememberMe
+	}
+	if cr.Spec.ForProvider.OfflineSessionIdleTimeout != nil {
+		currentMap["offlineSessionIdleTimeout"] = *cr.Spec.ForProvider.OfflineSessionIdleTimeout
+	}
+	if cr.Spec.ForProvider.OfflineSessionMaxLifespanEnabled != nil {
+		currentMap["offlineSessionMaxLifespanEnabled"] = *cr.Spec.ForProvider.OfflineSessionMaxLifespanEnabled
+	}
+	if cr.Spec.ForProvider.OfflineSessionMaxLifespan != nil {
+		currentMap["offlineSessionMaxLifespan"] = *cr.Spec.ForProvider.OfflineSessionMaxLifespan
+	}
+	if cr.Spec.ForProvider.ClientSessionIdleTimeout != nil {
+		currentMap["clientSessionIdleTimeout"] = *cr.Spec.ForProvider.ClientSessionIdleTimeout
+	}
+	if cr.Spec.ForProvider.ClientSessionMaxLifespan != nil {
+		currentMap["clientSessionMaxLifespan"] = *cr.Spec.ForProvider.ClientSessionMaxLifespan
+	}
+	if cr.Spec.ForProvider.AccessCodeLifespan != nil {
+		currentMap["accessCodeLifespan"] = *cr.Spec.ForProvider.AccessCodeLifespan
+	}
+	if cr.Spec.ForProvider.AccessCodeLifespanUserAction != nil {
+		currentMap["accessCodeLifespanUserAction"] = *cr.Spec.ForProvider.AccessCodeLifespanUserAction
+	}
+	if cr.Spec.ForProvider.AccessCodeLifespanLogin != nil {
+		currentMap["accessCodeLifespanLogin"] = *cr.Spec.ForProvider.AccessCodeLifespanLogin
+	}
+	if cr.Spec.ForProvider.ActionTokenGeneratedByAdminLifespan != nil {
+		currentMap["actionTokenGeneratedByAdminLifespan"] = *cr.Spec.ForProvider.ActionTokenGeneratedByAdminLifespan
+	}
+	if cr.Spec.ForProvider.ActionTokenGeneratedByUserLifespan != nil {
+		currentMap["actionTokenGeneratedByUserLifespan"] = *cr.Spec.ForProvider.ActionTokenGeneratedByUserLifespan
+	}
+	if cr.Spec.ForProvider.PasswordPolicy != nil {
+		currentMap["passwordPolicy"] = *cr.Spec.ForProvider.PasswordPolicy
 	}
 	if cr.Spec.ForProvider.LoginTheme != nil {
 		currentMap["loginTheme"] = *cr.Spec.ForProvider.LoginTheme
@@ -181,6 +256,33 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	}
 	if cr.Spec.ForProvider.EmailTheme != nil {
 		currentMap["emailTheme"] = *cr.Spec.ForProvider.EmailTheme
+	}
+	if len(cr.Spec.ForProvider.DefaultDefaultClientScopes) > 0 {
+		currentMap["defaultDefaultClientScopes"] = cr.Spec.ForProvider.DefaultDefaultClientScopes
+	}
+	if len(cr.Spec.ForProvider.DefaultOptionalClientScopes) > 0 {
+		currentMap["defaultOptionalClientScopes"] = cr.Spec.ForProvider.DefaultOptionalClientScopes
+	}
+	if cr.Spec.ForProvider.BrowserFlow != nil {
+		currentMap["browserFlow"] = *cr.Spec.ForProvider.BrowserFlow
+	}
+	if cr.Spec.ForProvider.RegistrationFlow != nil {
+		currentMap["registrationFlow"] = *cr.Spec.ForProvider.RegistrationFlow
+	}
+	if cr.Spec.ForProvider.DirectGrantFlow != nil {
+		currentMap["directGrantFlow"] = *cr.Spec.ForProvider.DirectGrantFlow
+	}
+	if cr.Spec.ForProvider.ResetCredentialsFlow != nil {
+		currentMap["resetCredentialsFlow"] = *cr.Spec.ForProvider.ResetCredentialsFlow
+	}
+	if cr.Spec.ForProvider.ClientAuthenticationFlow != nil {
+		currentMap["clientAuthenticationFlow"] = *cr.Spec.ForProvider.ClientAuthenticationFlow
+	}
+	if cr.Spec.ForProvider.UserManagedAccess != nil {
+		currentMap["userManagedAccess"] = *cr.Spec.ForProvider.UserManagedAccess
+	}
+	if cr.Spec.ForProvider.AdminPermissionsEnabled != nil {
+		currentMap["adminPermissionsEnabled"] = *cr.Spec.ForProvider.AdminPermissionsEnabled
 	}
 	// SMTP server config. Keycloak's RealmRepresentation.smtpServer is
 	// typed as Map[String] (flat string->string), NOT a nested object -
@@ -259,17 +361,92 @@ func realmParamsToRepresentation(ctx context.Context, kube client.Client, p *rea
 	if p.DisplayNameHtml != nil {
 		r.DisplayNameHtml = *p.DisplayNameHtml
 	}
-	if p.LoginWithEmailAllowed != nil {
-		r.LoginWithEmailAllowed = *p.LoginWithEmailAllowed
+	if p.SslRequired != nil {
+		r.SslRequired = *p.SslRequired
 	}
-	if p.DuplicateEmailsAllowed != nil {
-		r.DuplicateEmailsAllowed = *p.DuplicateEmailsAllowed
+	if p.RegistrationAllowed != nil {
+		r.RegistrationAllowed = *p.RegistrationAllowed
+	}
+	if p.RegistrationEmailAsUsername != nil {
+		r.RegistrationEmailAsUsername = *p.RegistrationEmailAsUsername
 	}
 	if p.EditUsernameAllowed != nil {
 		r.EditUsernameAllowed = *p.EditUsernameAllowed
 	}
 	if p.ResetPasswordAllowed != nil {
 		r.ResetPasswordAllowed = *p.ResetPasswordAllowed
+	}
+	if p.RememberMe != nil {
+		r.RememberMe = *p.RememberMe
+	}
+	if p.VerifyEmail != nil {
+		r.VerifyEmail = *p.VerifyEmail
+	}
+	if p.LoginWithEmailAllowed != nil {
+		r.LoginWithEmailAllowed = *p.LoginWithEmailAllowed
+	}
+	if p.DuplicateEmailsAllowed != nil {
+		r.DuplicateEmailsAllowed = *p.DuplicateEmailsAllowed
+	}
+	if p.DefaultSignatureAlgorithm != nil {
+		r.DefaultSignatureAlgorithm = *p.DefaultSignatureAlgorithm
+	}
+	if p.RevokeRefreshToken != nil {
+		r.RevokeRefreshToken = *p.RevokeRefreshToken
+	}
+	if p.RefreshTokenMaxReuse != nil {
+		r.RefreshTokenMaxReuse = *p.RefreshTokenMaxReuse
+	}
+	if p.AccessTokenLifespan != nil {
+		r.AccessTokenLifespan = *p.AccessTokenLifespan
+	}
+	if p.AccessTokenLifespanForImplicitFlow != nil {
+		r.AccessTokenLifespanForImplicitFlow = *p.AccessTokenLifespanForImplicitFlow
+	}
+	if p.SsoSessionIdleTimeout != nil {
+		r.SsoSessionIdleTimeout = *p.SsoSessionIdleTimeout
+	}
+	if p.SsoSessionMaxLifespan != nil {
+		r.SsoSessionMaxLifespan = *p.SsoSessionMaxLifespan
+	}
+	if p.SsoSessionIdleTimeoutRememberMe != nil {
+		r.SsoSessionIdleTimeoutRememberMe = *p.SsoSessionIdleTimeoutRememberMe
+	}
+	if p.SsoSessionMaxLifespanRememberMe != nil {
+		r.SsoSessionMaxLifespanRememberMe = *p.SsoSessionMaxLifespanRememberMe
+	}
+	if p.OfflineSessionIdleTimeout != nil {
+		r.OfflineSessionIdleTimeout = *p.OfflineSessionIdleTimeout
+	}
+	if p.OfflineSessionMaxLifespanEnabled != nil {
+		r.OfflineSessionMaxLifespanEnabled = *p.OfflineSessionMaxLifespanEnabled
+	}
+	if p.OfflineSessionMaxLifespan != nil {
+		r.OfflineSessionMaxLifespan = *p.OfflineSessionMaxLifespan
+	}
+	if p.ClientSessionIdleTimeout != nil {
+		r.ClientSessionIdleTimeout = *p.ClientSessionIdleTimeout
+	}
+	if p.ClientSessionMaxLifespan != nil {
+		r.ClientSessionMaxLifespan = *p.ClientSessionMaxLifespan
+	}
+	if p.AccessCodeLifespan != nil {
+		r.AccessCodeLifespan = *p.AccessCodeLifespan
+	}
+	if p.AccessCodeLifespanUserAction != nil {
+		r.AccessCodeLifespanUserAction = *p.AccessCodeLifespanUserAction
+	}
+	if p.AccessCodeLifespanLogin != nil {
+		r.AccessCodeLifespanLogin = *p.AccessCodeLifespanLogin
+	}
+	if p.ActionTokenGeneratedByAdminLifespan != nil {
+		r.ActionTokenGeneratedByAdminLifespan = *p.ActionTokenGeneratedByAdminLifespan
+	}
+	if p.ActionTokenGeneratedByUserLifespan != nil {
+		r.ActionTokenGeneratedByUserLifespan = *p.ActionTokenGeneratedByUserLifespan
+	}
+	if p.PasswordPolicy != nil {
+		r.PasswordPolicy = *p.PasswordPolicy
 	}
 	if p.LoginTheme != nil {
 		r.LoginTheme = *p.LoginTheme
@@ -282,6 +459,33 @@ func realmParamsToRepresentation(ctx context.Context, kube client.Client, p *rea
 	}
 	if p.EmailTheme != nil {
 		r.EmailTheme = *p.EmailTheme
+	}
+	if len(p.DefaultDefaultClientScopes) > 0 {
+		r.DefaultDefaultClientScopes = p.DefaultDefaultClientScopes
+	}
+	if len(p.DefaultOptionalClientScopes) > 0 {
+		r.DefaultOptionalClientScopes = p.DefaultOptionalClientScopes
+	}
+	if p.BrowserFlow != nil {
+		r.BrowserFlow = *p.BrowserFlow
+	}
+	if p.RegistrationFlow != nil {
+		r.RegistrationFlow = *p.RegistrationFlow
+	}
+	if p.DirectGrantFlow != nil {
+		r.DirectGrantFlow = *p.DirectGrantFlow
+	}
+	if p.ResetCredentialsFlow != nil {
+		r.ResetCredentialsFlow = *p.ResetCredentialsFlow
+	}
+	if p.ClientAuthenticationFlow != nil {
+		r.ClientAuthenticationFlow = *p.ClientAuthenticationFlow
+	}
+	if p.UserManagedAccess != nil {
+		r.UserManagedAccess = *p.UserManagedAccess
+	}
+	if p.AdminPermissionsEnabled != nil {
+		r.AdminPermissionsEnabled = *p.AdminPermissionsEnabled
 	}
 	if p.FrontendURL != nil {
 		if r.Attributes == nil {
@@ -323,10 +527,91 @@ func realmUpToDate(desired *realmv1alpha1.RealmParameters, actual *clients.Realm
 	if desired.DisplayNameHtml != nil && *desired.DisplayNameHtml != actual.DisplayNameHtml {
 		return false
 	}
+	if desired.SslRequired != nil && *desired.SslRequired != actual.SslRequired {
+		return false
+	}
+	if desired.RegistrationAllowed != nil && *desired.RegistrationAllowed != actual.RegistrationAllowed {
+		return false
+	}
+	if desired.RegistrationEmailAsUsername != nil && *desired.RegistrationEmailAsUsername != actual.RegistrationEmailAsUsername {
+		return false
+	}
+	if desired.EditUsernameAllowed != nil && *desired.EditUsernameAllowed != actual.EditUsernameAllowed {
+		return false
+	}
+	if desired.ResetPasswordAllowed != nil && *desired.ResetPasswordAllowed != actual.ResetPasswordAllowed {
+		return false
+	}
+	if desired.RememberMe != nil && *desired.RememberMe != actual.RememberMe {
+		return false
+	}
+	if desired.VerifyEmail != nil && *desired.VerifyEmail != actual.VerifyEmail {
+		return false
+	}
 	if desired.LoginWithEmailAllowed != nil && *desired.LoginWithEmailAllowed != actual.LoginWithEmailAllowed {
 		return false
 	}
 	if desired.DuplicateEmailsAllowed != nil && *desired.DuplicateEmailsAllowed != actual.DuplicateEmailsAllowed {
+		return false
+	}
+	if desired.DefaultSignatureAlgorithm != nil && *desired.DefaultSignatureAlgorithm != actual.DefaultSignatureAlgorithm {
+		return false
+	}
+	if desired.RevokeRefreshToken != nil && *desired.RevokeRefreshToken != actual.RevokeRefreshToken {
+		return false
+	}
+	if desired.RefreshTokenMaxReuse != nil && *desired.RefreshTokenMaxReuse != actual.RefreshTokenMaxReuse {
+		return false
+	}
+	if desired.AccessTokenLifespan != nil && *desired.AccessTokenLifespan != actual.AccessTokenLifespan {
+		return false
+	}
+	if desired.AccessTokenLifespanForImplicitFlow != nil && *desired.AccessTokenLifespanForImplicitFlow != actual.AccessTokenLifespanForImplicitFlow {
+		return false
+	}
+	if desired.SsoSessionIdleTimeout != nil && *desired.SsoSessionIdleTimeout != actual.SsoSessionIdleTimeout {
+		return false
+	}
+	if desired.SsoSessionMaxLifespan != nil && *desired.SsoSessionMaxLifespan != actual.SsoSessionMaxLifespan {
+		return false
+	}
+	if desired.SsoSessionIdleTimeoutRememberMe != nil && *desired.SsoSessionIdleTimeoutRememberMe != actual.SsoSessionIdleTimeoutRememberMe {
+		return false
+	}
+	if desired.SsoSessionMaxLifespanRememberMe != nil && *desired.SsoSessionMaxLifespanRememberMe != actual.SsoSessionMaxLifespanRememberMe {
+		return false
+	}
+	if desired.OfflineSessionIdleTimeout != nil && *desired.OfflineSessionIdleTimeout != actual.OfflineSessionIdleTimeout {
+		return false
+	}
+	if desired.OfflineSessionMaxLifespanEnabled != nil && *desired.OfflineSessionMaxLifespanEnabled != actual.OfflineSessionMaxLifespanEnabled {
+		return false
+	}
+	if desired.OfflineSessionMaxLifespan != nil && *desired.OfflineSessionMaxLifespan != actual.OfflineSessionMaxLifespan {
+		return false
+	}
+	if desired.ClientSessionIdleTimeout != nil && *desired.ClientSessionIdleTimeout != actual.ClientSessionIdleTimeout {
+		return false
+	}
+	if desired.ClientSessionMaxLifespan != nil && *desired.ClientSessionMaxLifespan != actual.ClientSessionMaxLifespan {
+		return false
+	}
+	if desired.AccessCodeLifespan != nil && *desired.AccessCodeLifespan != actual.AccessCodeLifespan {
+		return false
+	}
+	if desired.AccessCodeLifespanUserAction != nil && *desired.AccessCodeLifespanUserAction != actual.AccessCodeLifespanUserAction {
+		return false
+	}
+	if desired.AccessCodeLifespanLogin != nil && *desired.AccessCodeLifespanLogin != actual.AccessCodeLifespanLogin {
+		return false
+	}
+	if desired.ActionTokenGeneratedByAdminLifespan != nil && *desired.ActionTokenGeneratedByAdminLifespan != actual.ActionTokenGeneratedByAdminLifespan {
+		return false
+	}
+	if desired.ActionTokenGeneratedByUserLifespan != nil && *desired.ActionTokenGeneratedByUserLifespan != actual.ActionTokenGeneratedByUserLifespan {
+		return false
+	}
+	if desired.PasswordPolicy != nil && *desired.PasswordPolicy != actual.PasswordPolicy {
 		return false
 	}
 	if desired.LoginTheme != nil && *desired.LoginTheme != actual.LoginTheme {
@@ -339,6 +624,27 @@ func realmUpToDate(desired *realmv1alpha1.RealmParameters, actual *clients.Realm
 		return false
 	}
 	if desired.EmailTheme != nil && *desired.EmailTheme != actual.EmailTheme {
+		return false
+	}
+	if desired.BrowserFlow != nil && *desired.BrowserFlow != actual.BrowserFlow {
+		return false
+	}
+	if desired.RegistrationFlow != nil && *desired.RegistrationFlow != actual.RegistrationFlow {
+		return false
+	}
+	if desired.DirectGrantFlow != nil && *desired.DirectGrantFlow != actual.DirectGrantFlow {
+		return false
+	}
+	if desired.ResetCredentialsFlow != nil && *desired.ResetCredentialsFlow != actual.ResetCredentialsFlow {
+		return false
+	}
+	if desired.ClientAuthenticationFlow != nil && *desired.ClientAuthenticationFlow != actual.ClientAuthenticationFlow {
+		return false
+	}
+	if desired.UserManagedAccess != nil && *desired.UserManagedAccess != actual.UserManagedAccess {
+		return false
+	}
+	if desired.AdminPermissionsEnabled != nil && *desired.AdminPermissionsEnabled != actual.AdminPermissionsEnabled {
 		return false
 	}
 	if desired.FrontendURL != nil {
