@@ -476,22 +476,22 @@ type Realm struct {
 	DefaultSignatureAlgorithm            string            `json:"defaultSignatureAlgorithm,omitempty"`
 	RevokeRefreshToken                   bool              `json:"revokeRefreshToken"`
 	RefreshTokenMaxReuse                 int64             `json:"refreshTokenMaxReuse"`
-	AccessTokenLifespan                  string            `json:"accessTokenLifespan,omitempty"`
-	AccessTokenLifespanForImplicitFlow   string            `json:"accessTokenLifespanForImplicitFlow,omitempty"`
-	SsoSessionIdleTimeout                string            `json:"ssoSessionIdleTimeout,omitempty"`
-	SsoSessionMaxLifespan                string            `json:"ssoSessionMaxLifespan,omitempty"`
-	SsoSessionIdleTimeoutRememberMe      string            `json:"ssoSessionIdleTimeoutRememberMe,omitempty"`
-	SsoSessionMaxLifespanRememberMe      string            `json:"ssoSessionMaxLifespanRememberMe,omitempty"`
-	OfflineSessionIdleTimeout            string            `json:"offlineSessionIdleTimeout,omitempty"`
+	AccessTokenLifespan                  interface{}       `json:"accessTokenLifespan,omitempty"`
+	AccessTokenLifespanForImplicitFlow   interface{}       `json:"accessTokenLifespanForImplicitFlow,omitempty"`
+	SsoSessionIdleTimeout                interface{}       `json:"ssoSessionIdleTimeout,omitempty"`
+	SsoSessionMaxLifespan                interface{}       `json:"ssoSessionMaxLifespan,omitempty"`
+	SsoSessionIdleTimeoutRememberMe      interface{}       `json:"ssoSessionIdleTimeoutRememberMe,omitempty"`
+	SsoSessionMaxLifespanRememberMe      interface{}       `json:"ssoSessionMaxLifespanRememberMe,omitempty"`
+	OfflineSessionIdleTimeout            interface{}       `json:"offlineSessionIdleTimeout,omitempty"`
 	OfflineSessionMaxLifespanEnabled     bool              `json:"offlineSessionMaxLifespanEnabled"`
-	OfflineSessionMaxLifespan            string            `json:"offlineSessionMaxLifespan,omitempty"`
-	ClientSessionIdleTimeout             string            `json:"clientSessionIdleTimeout,omitempty"`
-	ClientSessionMaxLifespan             string            `json:"clientSessionMaxLifespan,omitempty"`
-	AccessCodeLifespan                   string            `json:"accessCodeLifespan,omitempty"`
-	AccessCodeLifespanUserAction         string            `json:"accessCodeLifespanUserAction,omitempty"`
-	AccessCodeLifespanLogin              string            `json:"accessCodeLifespanLogin,omitempty"`
-	ActionTokenGeneratedByAdminLifespan  string            `json:"actionTokenGeneratedByAdminLifespan,omitempty"`
-	ActionTokenGeneratedByUserLifespan   string            `json:"actionTokenGeneratedByUserLifespan,omitempty"`
+	OfflineSessionMaxLifespan            interface{}       `json:"offlineSessionMaxLifespan,omitempty"`
+	ClientSessionIdleTimeout             interface{}       `json:"clientSessionIdleTimeout,omitempty"`
+	ClientSessionMaxLifespan             interface{}       `json:"clientSessionMaxLifespan,omitempty"`
+	AccessCodeLifespan                   interface{}       `json:"accessCodeLifespan,omitempty"`
+	AccessCodeLifespanUserAction         interface{}       `json:"accessCodeLifespanUserAction,omitempty"`
+	AccessCodeLifespanLogin              interface{}       `json:"accessCodeLifespanLogin,omitempty"`
+	ActionTokenGeneratedByAdminLifespan  interface{}       `json:"actionTokenGeneratedByAdminLifespan,omitempty"`
+	ActionTokenGeneratedByUserLifespan   interface{}       `json:"actionTokenGeneratedByUserLifespan,omitempty"`
 	BruteForceProtected                  bool              `json:"bruteForceProtected"`
 	PasswordPolicy                       string            `json:"passwordPolicy,omitempty"`
 	LoginTheme                           string            `json:"loginTheme,omitempty"`
@@ -513,6 +513,37 @@ type Realm struct {
 	// Keycloak 26.x rejects any nested-object form ("Cannot parse the JSON");
 	// the only accepted shape is the flat string->string map.
 	SmtpServer map[string]string `json:"smtpServer,omitempty"`
+}
+
+// DurationToSeconds converts a Go duration string (e.g. "30m0s") to integer seconds.
+// Returns 0 if the input is empty.
+func DurationToSeconds(d string) int {
+	if d == "" {
+		return 0
+	}
+	parsed, err := time.ParseDuration(d)
+	if err != nil {
+		return 0
+	}
+	return int(parsed.Seconds())
+}
+
+// SecondsToDuration converts an integer seconds value to a Go duration string.
+// Handles both int and float64 from JSON unmarshalling.
+func SecondsToDuration(v interface{}) string {
+	switch val := v.(type) {
+	case float64:
+		return (time.Duration(val) * time.Second).String()
+	case int:
+		return (time.Duration(val) * time.Second).String()
+	case int64:
+		return (time.Duration(val) * time.Second).String()
+	case json.Number:
+		n, _ := val.Int64()
+		return (time.Duration(n) * time.Second).String()
+	default:
+		return ""
+	}
 }
 
 func (c *keycloakClient) GetRealm(ctx context.Context, realm string) (*Realm, error) {

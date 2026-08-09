@@ -195,52 +195,52 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		currentMap["refreshTokenMaxReuse"] = *cr.Spec.ForProvider.RefreshTokenMaxReuse
 	}
 	if cr.Spec.ForProvider.AccessTokenLifespan != nil {
-		currentMap["accessTokenLifespan"] = *cr.Spec.ForProvider.AccessTokenLifespan
+		currentMap["accessTokenLifespan"] = clients.DurationToSeconds(*cr.Spec.ForProvider.AccessTokenLifespan)
 	}
 	if cr.Spec.ForProvider.AccessTokenLifespanForImplicitFlow != nil {
-		currentMap["accessTokenLifespanForImplicitFlow"] = *cr.Spec.ForProvider.AccessTokenLifespanForImplicitFlow
+		currentMap["accessTokenLifespanForImplicitFlow"] = clients.DurationToSeconds(*cr.Spec.ForProvider.AccessTokenLifespanForImplicitFlow)
 	}
 	if cr.Spec.ForProvider.SsoSessionIdleTimeout != nil {
-		currentMap["ssoSessionIdleTimeout"] = *cr.Spec.ForProvider.SsoSessionIdleTimeout
+		currentMap["ssoSessionIdleTimeout"] = clients.DurationToSeconds(*cr.Spec.ForProvider.SsoSessionIdleTimeout)
 	}
 	if cr.Spec.ForProvider.SsoSessionMaxLifespan != nil {
-		currentMap["ssoSessionMaxLifespan"] = *cr.Spec.ForProvider.SsoSessionMaxLifespan
+		currentMap["ssoSessionMaxLifespan"] = clients.DurationToSeconds(*cr.Spec.ForProvider.SsoSessionMaxLifespan)
 	}
 	if cr.Spec.ForProvider.SsoSessionIdleTimeoutRememberMe != nil {
-		currentMap["ssoSessionIdleTimeoutRememberMe"] = *cr.Spec.ForProvider.SsoSessionIdleTimeoutRememberMe
+		currentMap["ssoSessionIdleTimeoutRememberMe"] = clients.DurationToSeconds(*cr.Spec.ForProvider.SsoSessionIdleTimeoutRememberMe)
 	}
 	if cr.Spec.ForProvider.SsoSessionMaxLifespanRememberMe != nil {
-		currentMap["ssoSessionMaxLifespanRememberMe"] = *cr.Spec.ForProvider.SsoSessionMaxLifespanRememberMe
+		currentMap["ssoSessionMaxLifespanRememberMe"] = clients.DurationToSeconds(*cr.Spec.ForProvider.SsoSessionMaxLifespanRememberMe)
 	}
 	if cr.Spec.ForProvider.OfflineSessionIdleTimeout != nil {
-		currentMap["offlineSessionIdleTimeout"] = *cr.Spec.ForProvider.OfflineSessionIdleTimeout
+		currentMap["offlineSessionIdleTimeout"] = clients.DurationToSeconds(*cr.Spec.ForProvider.OfflineSessionIdleTimeout)
 	}
 	if cr.Spec.ForProvider.OfflineSessionMaxLifespanEnabled != nil {
 		currentMap["offlineSessionMaxLifespanEnabled"] = *cr.Spec.ForProvider.OfflineSessionMaxLifespanEnabled
 	}
 	if cr.Spec.ForProvider.OfflineSessionMaxLifespan != nil {
-		currentMap["offlineSessionMaxLifespan"] = *cr.Spec.ForProvider.OfflineSessionMaxLifespan
+		currentMap["offlineSessionMaxLifespan"] = clients.DurationToSeconds(*cr.Spec.ForProvider.OfflineSessionMaxLifespan)
 	}
 	if cr.Spec.ForProvider.ClientSessionIdleTimeout != nil {
-		currentMap["clientSessionIdleTimeout"] = *cr.Spec.ForProvider.ClientSessionIdleTimeout
+		currentMap["clientSessionIdleTimeout"] = clients.DurationToSeconds(*cr.Spec.ForProvider.ClientSessionIdleTimeout)
 	}
 	if cr.Spec.ForProvider.ClientSessionMaxLifespan != nil {
-		currentMap["clientSessionMaxLifespan"] = *cr.Spec.ForProvider.ClientSessionMaxLifespan
+		currentMap["clientSessionMaxLifespan"] = clients.DurationToSeconds(*cr.Spec.ForProvider.ClientSessionMaxLifespan)
 	}
 	if cr.Spec.ForProvider.AccessCodeLifespan != nil {
-		currentMap["accessCodeLifespan"] = *cr.Spec.ForProvider.AccessCodeLifespan
+		currentMap["accessCodeLifespan"] = clients.DurationToSeconds(*cr.Spec.ForProvider.AccessCodeLifespan)
 	}
 	if cr.Spec.ForProvider.AccessCodeLifespanUserAction != nil {
-		currentMap["accessCodeLifespanUserAction"] = *cr.Spec.ForProvider.AccessCodeLifespanUserAction
+		currentMap["accessCodeLifespanUserAction"] = clients.DurationToSeconds(*cr.Spec.ForProvider.AccessCodeLifespanUserAction)
 	}
 	if cr.Spec.ForProvider.AccessCodeLifespanLogin != nil {
-		currentMap["accessCodeLifespanLogin"] = *cr.Spec.ForProvider.AccessCodeLifespanLogin
+		currentMap["accessCodeLifespanLogin"] = clients.DurationToSeconds(*cr.Spec.ForProvider.AccessCodeLifespanLogin)
 	}
 	if cr.Spec.ForProvider.ActionTokenGeneratedByAdminLifespan != nil {
-		currentMap["actionTokenGeneratedByAdminLifespan"] = *cr.Spec.ForProvider.ActionTokenGeneratedByAdminLifespan
+		currentMap["actionTokenGeneratedByAdminLifespan"] = clients.DurationToSeconds(*cr.Spec.ForProvider.ActionTokenGeneratedByAdminLifespan)
 	}
 	if cr.Spec.ForProvider.ActionTokenGeneratedByUserLifespan != nil {
-		currentMap["actionTokenGeneratedByUserLifespan"] = *cr.Spec.ForProvider.ActionTokenGeneratedByUserLifespan
+		currentMap["actionTokenGeneratedByUserLifespan"] = clients.DurationToSeconds(*cr.Spec.ForProvider.ActionTokenGeneratedByUserLifespan)
 	}
 	if cr.Spec.ForProvider.PasswordPolicy != nil {
 		currentMap["passwordPolicy"] = *cr.Spec.ForProvider.PasswordPolicy
@@ -398,52 +398,52 @@ func realmParamsToRepresentation(ctx context.Context, kube client.Client, p *rea
 		r.RefreshTokenMaxReuse = *p.RefreshTokenMaxReuse
 	}
 	if p.AccessTokenLifespan != nil {
-		r.AccessTokenLifespan = *p.AccessTokenLifespan
+		r.AccessTokenLifespan = clients.DurationToSeconds(*p.AccessTokenLifespan)
 	}
 	if p.AccessTokenLifespanForImplicitFlow != nil {
-		r.AccessTokenLifespanForImplicitFlow = *p.AccessTokenLifespanForImplicitFlow
+		r.AccessTokenLifespanForImplicitFlow = clients.DurationToSeconds(*p.AccessTokenLifespanForImplicitFlow)
 	}
 	if p.SsoSessionIdleTimeout != nil {
-		r.SsoSessionIdleTimeout = *p.SsoSessionIdleTimeout
+		r.SsoSessionIdleTimeout = clients.DurationToSeconds(*p.SsoSessionIdleTimeout)
 	}
 	if p.SsoSessionMaxLifespan != nil {
-		r.SsoSessionMaxLifespan = *p.SsoSessionMaxLifespan
+		r.SsoSessionMaxLifespan = clients.DurationToSeconds(*p.SsoSessionMaxLifespan)
 	}
 	if p.SsoSessionIdleTimeoutRememberMe != nil {
-		r.SsoSessionIdleTimeoutRememberMe = *p.SsoSessionIdleTimeoutRememberMe
+		r.SsoSessionIdleTimeoutRememberMe = clients.DurationToSeconds(*p.SsoSessionIdleTimeoutRememberMe)
 	}
 	if p.SsoSessionMaxLifespanRememberMe != nil {
-		r.SsoSessionMaxLifespanRememberMe = *p.SsoSessionMaxLifespanRememberMe
+		r.SsoSessionMaxLifespanRememberMe = clients.DurationToSeconds(*p.SsoSessionMaxLifespanRememberMe)
 	}
 	if p.OfflineSessionIdleTimeout != nil {
-		r.OfflineSessionIdleTimeout = *p.OfflineSessionIdleTimeout
+		r.OfflineSessionIdleTimeout = clients.DurationToSeconds(*p.OfflineSessionIdleTimeout)
 	}
 	if p.OfflineSessionMaxLifespanEnabled != nil {
 		r.OfflineSessionMaxLifespanEnabled = *p.OfflineSessionMaxLifespanEnabled
 	}
 	if p.OfflineSessionMaxLifespan != nil {
-		r.OfflineSessionMaxLifespan = *p.OfflineSessionMaxLifespan
+		r.OfflineSessionMaxLifespan = clients.DurationToSeconds(*p.OfflineSessionMaxLifespan)
 	}
 	if p.ClientSessionIdleTimeout != nil {
-		r.ClientSessionIdleTimeout = *p.ClientSessionIdleTimeout
+		r.ClientSessionIdleTimeout = clients.DurationToSeconds(*p.ClientSessionIdleTimeout)
 	}
 	if p.ClientSessionMaxLifespan != nil {
-		r.ClientSessionMaxLifespan = *p.ClientSessionMaxLifespan
+		r.ClientSessionMaxLifespan = clients.DurationToSeconds(*p.ClientSessionMaxLifespan)
 	}
 	if p.AccessCodeLifespan != nil {
-		r.AccessCodeLifespan = *p.AccessCodeLifespan
+		r.AccessCodeLifespan = clients.DurationToSeconds(*p.AccessCodeLifespan)
 	}
 	if p.AccessCodeLifespanUserAction != nil {
-		r.AccessCodeLifespanUserAction = *p.AccessCodeLifespanUserAction
+		r.AccessCodeLifespanUserAction = clients.DurationToSeconds(*p.AccessCodeLifespanUserAction)
 	}
 	if p.AccessCodeLifespanLogin != nil {
-		r.AccessCodeLifespanLogin = *p.AccessCodeLifespanLogin
+		r.AccessCodeLifespanLogin = clients.DurationToSeconds(*p.AccessCodeLifespanLogin)
 	}
 	if p.ActionTokenGeneratedByAdminLifespan != nil {
-		r.ActionTokenGeneratedByAdminLifespan = *p.ActionTokenGeneratedByAdminLifespan
+		r.ActionTokenGeneratedByAdminLifespan = clients.DurationToSeconds(*p.ActionTokenGeneratedByAdminLifespan)
 	}
 	if p.ActionTokenGeneratedByUserLifespan != nil {
-		r.ActionTokenGeneratedByUserLifespan = *p.ActionTokenGeneratedByUserLifespan
+		r.ActionTokenGeneratedByUserLifespan = clients.DurationToSeconds(*p.ActionTokenGeneratedByUserLifespan)
 	}
 	if p.PasswordPolicy != nil {
 		r.PasswordPolicy = *p.PasswordPolicy
@@ -563,52 +563,52 @@ func realmUpToDate(desired *realmv1alpha1.RealmParameters, actual *clients.Realm
 	if desired.RefreshTokenMaxReuse != nil && *desired.RefreshTokenMaxReuse != actual.RefreshTokenMaxReuse {
 		return false
 	}
-	if desired.AccessTokenLifespan != nil && *desired.AccessTokenLifespan != actual.AccessTokenLifespan {
+	if desired.AccessTokenLifespan != nil && clients.DurationToSeconds(*desired.AccessTokenLifespan) != int(secondsToNumber(actual.AccessTokenLifespan)) {
 		return false
 	}
-	if desired.AccessTokenLifespanForImplicitFlow != nil && *desired.AccessTokenLifespanForImplicitFlow != actual.AccessTokenLifespanForImplicitFlow {
+	if desired.AccessTokenLifespanForImplicitFlow != nil && clients.DurationToSeconds(*desired.AccessTokenLifespanForImplicitFlow) != int(secondsToNumber(actual.AccessTokenLifespanForImplicitFlow)) {
 		return false
 	}
-	if desired.SsoSessionIdleTimeout != nil && *desired.SsoSessionIdleTimeout != actual.SsoSessionIdleTimeout {
+	if desired.SsoSessionIdleTimeout != nil && clients.DurationToSeconds(*desired.SsoSessionIdleTimeout) != int(secondsToNumber(actual.SsoSessionIdleTimeout)) {
 		return false
 	}
-	if desired.SsoSessionMaxLifespan != nil && *desired.SsoSessionMaxLifespan != actual.SsoSessionMaxLifespan {
+	if desired.SsoSessionMaxLifespan != nil && clients.DurationToSeconds(*desired.SsoSessionMaxLifespan) != int(secondsToNumber(actual.SsoSessionMaxLifespan)) {
 		return false
 	}
-	if desired.SsoSessionIdleTimeoutRememberMe != nil && *desired.SsoSessionIdleTimeoutRememberMe != actual.SsoSessionIdleTimeoutRememberMe {
+	if desired.SsoSessionIdleTimeoutRememberMe != nil && clients.DurationToSeconds(*desired.SsoSessionIdleTimeoutRememberMe) != int(secondsToNumber(actual.SsoSessionIdleTimeoutRememberMe)) {
 		return false
 	}
-	if desired.SsoSessionMaxLifespanRememberMe != nil && *desired.SsoSessionMaxLifespanRememberMe != actual.SsoSessionMaxLifespanRememberMe {
+	if desired.SsoSessionMaxLifespanRememberMe != nil && clients.DurationToSeconds(*desired.SsoSessionMaxLifespanRememberMe) != int(secondsToNumber(actual.SsoSessionMaxLifespanRememberMe)) {
 		return false
 	}
-	if desired.OfflineSessionIdleTimeout != nil && *desired.OfflineSessionIdleTimeout != actual.OfflineSessionIdleTimeout {
+	if desired.OfflineSessionIdleTimeout != nil && clients.DurationToSeconds(*desired.OfflineSessionIdleTimeout) != int(secondsToNumber(actual.OfflineSessionIdleTimeout)) {
 		return false
 	}
 	if desired.OfflineSessionMaxLifespanEnabled != nil && *desired.OfflineSessionMaxLifespanEnabled != actual.OfflineSessionMaxLifespanEnabled {
 		return false
 	}
-	if desired.OfflineSessionMaxLifespan != nil && *desired.OfflineSessionMaxLifespan != actual.OfflineSessionMaxLifespan {
+	if desired.OfflineSessionMaxLifespan != nil && clients.DurationToSeconds(*desired.OfflineSessionMaxLifespan) != int(secondsToNumber(actual.OfflineSessionMaxLifespan)) {
 		return false
 	}
-	if desired.ClientSessionIdleTimeout != nil && *desired.ClientSessionIdleTimeout != actual.ClientSessionIdleTimeout {
+	if desired.ClientSessionIdleTimeout != nil && clients.DurationToSeconds(*desired.ClientSessionIdleTimeout) != int(secondsToNumber(actual.ClientSessionIdleTimeout)) {
 		return false
 	}
-	if desired.ClientSessionMaxLifespan != nil && *desired.ClientSessionMaxLifespan != actual.ClientSessionMaxLifespan {
+	if desired.ClientSessionMaxLifespan != nil && clients.DurationToSeconds(*desired.ClientSessionMaxLifespan) != int(secondsToNumber(actual.ClientSessionMaxLifespan)) {
 		return false
 	}
-	if desired.AccessCodeLifespan != nil && *desired.AccessCodeLifespan != actual.AccessCodeLifespan {
+	if desired.AccessCodeLifespan != nil && clients.DurationToSeconds(*desired.AccessCodeLifespan) != int(secondsToNumber(actual.AccessCodeLifespan)) {
 		return false
 	}
-	if desired.AccessCodeLifespanUserAction != nil && *desired.AccessCodeLifespanUserAction != actual.AccessCodeLifespanUserAction {
+	if desired.AccessCodeLifespanUserAction != nil && clients.DurationToSeconds(*desired.AccessCodeLifespanUserAction) != int(secondsToNumber(actual.AccessCodeLifespanUserAction)) {
 		return false
 	}
-	if desired.AccessCodeLifespanLogin != nil && *desired.AccessCodeLifespanLogin != actual.AccessCodeLifespanLogin {
+	if desired.AccessCodeLifespanLogin != nil && clients.DurationToSeconds(*desired.AccessCodeLifespanLogin) != int(secondsToNumber(actual.AccessCodeLifespanLogin)) {
 		return false
 	}
-	if desired.ActionTokenGeneratedByAdminLifespan != nil && *desired.ActionTokenGeneratedByAdminLifespan != actual.ActionTokenGeneratedByAdminLifespan {
+	if desired.ActionTokenGeneratedByAdminLifespan != nil && clients.DurationToSeconds(*desired.ActionTokenGeneratedByAdminLifespan) != int(secondsToNumber(actual.ActionTokenGeneratedByAdminLifespan)) {
 		return false
 	}
-	if desired.ActionTokenGeneratedByUserLifespan != nil && *desired.ActionTokenGeneratedByUserLifespan != actual.ActionTokenGeneratedByUserLifespan {
+	if desired.ActionTokenGeneratedByUserLifespan != nil && clients.DurationToSeconds(*desired.ActionTokenGeneratedByUserLifespan) != int(secondsToNumber(actual.ActionTokenGeneratedByUserLifespan)) {
 		return false
 	}
 	if desired.PasswordPolicy != nil && *desired.PasswordPolicy != actual.PasswordPolicy {
@@ -748,5 +748,23 @@ func buildSmtpServerMapFields(p *realmv1alpha1.SmtpServer) map[string]string {
 		m["starttls"] = strconv.FormatBool(*p.Starttls)
 	}
 	return m
+}
+
+// secondsToNumber extracts a numeric value from an interface{} (JSON number).
+// Returns 0 for nil or unrecognized types.
+func secondsToNumber(v interface{}) float64 {
+	switch val := v.(type) {
+	case float64:
+		return val
+	case int:
+		return float64(val)
+	case int64:
+		return float64(val)
+	case json.Number:
+		f, _ := val.Float64()
+		return f
+	default:
+		return 0
+	}
 }
 
