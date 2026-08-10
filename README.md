@@ -312,7 +312,7 @@ Provider-keycloak maintains feature parity with [crossplane-contrib/provider-key
 - ✅ Comprehensive test coverage
 - ✅ Production security hardening
 
-## Quick Start
+## Getting Started
 
 1. **Install provider**:
    ```bash

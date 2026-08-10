@@ -107,6 +107,9 @@ func (m *mockRoleClient) GetClientSecret(ctx context.Context, realm, clientID st
 	return "", nil
 }
 func (m *mockRoleClient) ResetClientSecret(ctx context.Context, realm, clientID, secretValue string) error {
+	if m.resetClientSecretFn != nil {
+		return m.resetClientSecretFn(ctx, realm, clientID, secretValue)
+	}
 	return nil
 }
 func (m *mockRoleClient) GetUserGroups(ctx context.Context, realm, userID string) ([]clients.GroupRepresentation, error) {
