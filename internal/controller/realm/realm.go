@@ -117,6 +117,21 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	}
 	cr.Status.SetConditions(xpv1.Available())
 	upToDate := realmUpToDate(&cr.Spec.ForProvider, r)
+
+	// realmUpToDate deliberately never compares the SMTP password: Keycloak
+	// always masks it in GET responses, so there's no live value to diff
+	// against. Without this, a realm whose only drift is a rotated Vault
+	// password would show up-to-date forever and Update() (which does
+	// resolve and push PasswordSecretRef on every call) would never run.
+	// Force a re-push on every reconcile instead - cheap at this resource
+	// count and keeps Vault authoritative.
+	if upToDate && len(cr.Spec.ForProvider.SmtpServer) > 0 {
+		auth := cr.Spec.ForProvider.SmtpServer[0].Auth
+		if len(auth) > 0 && auth[0].PasswordSecretRef != nil {
+			upToDate = false
+		}
+	}
+
 	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
 
