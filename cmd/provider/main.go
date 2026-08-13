@@ -106,9 +106,5 @@ func main() {
 	kingpin.FatalIfError(mgr.AddHealthzCheck("healthz", healthz.Ping), "Cannot add health check")
 	kingpin.FatalIfError(mgr.AddReadyzCheck("readyz", healthz.Ping), "Cannot add ready check")
 
-	// Create context with cache initialization timeout to prevent startup failures on slow API servers
-	ctx, cancel := context.WithTimeout(ctrl.SetupSignalHandler(), *cacheInitTimeout)
-	defer cancel()
-
-	kingpin.FatalIfError(mgr.Start(ctx), "Cannot start controller manager")
+	kingpin.FatalIfError(mgr.Start(ctrl.SetupSignalHandler()), "Cannot start controller manager")
 }
