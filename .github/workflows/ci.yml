@@ -210,18 +210,11 @@ jobs:
           echo "Repository: ${{ github.repository }}"
           echo "Repository owner: ${{ github.repository_owner }}"
           
-          # Build binary
+          # make build already builds the binary, Docker image, and
+          # Crossplane xpkg package in one pass (crossplane build submodule).
           make build
-          echo "✅ Binary build successful"
-          
-          # Build Docker image locally (without push)
-          make docker.build
-          echo "✅ Docker image build successful"
-          
-          # Build Crossplane package locally (without push)
-          make xpkg.build
-          echo "✅ Crossplane package build successful"
-          
+          echo "✅ Build successful (binary, Docker image, Crossplane package)"
+
           # Verify build artifacts exist
           ls -la _output/bin/linux_amd64/provider 2>/dev/null && echo "✅ Provider binary exists" || echo "❌ Provider binary missing"
           ls -la _output/xpkg/linux_amd64/*.xpkg 2>/dev/null && echo "✅ Crossplane package exists" || echo "❌ Crossplane package missing"
