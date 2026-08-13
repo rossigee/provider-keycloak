@@ -279,7 +279,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		currentMap["clientAuthenticationFlow"] = *cr.Spec.ForProvider.ClientAuthenticationFlow
 	}
 	if cr.Spec.ForProvider.UserManagedAccess != nil {
-		currentMap["userManagedAccess"] = *cr.Spec.ForProvider.UserManagedAccess
+		currentMap["userManagedAccessAllowed"] = *cr.Spec.ForProvider.UserManagedAccess
 	}
 	if cr.Spec.ForProvider.AdminPermissionsEnabled != nil {
 		currentMap["adminPermissionsEnabled"] = *cr.Spec.ForProvider.AdminPermissionsEnabled

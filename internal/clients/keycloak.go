@@ -587,7 +587,7 @@ type Realm struct {
 	DirectGrantFlow                      string            `json:"directGrantFlow,omitempty"`
 	ResetCredentialsFlow                 string            `json:"resetCredentialsFlow,omitempty"`
 	ClientAuthenticationFlow             string            `json:"clientAuthenticationFlow,omitempty"`
-	UserManagedAccess                    bool              `json:"userManagedAccess"`
+	UserManagedAccess                    bool              `json:"userManagedAccessAllowed"`
 	AdminPermissionsEnabled              bool              `json:"adminPermissionsEnabled"`
 	FrontendURL                          *string           `json:"frontendUrl,omitempty"`
 	Attributes                           map[string]string `json:"attributes,omitempty"`
