@@ -26,6 +26,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -51,6 +52,11 @@ const (
 	backoffInitial = 5 * time.Second
 	backoffMax     = 5 * time.Minute
 )
+
+// debugHTTP enables verbose request/response logging in doRequest, gated by
+// an env var so it can be toggled without a code change. Temporary
+// diagnostic aid.
+var debugHTTP = os.Getenv("KEYCLOAK_PROVIDER_DEBUG_HTTP") == "true"
 
 // ErrAuthUnavailable indicates that an access token could not be obtained
 // from Keycloak and the provider is currently in its backoff window.
@@ -445,6 +451,11 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 
+	if debugHTTP {
+		fmt.Printf("DEBUGHTTP request: method=%s url=%s content-length=%d transfer-encoding=%v proto=%s host=%s\n",
+			req.Method, req.URL.String(), req.ContentLength, req.TransferEncoding, req.Proto, req.Host)
+	}
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute request")
@@ -454,6 +465,11 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 16*1024*1024))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read response body")
+	}
+
+	if debugHTTP {
+		fmt.Printf("DEBUGHTTP response: status=%d proto=%s content-length=%d transfer-encoding=%v headers=%v body=%q\n",
+			resp.StatusCode, resp.Proto, resp.ContentLength, resp.TransferEncoding, resp.Header, string(respBody))
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
