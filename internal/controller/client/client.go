@@ -129,9 +129,29 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 
 	cr.Status.SetConditions(xpv1.Available().WithMessage("Keycloak client is available"))
 
+	upToDate := clientUpToDate(&cr.Spec.ForProvider, kcClient)
+
+	// clientUpToDate only compares flags/URLs - it has no way to see the
+	// live secret (Keycloak's representation never includes it). When
+	// WriteToSecretRef is set, explicitly compare the K8s-sourced desired
+	// secret against Keycloak's current one so a secret-only drift (e.g. a
+	// rotated Vault value, or a client whose other fields already matched
+	// when this field was introduced) actually triggers Update().
+	if upToDate {
+		if writeRef := cr.Spec.ForProvider.WriteToSecretRef; writeRef != nil {
+			desiredSecret, err := e.readSecretFromK8s(ctx, writeRef)
+			if err == nil && desiredSecret != "" {
+				currentSecret, err := e.client.GetClientSecret(ctx, realmId, kcClient.ID)
+				if err == nil && currentSecret != desiredSecret {
+					upToDate = false
+				}
+			}
+		}
+	}
+
 	return managed.ExternalObservation{
 		ResourceExists:   true,
-		ResourceUpToDate: clientUpToDate(&cr.Spec.ForProvider, kcClient),
+		ResourceUpToDate: upToDate,
 	}, nil
 }
 
