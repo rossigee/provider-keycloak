@@ -19,6 +19,7 @@ package clients
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -27,6 +28,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -57,6 +59,8 @@ const (
 // an env var so it can be toggled without a code change. Temporary
 // diagnostic aid.
 var debugHTTP = os.Getenv("KEYCLOAK_PROVIDER_DEBUG_HTTP") == "true"
+
+var passwordRedactRe = regexp.MustCompile(`"password":"[^"]*"`)
 
 // ErrAuthUnavailable indicates that an access token could not be obtained
 // from Keycloak and the provider is currently in its backoff window.
@@ -435,6 +439,10 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 		bodyBytes, err := json.Marshal(body)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshal request body")
+		}
+		if debugHTTP && method == http.MethodPost && path == adminPath {
+			redacted := passwordRedactRe.ReplaceAllString(string(bodyBytes), `"password":"REDACTED"`)
+			fmt.Printf("DEBUGHTTP body (len=%d, sha256=%x): %s\n", len(bodyBytes), sha256.Sum256(bodyBytes), redacted)
 		}
 		bodyReader = bytes.NewReader(bodyBytes)
 	}
