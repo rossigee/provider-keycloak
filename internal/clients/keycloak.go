@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"regexp"
@@ -456,7 +457,8 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 		}
 		if debugHTTP && method == http.MethodPost && path == adminPath {
 			redacted := passwordRedactRe.ReplaceAllString(string(bodyBytes), `"password":"REDACTED"`)
-			fmt.Printf("DEBUGHTTP body (len=%d, sha256=%x): %s\n", len(bodyBytes), sha256.Sum256(bodyBytes), redacted)
+			fmt.Printf("DEBUGHTTP body (len=%d, sha256=%x, valid-json=%v): %s\n",
+				len(bodyBytes), sha256.Sum256(bodyBytes), json.Valid(bodyBytes), redacted)
 			counted := &countingReader{r: bytes.NewReader(bodyBytes)}
 			defer func() {
 				fmt.Printf("DEBUGHTTP bytes actually read from body by transport: %d of %d\n", counted.n, len(bodyBytes))
@@ -488,6 +490,24 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 	if debugHTTP {
 		fmt.Printf("DEBUGHTTP request: method=%s url=%s content-length=%d transfer-encoding=%v proto=%s host=%s\n",
 			req.Method, req.URL.String(), req.ContentLength, req.TransferEncoding, req.Proto, req.Host)
+		if method == http.MethodPost && path == adminPath {
+			// Dump the exact wire bytes net/http would send, including any
+			// headers the Transport itself adds. Built from a throwaway
+			// request sharing the same method/URL/headers/body so the real
+			// req and its body reader (possibly the instrumented
+			// countingReader above) are never touched by this dump.
+			bodyBytes, _ := json.Marshal(body)
+			dumpReq, dErr := http.NewRequest(method, c.baseURL+path, bytes.NewReader(bodyBytes))
+			if dErr == nil {
+				dumpReq.Header = req.Header.Clone()
+				dump, dumpErr := httputil.DumpRequestOut(dumpReq, true)
+				if dumpErr != nil {
+					fmt.Printf("DEBUGHTTP dump failed: %v\n", dumpErr)
+				} else {
+					fmt.Printf("DEBUGHTTP wire dump (%d bytes):\n%s\n", len(dump), string(dump))
+				}
+			}
+		}
 	}
 
 	resp, err := c.httpClient.Do(req)
