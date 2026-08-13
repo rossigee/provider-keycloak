@@ -417,6 +417,29 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalUpdate{}, errors.Wrap(err, errUpdateClient)
 	}
 
+	// WriteToSecretRef: the K8s secret is authoritative (e.g. sourced from
+	// Vault via ExternalSecret) - push its current value into Keycloak on
+	// every update so a rotated Vault secret propagates. Only Create()
+	// handled this before, so an externally-rotated secret was never
+	// re-applied after initial client creation.
+	if writeRef := cr.Spec.ForProvider.WriteToSecretRef; writeRef != nil {
+		desiredSecret, err := e.readSecretFromK8s(ctx, writeRef)
+		if err != nil {
+			klog.V(2).InfoS("failed to read secret from K8s during update", "client", cr.Spec.ForProvider.ClientId, "error", err)
+		} else if desiredSecret != "" {
+			currentSecret, err := e.client.GetClientSecret(ctx, realmId, existing.ID)
+			if err != nil {
+				klog.V(2).InfoS("failed to get client secret during update", "client", cr.Spec.ForProvider.ClientId, "error", err)
+			} else if currentSecret != desiredSecret {
+				if err := e.client.ResetClientSecret(ctx, realmId, existing.ID, desiredSecret); err != nil {
+					klog.V(2).InfoS("failed to push client secret during update", "client", cr.Spec.ForProvider.ClientId, "error", err)
+				} else {
+					klog.V(2).InfoS("successfully pushed client secret during update", "client", cr.Spec.ForProvider.ClientId)
+				}
+			}
+		}
+	}
+
 	// Refresh the client secret on each update to ensure K8s secret is up to date
 	// Handle ReadFromSecretRef (new) and deprecated ClientSecretSecretRef
 	readRef := cr.Spec.ForProvider.ReadFromSecretRef
