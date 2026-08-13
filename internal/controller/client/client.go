@@ -18,6 +18,8 @@ package client
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"strings"
 
 	xpcontroller "github.com/crossplane/crossplane-runtime/v2/pkg/controller"
@@ -51,6 +53,11 @@ const (
 )
 
 const controllerName = "clients.openidclient.keycloak.crossplane.io"
+
+// debugHTTP enables verbose tracing in the WriteToSecretRef push path,
+// gated by an env var so it can be toggled without a code change.
+// Temporary diagnostic aid.
+var debugHTTP = os.Getenv("KEYCLOAK_PROVIDER_DEBUG_HTTP") == "true"
 
 // Setup creates and adds a new Controller.
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
@@ -423,19 +430,39 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	// handled this before, so an externally-rotated secret was never
 	// re-applied after initial client creation.
 	if writeRef := cr.Spec.ForProvider.WriteToSecretRef; writeRef != nil {
+		if debugHTTP {
+			fmt.Printf("DEBUGHTTP writeToSecretRef path entered: client=%s ref=%s/%s/%s\n", cr.Spec.ForProvider.ClientId, writeRef.Namespace, writeRef.Name, writeRef.Key)
+		}
 		desiredSecret, err := e.readSecretFromK8s(ctx, writeRef)
 		if err != nil {
+			if debugHTTP {
+				fmt.Printf("DEBUGHTTP readSecretFromK8s error: %v\n", err)
+			}
 			klog.V(2).InfoS("failed to read secret from K8s during update", "client", cr.Spec.ForProvider.ClientId, "error", err)
 		} else if desiredSecret != "" {
 			currentSecret, err := e.client.GetClientSecret(ctx, realmId, existing.ID)
 			if err != nil {
+				if debugHTTP {
+					fmt.Printf("DEBUGHTTP GetClientSecret error: %v\n", err)
+				}
 				klog.V(2).InfoS("failed to get client secret during update", "client", cr.Spec.ForProvider.ClientId, "error", err)
 			} else if currentSecret != desiredSecret {
+				if debugHTTP {
+					fmt.Printf("DEBUGHTTP secrets differ (desired-len=%d current-len=%d), pushing\n", len(desiredSecret), len(currentSecret))
+				}
 				if err := e.client.ResetClientSecret(ctx, realmId, existing.ID, desiredSecret); err != nil {
+					if debugHTTP {
+						fmt.Printf("DEBUGHTTP ResetClientSecret error: %v\n", err)
+					}
 					klog.V(2).InfoS("failed to push client secret during update", "client", cr.Spec.ForProvider.ClientId, "error", err)
 				} else {
+					if debugHTTP {
+						fmt.Printf("DEBUGHTTP ResetClientSecret succeeded\n")
+					}
 					klog.V(2).InfoS("successfully pushed client secret during update", "client", cr.Spec.ForProvider.ClientId)
 				}
+			} else if debugHTTP {
+				fmt.Printf("DEBUGHTTP secrets already match, no push needed\n")
 			}
 		}
 	}
