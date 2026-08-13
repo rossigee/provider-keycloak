@@ -244,7 +244,20 @@ func NewClient(ctx context.Context, pc *v1beta1.ProviderConfig, kube client.Clie
 
 // NewClientFromConfig creates a new Keycloak API client from a resolved Config.
 func NewClientFromConfig(ctx context.Context, cfg *Config) (*keycloakClient, error) {
-	transport := http.DefaultTransport
+	// Use a dedicated Transport per client rather than the shared
+	// http.DefaultTransport singleton. With many concurrent reconcile
+	// workers hitting the same Keycloak host, DefaultTransport's low
+	// MaxIdleConnsPerHost (2) causes heavy connection reuse under load;
+	// a keep-alive connection reused across concurrent goroutines is a
+	// known source of stream-framing desync between client and server,
+	// which surfaces here as Keycloak-side "unable to read contents from
+	// stream" errors on POST bodies with no corresponding server-side
+	// application log entry (the request never reaches Keycloak's own
+	// routing - it fails at the HTTP transport layer). Disabling
+	// keep-alives trades a little latency for eliminating that entirely.
+	dedicatedTransport := &http.Transport{
+		DisableKeepAlives: true,
+	}
 	if cfg.RootCACertificate != "" || cfg.TLSInsecureSkipVerify {
 		tlsConfig := &tls.Config{
 			InsecureSkipVerify: cfg.TLSInsecureSkipVerify, // nolint:gosec // configured via explicit provider credential
@@ -256,10 +269,9 @@ func NewClientFromConfig(ctx context.Context, cfg *Config) (*keycloakClient, err
 			}
 			tlsConfig.RootCAs = pool
 		}
-		transport = &http.Transport{
-			TLSClientConfig: tlsConfig,
-		}
+		dedicatedTransport.TLSClientConfig = tlsConfig
 	}
+	transport := http.RoundTripper(dedicatedTransport)
 
 	httpClient := &http.Client{
 		Timeout:   defaultTimeout,
