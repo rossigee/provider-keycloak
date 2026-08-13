@@ -62,6 +62,20 @@ var debugHTTP = os.Getenv("KEYCLOAK_PROVIDER_DEBUG_HTTP") == "true"
 
 var passwordRedactRe = regexp.MustCompile(`"password":"[^"]*"`)
 
+// countingReader wraps a reader and tracks how many bytes have been Read,
+// to check whether the HTTP transport actually consumes the full body.
+// Temporary diagnostic aid.
+type countingReader struct {
+	r *bytes.Reader
+	n int
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.n += n
+	return n, err
+}
+
 // ErrAuthUnavailable indicates that an access token could not be obtained
 // from Keycloak and the provider is currently in its backoff window.
 // Controllers should map this to a RequeueAfter rather than letting it
@@ -443,13 +457,25 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 		if debugHTTP && method == http.MethodPost && path == adminPath {
 			redacted := passwordRedactRe.ReplaceAllString(string(bodyBytes), `"password":"REDACTED"`)
 			fmt.Printf("DEBUGHTTP body (len=%d, sha256=%x): %s\n", len(bodyBytes), sha256.Sum256(bodyBytes), redacted)
+			counted := &countingReader{r: bytes.NewReader(bodyBytes)}
+			defer func() {
+				fmt.Printf("DEBUGHTTP bytes actually read from body by transport: %d of %d\n", counted.n, len(bodyBytes))
+			}()
+			bodyReader = counted
+		} else {
+			bodyReader = bytes.NewReader(bodyBytes)
 		}
-		bodyReader = bytes.NewReader(bodyBytes)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bodyReader)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create request")
+	}
+	if counted, ok := bodyReader.(*countingReader); ok {
+		// io.Reader (unlike *bytes.Reader) isn't special-cased by
+		// NewRequestWithContext for Content-Length auto-detection -
+		// restore identical wire behavior to the non-debug path.
+		req.ContentLength = int64(counted.r.Size())
 	}
 
 	c.mu.Lock()
