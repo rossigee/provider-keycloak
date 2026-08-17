@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"os"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/logging"
@@ -151,7 +152,7 @@ func setupRBAC(c k8sclient.Client, l logging.Logger) error {
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:      "ServiceAccount",
-			Name:      "provider-keycloak",
+			Name:      os.Getenv("REVISION_NAME"),
 			Namespace: "crossplane-system",
 		}},
 	}
