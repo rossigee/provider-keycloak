@@ -9,19 +9,19 @@ func TestClientRepresentationMarshalRoundtrip(t *testing.T) {
 	bTrue, bFalse := true, false
 	s := "https://example.com/back"
 	in := ClientRepresentation{
-		ClientID: "test-app",
-		HomeURL: "https://example.com/home",
-		BackchannelLogoutURL: "https://example.com/back",
-		BackchannelLogoutSessionRequired: &bTrue,
+		ClientID:                               "test-app",
+		HomeURL:                                "https://example.com/home",
+		BackchannelLogoutURL:                   "https://example.com/back",
+		BackchannelLogoutSessionRequired:       &bTrue,
 		BackchannelLogoutRevokeOfflineSessions: &bFalse,
-		FrontchannelLogoutURL: &s,
-		OAuth2DeviceAuthorizationGrantEnabled: &bTrue,
-		StandardTokenExchangeEnabled: &bFalse,
-		UseRefreshTokens: &bTrue,
-		ClientSessionIdleTimeout: "1800",
-		ClientSessionMaxLifespan: "36000",
-		ClientOfflineSessionIdleTimeout: "2592000",
-		ClientOfflineSessionMaxLifespan: "2592000",
+		FrontchannelLogoutURL:                  &s,
+		OAuth2DeviceAuthorizationGrantEnabled:  &bTrue,
+		StandardTokenExchangeEnabled:           &bFalse,
+		UseRefreshTokens:                       &bTrue,
+		ClientSessionIdleTimeout:               "1800",
+		ClientSessionMaxLifespan:               "36000",
+		ClientOfflineSessionIdleTimeout:        "2592000",
+		ClientOfflineSessionMaxLifespan:        "2592000",
 	}
 	b, err := json.Marshal(&in)
 	if err != nil {
@@ -44,18 +44,18 @@ func TestClientRepresentationMarshalRoundtrip(t *testing.T) {
 		t.Fatalf("expected attributes map, got: %v", raw)
 	}
 	wantAttrs := map[string]string{
-		"home.page.url": "https://example.com/home",
-		"frontchannel.logout.url": "https://example.com/back",
-		"backchannel.logout.url": "https://example.com/back",
-		"backchannel.logout.session.required": "true",
+		"home.page.url":                              "https://example.com/home",
+		"frontchannel.logout.url":                    "https://example.com/back",
+		"backchannel.logout.url":                     "https://example.com/back",
+		"backchannel.logout.session.required":        "true",
 		"backchannel.logout.revoke.offline.sessions": "false",
-		"oauth2.device.authorization.grant.enabled": "true",
-		"standard.token.exchange.enabled": "false",
-		"use.refresh.tokens": "true",
-		"client.session.idle.timeout": "1800",
-		"client.session.max.lifespan": "36000",
-		"client.offline.session.idle.timeout": "2592000",
-		"client.offline.session.max.lifespan": "2592000",
+		"oauth2.device.authorization.grant.enabled":  "true",
+		"standard.token.exchange.enabled":            "false",
+		"use.refresh.tokens":                         "true",
+		"client.session.idle.timeout":                "1800",
+		"client.session.max.lifespan":                "36000",
+		"client.offline.session.idle.timeout":        "2592000",
+		"client.offline.session.max.lifespan":        "2592000",
 	}
 	for k, v := range wantAttrs {
 		if got, ok := attrs[k]; !ok {

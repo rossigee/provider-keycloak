@@ -36,7 +36,7 @@ import (
 	realmv1alpha1 "github.com/rossigee/provider-keycloak/apis/realm/v1alpha1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
-	)
+)
 
 const (
 	errNotRealm          = "managed resource is not a Realm"
@@ -95,7 +95,6 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	}
 	return &external{kube: c.kube, client: kc}, nil
 }
-
 
 func (e *external) Disconnect(_ context.Context) error { return nil }
 
@@ -782,4 +781,3 @@ func secondsToNumber(v interface{}) float64 {
 		return 0
 	}
 }
-

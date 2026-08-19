@@ -34,10 +34,10 @@ import (
 type mockGroupClient struct {
 	*testhelpers.BaseMockClient
 	searchGroupsFn      func(ctx context.Context, realm, name string) ([]clients.GroupRepresentation, error)
-	createGroupFn        func(ctx context.Context, realm string, g *clients.GroupRepresentation) (*clients.GroupRepresentation, error)
-	updateGroupFn        func(ctx context.Context, realm string, g *clients.GroupRepresentation) error
-	deleteGroupFn        func(ctx context.Context, realm, groupID string) error
-	resetClientSecretFn  func(ctx context.Context, realm, clientID, secretValue string) error
+	createGroupFn       func(ctx context.Context, realm string, g *clients.GroupRepresentation) (*clients.GroupRepresentation, error)
+	updateGroupFn       func(ctx context.Context, realm string, g *clients.GroupRepresentation) error
+	deleteGroupFn       func(ctx context.Context, realm, groupID string) error
+	resetClientSecretFn func(ctx context.Context, realm, clientID, secretValue string) error
 }
 
 func (m *mockGroupClient) SearchGroups(ctx context.Context, realm, name string) ([]clients.GroupRepresentation, error) {

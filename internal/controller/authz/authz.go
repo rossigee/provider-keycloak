@@ -16,7 +16,7 @@ import (
 	authzv1alpha1 "github.com/rossigee/provider-keycloak/apis/authz/v1alpha1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
-		"github.com/rossigee/provider-keycloak/internal/tracing"
+	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
 const (
@@ -79,7 +79,6 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	}
 	return &external{client: kc}, nil
 }
-
 
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
 	_, span := tracing.StartSpan(ctx, "authz.observe",

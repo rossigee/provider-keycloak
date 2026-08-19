@@ -31,7 +31,7 @@ import (
 	authenticationflowv1alpha1 "github.com/rossigee/provider-keycloak/apis/authenticationflow/v1alpha1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
-		"github.com/rossigee/provider-keycloak/internal/tracing"
+	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
 const (
@@ -82,7 +82,6 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	}
 	return &external{client: kc}, nil
 }
-
 
 func (e *external) Disconnect(_ context.Context) error { return nil }
 

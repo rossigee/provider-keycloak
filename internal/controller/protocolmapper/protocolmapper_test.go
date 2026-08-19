@@ -33,12 +33,12 @@ import (
 
 type mockMapperClient struct {
 	*testhelpers.BaseMockClient
-	getClientFn           func(ctx context.Context, realm, clientID string) (*clients.ClientRepresentation, error)
-	listMappersFn        func(ctx context.Context, realm, clientUUID string) ([]clients.ProtocolMapperRepresentation, error)
-	createMapperFn       func(ctx context.Context, realm, clientUUID string, p *clients.ProtocolMapperRepresentation) (string, error)
-	updateMapperFn       func(ctx context.Context, realm, clientUUID string, p *clients.ProtocolMapperRepresentation) error
-	deleteMapperFn       func(ctx context.Context, realm, clientUUID, mapperID string) error
-	resetClientSecretFn  func(ctx context.Context, realm, clientID, secretValue string) error
+	getClientFn         func(ctx context.Context, realm, clientID string) (*clients.ClientRepresentation, error)
+	listMappersFn       func(ctx context.Context, realm, clientUUID string) ([]clients.ProtocolMapperRepresentation, error)
+	createMapperFn      func(ctx context.Context, realm, clientUUID string, p *clients.ProtocolMapperRepresentation) (string, error)
+	updateMapperFn      func(ctx context.Context, realm, clientUUID string, p *clients.ProtocolMapperRepresentation) error
+	deleteMapperFn      func(ctx context.Context, realm, clientUUID, mapperID string) error
+	resetClientSecretFn func(ctx context.Context, realm, clientID, secretValue string) error
 }
 
 func (m *mockMapperClient) GetClient(ctx context.Context, realm, clientID string) (*clients.ClientRepresentation, error) {

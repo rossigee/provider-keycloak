@@ -127,10 +127,10 @@ func newFailingProviderConfig(t *testing.T, baseURL string) (*v1beta1.ProviderCo
 	}
 
 	creds, err := json.Marshal(ProviderCredentials{
-		URL:         baseURL,
-		BasePath:    "/auth",
-		Realm:       testRealm,
-		ClientID:    "x",
+		URL:          baseURL,
+		BasePath:     "/auth",
+		Realm:        testRealm,
+		ClientID:     "x",
 		ClientSecret: "y",
 	})
 	if err != nil {
@@ -157,4 +157,3 @@ func newFailingProviderConfig(t *testing.T, baseURL string) (*v1beta1.ProviderCo
 	kube := fake.NewClientBuilder().WithScheme(s).WithObjects(pc, secret).Build()
 	return pc, kube
 }
-

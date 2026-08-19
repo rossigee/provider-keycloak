@@ -99,7 +99,6 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	return &external{kube: c.kube, client: kc}, nil
 }
 
-
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
 	_, span := tracing.StartSpan(ctx, "client.observe",
 		tracing.SpanAttrs("Client", mg.GetName(), "observe")...)
@@ -396,8 +395,6 @@ func (e *external) writeClientSecret(ctx context.Context, ref *openidclientv1alp
 	secret.Data[ref.Key] = []byte(secretValue)
 	return errors.Wrap(e.kube.Update(ctx, secret), "cannot update target secret")
 }
-
-
 
 func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
 	_, span := tracing.StartSpan(ctx, "client.update",

@@ -49,11 +49,11 @@ type Connector struct {
 }
 
 type connectorEntry struct {
-	client        *keycloakClient
-	lastErr       error
-	lastAttemptAt time.Time
+	client           *keycloakClient
+	lastErr          error
+	lastAttemptAt    time.Time
 	consecutiveFails int
-	backoffUntil time.Time
+	backoffUntil     time.Time
 }
 
 // NewConnector returns a Connector that resolves ProviderConfigs from the

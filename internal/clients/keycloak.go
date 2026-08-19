@@ -83,8 +83,6 @@ func (c *countingReader) Read(p []byte) (int, error) {
 // bubble as an unrecoverable reconcile error.
 var ErrAuthUnavailable = errors.New("Keycloak authentication unavailable")
 
-
-
 // realmPath returns the safely encoded admin API path for a realm.
 func realmPath(realm string) string {
 	return adminPath + "/" + url.PathEscape(realm)
@@ -244,17 +242,17 @@ type Client interface {
 
 // keycloakClient implements Client
 type keycloakClient struct {
-	mu          sync.Mutex
-	httpClient  *http.Client
-	baseURL     string
-	token       string
-	tokenExp    time.Time // token expiration time
-	cfg         *Config   // for token refresh
+	mu         sync.Mutex
+	httpClient *http.Client
+	baseURL    string
+	token      string
+	tokenExp   time.Time // token expiration time
+	cfg        *Config   // for token refresh
 
 	// Failure tracking for token acquisition backoff.
-	lastFailure     error
-	lastFailureAt  time.Time
-	backoffUntil   time.Time
+	lastFailure      error
+	lastFailureAt    time.Time
+	backoffUntil     time.Time
 	consecutiveFails int
 }
 
@@ -542,55 +540,55 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 // =============================================================================
 
 type Realm struct {
-	Realm                                string            `json:"realm"`
-	Enabled                              bool              `json:"enabled"`
-	DisplayName                          string            `json:"displayName,omitempty"`
-	DisplayNameHtml                      string            `json:"displayNameHtml,omitempty"`
-	SslRequired                          string            `json:"sslRequired,omitempty"`
-	RegistrationAllowed                  bool              `json:"registrationAllowed"`
-	RegistrationEmailAsUsername          bool              `json:"registrationEmailAsUsername"`
-	EditUsernameAllowed                  bool              `json:"editUsernameAllowed"`
-	ResetPasswordAllowed                 bool              `json:"resetPasswordAllowed"`
-	RememberMe                           bool              `json:"rememberMe"`
-	VerifyEmail                          bool              `json:"verifyEmail"`
-	LoginWithEmailAllowed                bool              `json:"loginWithEmailAllowed"`
-	DuplicateEmailsAllowed               bool              `json:"duplicateEmailsAllowed"`
-	DefaultSignatureAlgorithm            string            `json:"defaultSignatureAlgorithm,omitempty"`
-	RevokeRefreshToken                   bool              `json:"revokeRefreshToken"`
-	RefreshTokenMaxReuse                 int64             `json:"refreshTokenMaxReuse"`
-	AccessTokenLifespan                  interface{}       `json:"accessTokenLifespan,omitempty"`
-	AccessTokenLifespanForImplicitFlow   interface{}       `json:"accessTokenLifespanForImplicitFlow,omitempty"`
-	SsoSessionIdleTimeout                interface{}       `json:"ssoSessionIdleTimeout,omitempty"`
-	SsoSessionMaxLifespan                interface{}       `json:"ssoSessionMaxLifespan,omitempty"`
-	SsoSessionIdleTimeoutRememberMe      interface{}       `json:"ssoSessionIdleTimeoutRememberMe,omitempty"`
-	SsoSessionMaxLifespanRememberMe      interface{}       `json:"ssoSessionMaxLifespanRememberMe,omitempty"`
-	OfflineSessionIdleTimeout            interface{}       `json:"offlineSessionIdleTimeout,omitempty"`
-	OfflineSessionMaxLifespanEnabled     bool              `json:"offlineSessionMaxLifespanEnabled"`
-	OfflineSessionMaxLifespan            interface{}       `json:"offlineSessionMaxLifespan,omitempty"`
-	ClientSessionIdleTimeout             interface{}       `json:"clientSessionIdleTimeout,omitempty"`
-	ClientSessionMaxLifespan             interface{}       `json:"clientSessionMaxLifespan,omitempty"`
-	AccessCodeLifespan                   interface{}       `json:"accessCodeLifespan,omitempty"`
-	AccessCodeLifespanUserAction         interface{}       `json:"accessCodeLifespanUserAction,omitempty"`
-	AccessCodeLifespanLogin              interface{}       `json:"accessCodeLifespanLogin,omitempty"`
-	ActionTokenGeneratedByAdminLifespan  interface{}       `json:"actionTokenGeneratedByAdminLifespan,omitempty"`
-	ActionTokenGeneratedByUserLifespan   interface{}       `json:"actionTokenGeneratedByUserLifespan,omitempty"`
-	BruteForceProtected                  bool              `json:"bruteForceProtected"`
-	PasswordPolicy                       string            `json:"passwordPolicy,omitempty"`
-	LoginTheme                           string            `json:"loginTheme,omitempty"`
-	AccountTheme                         string            `json:"accountTheme,omitempty"`
-	AdminTheme                           string            `json:"adminTheme,omitempty"`
-	EmailTheme                           string            `json:"emailTheme,omitempty"`
-	DefaultDefaultClientScopes           []string          `json:"defaultDefaultClientScopes,omitempty"`
-	DefaultOptionalClientScopes          []string          `json:"defaultOptionalClientScopes,omitempty"`
-	BrowserFlow                          string            `json:"browserFlow,omitempty"`
-	RegistrationFlow                     string            `json:"registrationFlow,omitempty"`
-	DirectGrantFlow                      string            `json:"directGrantFlow,omitempty"`
-	ResetCredentialsFlow                 string            `json:"resetCredentialsFlow,omitempty"`
-	ClientAuthenticationFlow             string            `json:"clientAuthenticationFlow,omitempty"`
-	UserManagedAccess                    bool              `json:"userManagedAccessAllowed"`
-	AdminPermissionsEnabled              bool              `json:"adminPermissionsEnabled"`
-	FrontendURL                          *string           `json:"frontendUrl,omitempty"`
-	Attributes                           map[string]string `json:"attributes,omitempty"`
+	Realm                               string            `json:"realm"`
+	Enabled                             bool              `json:"enabled"`
+	DisplayName                         string            `json:"displayName,omitempty"`
+	DisplayNameHtml                     string            `json:"displayNameHtml,omitempty"`
+	SslRequired                         string            `json:"sslRequired,omitempty"`
+	RegistrationAllowed                 bool              `json:"registrationAllowed"`
+	RegistrationEmailAsUsername         bool              `json:"registrationEmailAsUsername"`
+	EditUsernameAllowed                 bool              `json:"editUsernameAllowed"`
+	ResetPasswordAllowed                bool              `json:"resetPasswordAllowed"`
+	RememberMe                          bool              `json:"rememberMe"`
+	VerifyEmail                         bool              `json:"verifyEmail"`
+	LoginWithEmailAllowed               bool              `json:"loginWithEmailAllowed"`
+	DuplicateEmailsAllowed              bool              `json:"duplicateEmailsAllowed"`
+	DefaultSignatureAlgorithm           string            `json:"defaultSignatureAlgorithm,omitempty"`
+	RevokeRefreshToken                  bool              `json:"revokeRefreshToken"`
+	RefreshTokenMaxReuse                int64             `json:"refreshTokenMaxReuse"`
+	AccessTokenLifespan                 interface{}       `json:"accessTokenLifespan,omitempty"`
+	AccessTokenLifespanForImplicitFlow  interface{}       `json:"accessTokenLifespanForImplicitFlow,omitempty"`
+	SsoSessionIdleTimeout               interface{}       `json:"ssoSessionIdleTimeout,omitempty"`
+	SsoSessionMaxLifespan               interface{}       `json:"ssoSessionMaxLifespan,omitempty"`
+	SsoSessionIdleTimeoutRememberMe     interface{}       `json:"ssoSessionIdleTimeoutRememberMe,omitempty"`
+	SsoSessionMaxLifespanRememberMe     interface{}       `json:"ssoSessionMaxLifespanRememberMe,omitempty"`
+	OfflineSessionIdleTimeout           interface{}       `json:"offlineSessionIdleTimeout,omitempty"`
+	OfflineSessionMaxLifespanEnabled    bool              `json:"offlineSessionMaxLifespanEnabled"`
+	OfflineSessionMaxLifespan           interface{}       `json:"offlineSessionMaxLifespan,omitempty"`
+	ClientSessionIdleTimeout            interface{}       `json:"clientSessionIdleTimeout,omitempty"`
+	ClientSessionMaxLifespan            interface{}       `json:"clientSessionMaxLifespan,omitempty"`
+	AccessCodeLifespan                  interface{}       `json:"accessCodeLifespan,omitempty"`
+	AccessCodeLifespanUserAction        interface{}       `json:"accessCodeLifespanUserAction,omitempty"`
+	AccessCodeLifespanLogin             interface{}       `json:"accessCodeLifespanLogin,omitempty"`
+	ActionTokenGeneratedByAdminLifespan interface{}       `json:"actionTokenGeneratedByAdminLifespan,omitempty"`
+	ActionTokenGeneratedByUserLifespan  interface{}       `json:"actionTokenGeneratedByUserLifespan,omitempty"`
+	BruteForceProtected                 bool              `json:"bruteForceProtected"`
+	PasswordPolicy                      string            `json:"passwordPolicy,omitempty"`
+	LoginTheme                          string            `json:"loginTheme,omitempty"`
+	AccountTheme                        string            `json:"accountTheme,omitempty"`
+	AdminTheme                          string            `json:"adminTheme,omitempty"`
+	EmailTheme                          string            `json:"emailTheme,omitempty"`
+	DefaultDefaultClientScopes          []string          `json:"defaultDefaultClientScopes,omitempty"`
+	DefaultOptionalClientScopes         []string          `json:"defaultOptionalClientScopes,omitempty"`
+	BrowserFlow                         string            `json:"browserFlow,omitempty"`
+	RegistrationFlow                    string            `json:"registrationFlow,omitempty"`
+	DirectGrantFlow                     string            `json:"directGrantFlow,omitempty"`
+	ResetCredentialsFlow                string            `json:"resetCredentialsFlow,omitempty"`
+	ClientAuthenticationFlow            string            `json:"clientAuthenticationFlow,omitempty"`
+	UserManagedAccess                   bool              `json:"userManagedAccessAllowed"`
+	AdminPermissionsEnabled             bool              `json:"adminPermissionsEnabled"`
+	FrontendURL                         *string           `json:"frontendUrl,omitempty"`
+	Attributes                          map[string]string `json:"attributes,omitempty"`
 	// SmtpServer is Keycloak's RealmRepresentation.smtpServer map[string]string.
 	// Keycloak 26.x rejects any nested-object form ("Cannot parse the JSON");
 	// the only accepted shape is the flat string->string map.
@@ -825,43 +823,43 @@ func (c *ClientRepresentation) MarshalJSON() ([]byte, error) {
 		Secret                                 string            `json:"secret,omitempty"`
 	}
 	tmp, err := json.Marshal(clientWire{
-		ID: c.ID,
-		ClientID: c.ClientID,
-		Name: c.Name,
-		Description: c.Description,
-		Enabled: c.Enabled,
-		RootURL: c.RootURL,
-		HomeURL: c.HomeURL,
-		BaseURL: c.BaseURL,
-		AdminURL: c.AdminURL,
-		ValidRedirectURIs: c.ValidRedirectURIs,
-		WebOrigins: c.WebOrigins,
-		StandardFlowEnabled: c.StandardFlowEnabled,
-		DirectAccessGrantsEnabled: c.DirectAccessGrantsEnabled,
-		ImplicitFlowEnabled: c.ImplicitFlowEnabled,
-		ServiceAccountsEnabled: c.ServiceAccountsEnabled,
-		PublicClient: c.PublicClient,
-		BearerOnly: c.BearerOnly,
-		ConsentRequired: c.ConsentRequired,
-		FullScopeAllowed: c.FullScopeAllowed,
-		AlwaysDisplayInConsole: c.AlwaysDisplayInConsole,
-		FrontchannelLogoutEnabled: c.FrontchannelLogoutEnabled,
-		FrontchannelLogoutURL: c.FrontchannelLogoutURL,
-		BackchannelLogoutURL: c.BackchannelLogoutURL,
-		BackchannelLogoutSessionRequired: c.BackchannelLogoutSessionRequired,
+		ID:                                     c.ID,
+		ClientID:                               c.ClientID,
+		Name:                                   c.Name,
+		Description:                            c.Description,
+		Enabled:                                c.Enabled,
+		RootURL:                                c.RootURL,
+		HomeURL:                                c.HomeURL,
+		BaseURL:                                c.BaseURL,
+		AdminURL:                               c.AdminURL,
+		ValidRedirectURIs:                      c.ValidRedirectURIs,
+		WebOrigins:                             c.WebOrigins,
+		StandardFlowEnabled:                    c.StandardFlowEnabled,
+		DirectAccessGrantsEnabled:              c.DirectAccessGrantsEnabled,
+		ImplicitFlowEnabled:                    c.ImplicitFlowEnabled,
+		ServiceAccountsEnabled:                 c.ServiceAccountsEnabled,
+		PublicClient:                           c.PublicClient,
+		BearerOnly:                             c.BearerOnly,
+		ConsentRequired:                        c.ConsentRequired,
+		FullScopeAllowed:                       c.FullScopeAllowed,
+		AlwaysDisplayInConsole:                 c.AlwaysDisplayInConsole,
+		FrontchannelLogoutEnabled:              c.FrontchannelLogoutEnabled,
+		FrontchannelLogoutURL:                  c.FrontchannelLogoutURL,
+		BackchannelLogoutURL:                   c.BackchannelLogoutURL,
+		BackchannelLogoutSessionRequired:       c.BackchannelLogoutSessionRequired,
 		BackchannelLogoutRevokeOfflineSessions: c.BackchannelLogoutRevokeOfflineSessions,
-		Protocol: c.Protocol,
-		AuthorizationServicesEnabled: c.AuthorizationServicesEnabled,
-		OAuth2DeviceAuthorizationGrantEnabled: c.OAuth2DeviceAuthorizationGrantEnabled,
-		StandardTokenExchangeEnabled: c.StandardTokenExchangeEnabled,
-		UseRefreshTokens: c.UseRefreshTokens,
-		ClientSessionIdleTimeout: c.ClientSessionIdleTimeout,
-		ClientSessionMaxLifespan: c.ClientSessionMaxLifespan,
-		ClientOfflineSessionIdleTimeout: c.ClientOfflineSessionIdleTimeout,
-		ClientOfflineSessionMaxLifespan: c.ClientOfflineSessionMaxLifespan,
-		PkceCodeChallengeMethod: c.PkceCodeChallengeMethod,
-		Attributes: c.Attributes,
-		Secret: c.Secret,
+		Protocol:                               c.Protocol,
+		AuthorizationServicesEnabled:           c.AuthorizationServicesEnabled,
+		OAuth2DeviceAuthorizationGrantEnabled:  c.OAuth2DeviceAuthorizationGrantEnabled,
+		StandardTokenExchangeEnabled:           c.StandardTokenExchangeEnabled,
+		UseRefreshTokens:                       c.UseRefreshTokens,
+		ClientSessionIdleTimeout:               c.ClientSessionIdleTimeout,
+		ClientSessionMaxLifespan:               c.ClientSessionMaxLifespan,
+		ClientOfflineSessionIdleTimeout:        c.ClientOfflineSessionIdleTimeout,
+		ClientOfflineSessionMaxLifespan:        c.ClientOfflineSessionMaxLifespan,
+		PkceCodeChallengeMethod:                c.PkceCodeChallengeMethod,
+		Attributes:                             c.Attributes,
+		Secret:                                 c.Secret,
 	})
 	if err != nil {
 		return nil, err

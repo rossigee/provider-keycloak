@@ -33,11 +33,11 @@ import (
 
 type mockRealmClient struct {
 	*testhelpers.BaseMockClient
-	getRealmFn           func(ctx context.Context, realm string) (*clients.Realm, error)
-	createRealmFn        func(ctx context.Context, r *clients.Realm) (*clients.Realm, error)
-	updateRealmFn        func(ctx context.Context, r *clients.Realm) error
-	deleteRealmFn        func(ctx context.Context, realm string) error
-	resetClientSecretFn  func(ctx context.Context, realm, clientID, secretValue string) error
+	getRealmFn          func(ctx context.Context, realm string) (*clients.Realm, error)
+	createRealmFn       func(ctx context.Context, r *clients.Realm) (*clients.Realm, error)
+	updateRealmFn       func(ctx context.Context, r *clients.Realm) error
+	deleteRealmFn       func(ctx context.Context, realm string) error
+	resetClientSecretFn func(ctx context.Context, realm, clientID, secretValue string) error
 }
 
 func (m *mockRealmClient) GetRealm(ctx context.Context, realm string) (*clients.Realm, error) {
