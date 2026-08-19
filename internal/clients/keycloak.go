@@ -475,7 +475,7 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 		// io.Reader (unlike *bytes.Reader) isn't special-cased by
 		// NewRequestWithContext for Content-Length auto-detection -
 		// restore identical wire behavior to the non-debug path.
-		req.ContentLength = int64(counted.r.Size())
+		req.ContentLength = counted.r.Size()
 	}
 
 	c.mu.Lock()

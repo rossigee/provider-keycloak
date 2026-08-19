@@ -32,7 +32,3 @@ limitations under the License.
 //go:generate go run -tags generate sigs.k8s.io/controller-tools/cmd/controller-gen crd:crdVersions=v1 paths=./v1beta1 paths=./authenticationflow/v1alpha1 paths=./authorizationpolicy/v1alpha1 paths=./authz/v1alpha1 paths=./client/v1alpha1 paths=./clientcertificates/v1alpha1 paths=./clientinitialaccess/v1alpha1 paths=./component/v1alpha1 paths=./events/v1alpha1 paths=./group/v1alpha1 paths=./identityprovider/v1alpha1 paths=./keys/v1alpha1 paths=./openidclient/v1alpha1 paths=./realm/v1alpha1 paths=./realmimpexp/v1alpha1 paths=./role/v1alpha1 paths=./rolemappings/v1alpha1 paths=./scopes/v1alpha1 paths=./user/v1alpha1 paths=./userfederation/v1alpha1 output:artifacts:config=../package/crds
 
 package apis
-
-import (
-	"sigs.k8s.io/controller-tools/cmd/controller-gen"
-)
