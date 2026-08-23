@@ -67,9 +67,10 @@ jobs:
         run: |
           PLATFORM=$(go env GOOS)_$(go env GOARCH)
           mkdir -p .cache/tools/${PLATFORM}
-          curl -sSL "https://github.com/crossplane/crossplane/releases/download/v2.3.2/crossplane-${PLATFORM}" -o .cache/tools/${PLATFORM}/crossplane-cli-v2.3.5
+          curl -sSL "https://github.com/crossplane/crossplane/releases/download/v2.3.5/crossplane-${PLATFORM}" -o .cache/tools/${PLATFORM}/crossplane-cli-v2.3.5
           chmod +x .cache/tools/${PLATFORM}/crossplane-cli-v2.3.5
-          ln -sf .cache/tools/${PLATFORM}/crossplane-cli-v2.3.5 .cache/tools/${PLATFORM}/crossplane-cli
+          ln -sf crossplane-cli-v2.3.5 .cache/tools/${PLATFORM}/crossplane-cli
+          ln -sf crossplane-cli-v2.3.5 .cache/tools/${PLATFORM}/crossplane-cli-v2.3.3
 
 
       - name: Build and Publish All Artifacts
