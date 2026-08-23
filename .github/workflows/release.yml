@@ -67,9 +67,10 @@ jobs:
         run: |
           PLATFORM=$(go env GOOS)_$(go env GOARCH)
           mkdir -p .cache/tools/${PLATFORM}
-          curl -sSL "https://github.com/crossplane/crossplane/releases/download/v2.3.5/crossplane-${PLATFORM}" -o .cache/tools/${PLATFORM}/crossplane-cli-v2.3.5
+          curl -fsSL "https://releases.crossplane.io/stable/v2.3.5/bin/${PLATFORM}/crank" -o .cache/tools/${PLATFORM}/crossplane-cli-v2.3.5
           chmod +x .cache/tools/${PLATFORM}/crossplane-cli-v2.3.5
           ln -sf crossplane-cli-v2.3.5 .cache/tools/${PLATFORM}/crossplane-cli
+          ln -sf crossplane-cli-v2.3.5 .cache/tools/${PLATFORM}/crossplane-cli-v2.3.3
           ln -sf crossplane-cli-v2.3.5 .cache/tools/${PLATFORM}/crossplane-cli-v2.3.3
 
 
