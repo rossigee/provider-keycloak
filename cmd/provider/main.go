@@ -27,7 +27,27 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/feature"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/logging"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/ratelimiter"
+	"github.com/crossplane/crossplane-runtime/v2/pkg/statemetrics"
 	"github.com/rossigee/provider-keycloak/apis"
+	authenticationflowv1alpha1 "github.com/rossigee/provider-keycloak/apis/authenticationflow/v1alpha1"
+	authorizationpolicyv1alpha1 "github.com/rossigee/provider-keycloak/apis/authorizationpolicy/v1alpha1"
+	authzv1alpha1 "github.com/rossigee/provider-keycloak/apis/authz/v1alpha1"
+	clientv1alpha1 "github.com/rossigee/provider-keycloak/apis/client/v1alpha1"
+	clientcertificatesv1alpha1 "github.com/rossigee/provider-keycloak/apis/clientcertificates/v1alpha1"
+	clientinitialaccessv1alpha1 "github.com/rossigee/provider-keycloak/apis/clientinitialaccess/v1alpha1"
+	componentv1alpha1 "github.com/rossigee/provider-keycloak/apis/component/v1alpha1"
+	eventsv1alpha1 "github.com/rossigee/provider-keycloak/apis/events/v1alpha1"
+	groupv1alpha1 "github.com/rossigee/provider-keycloak/apis/group/v1alpha1"
+	identityproviderv1alpha1 "github.com/rossigee/provider-keycloak/apis/identityprovider/v1alpha1"
+	keysv1alpha1 "github.com/rossigee/provider-keycloak/apis/keys/v1alpha1"
+	openidclientv1alpha1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1alpha1"
+	realmv1alpha1 "github.com/rossigee/provider-keycloak/apis/realm/v1alpha1"
+	realmimpexpv1alpha1 "github.com/rossigee/provider-keycloak/apis/realmimpexp/v1alpha1"
+	rolev1alpha1 "github.com/rossigee/provider-keycloak/apis/role/v1alpha1"
+	rolemappingsv1alpha1 "github.com/rossigee/provider-keycloak/apis/rolemappings/v1alpha1"
+	scopesv1alpha1 "github.com/rossigee/provider-keycloak/apis/scopes/v1alpha1"
+	userv1alpha1 "github.com/rossigee/provider-keycloak/apis/user/v1alpha1"
+	userfederationv1alpha1 "github.com/rossigee/provider-keycloak/apis/userfederation/v1alpha1"
 	controller "github.com/rossigee/provider-keycloak/internal/controller"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -37,17 +57,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	metricserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 func main() {
 	var (
-		app              = kingpin.New(filepath.Base(os.Args[0]), "Keycloak support for Crossplane.").DefaultEnvars()
-		debug            = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
-		leaderElection   = app.Flag("leader-election", "Use leader election for the controller manager.").Short('l').Default("false").OverrideDefaultFromEnvar("LEADER_ELECTION").Bool()
-		syncInterval     = app.Flag("sync", "How often all resources will be double-checked for drift from the desired state.").Short('s').Default("1h").Duration()
-		pollInterval     = app.Flag("poll", "How often individual resources will be checked for drift from the desired state").Default("1m").Duration()
-		maxReconcileRate = app.Flag("max-reconcile-rate", "The global maximum rate per second at which resources may checked for drift from the desired state.").Default("10").Int()
-		cacheInitTimeout = app.Flag("cache-init-timeout", "Timeout for cache initialization on startup; increase this if the provider fails to start on slow Kubernetes API servers.").Default("5m").Duration()
+		app                     = kingpin.New(filepath.Base(os.Args[0]), "Keycloak support for Crossplane.").DefaultEnvars()
+		debug                   = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
+		leaderElection          = app.Flag("leader-election", "Use leader election for the controller manager.").Short('l').Default("false").OverrideDefaultFromEnvar("LEADER_ELECTION").Bool()
+		syncInterval            = app.Flag("sync", "How often all resources will be double-checked for drift from the desired state.").Short('s').Default("1h").Duration()
+		pollInterval            = app.Flag("poll", "How often individual resources will be checked for drift from the desired state").Default("1m").Duration()
+		maxReconcileRate        = app.Flag("max-reconcile-rate", "The global maximum rate per second at which resources may checked for drift from the desired state.").Default("10").Int()
+		cacheInitTimeout        = app.Flag("cache-init-timeout", "Timeout for cache initialization on startup; increase this if the provider fails to start on slow Kubernetes API servers.").Default("5m").Duration()
+		pollStateMetricInterval = app.Flag("poll-state-metric", "State metric recording interval").Default("5s").Duration()
+		metricsBindAddress      = app.Flag("metrics-bind-address", "The address the metrics endpoint binds to.").Default(":8080").String()
 
 		// namespace = app.Flag("namespace", "Namespace used to set as default scope in default secret store config.").Default("crossplane-system").Envar("POD_NAMESPACE").String()
 	)
@@ -93,9 +117,20 @@ func main() {
 		Controller: config.Controller{
 			CacheSyncTimeout: 10 * time.Minute,
 		},
+		Metrics: metricserver.Options{
+			BindAddress: *metricsBindAddress,
+		},
 	})
 	kingpin.FatalIfError(err, "Cannot create controller manager")
 	kingpin.FatalIfError(apis.AddToScheme(mgr.GetScheme()), "Cannot add Http APIs to scheme")
+
+	mrStateMetrics := statemetrics.NewMRStateMetrics()
+	metrics.Registry.MustRegister(mrStateMetrics)
+
+	mo := xpcontroller.MetricOptions{
+		PollStateMetricInterval: *pollStateMetricInterval,
+		MRStateMetrics:          mrStateMetrics,
+	}
 
 	o := xpcontroller.Options{
 		Logger:                  log,
@@ -103,9 +138,34 @@ func main() {
 		PollInterval:            *pollInterval,
 		GlobalRateLimiter:       ratelimiter.NewGlobal(*maxReconcileRate),
 		Features:                &feature.Flags{},
+		MetricOptions:           &mo,
 	}
 
 	kingpin.FatalIfError(controller.Setup(mgr, o), "Cannot setup Keycloak controllers")
+
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &authenticationflowv1alpha1.AuthenticationFlowList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for AuthenticationFlow")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &authorizationpolicyv1alpha1.AuthorizationPolicyList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for AuthorizationPolicy")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &authzv1alpha1.AuthzResourceList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for AuthzResource")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &clientv1alpha1.ProtocolMapperList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ProtocolMapper")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &clientcertificatesv1alpha1.ClientCertificateList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientCertificate")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &clientinitialaccessv1alpha1.ClientInitialAccessList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientInitialAccess")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &componentv1alpha1.ComponentList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Component")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &eventsv1alpha1.RealmEventsConfigList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for RealmEventsConfig")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &groupv1alpha1.GroupList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Group")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &identityproviderv1alpha1.IdentityProviderList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for IdentityProvider")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &keysv1alpha1.RealmKeysList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for RealmKeys")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &openidclientv1alpha1.ClientList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Client")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &openidclientv1alpha1.ClientDefaultScopesList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientDefaultScopes")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &openidclientv1alpha1.ClientOptionalScopesList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientOptionalScopes")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &realmv1alpha1.RealmList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Realm")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &realmimpexpv1alpha1.RealmImportList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for RealmImport")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &rolev1alpha1.RoleList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Role")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &rolemappingsv1alpha1.ClientRoleMappingList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientRoleMapping")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &scopesv1alpha1.ClientScopeMappingList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientScopeMapping")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &scopesv1alpha1.ClientScopeList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientScope")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &userv1alpha1.UserList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for User")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &userv1alpha1.GroupsList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Groups")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &userfederationv1alpha1.UserFederationProviderList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for UserFederationProvider")
 
 	kingpin.FatalIfError(mgr.AddHealthzCheck("healthz", healthz.Ping), "Cannot add health check")
 	kingpin.FatalIfError(mgr.AddReadyzCheck("readyz", healthz.Ping), "Cannot add ready check")
