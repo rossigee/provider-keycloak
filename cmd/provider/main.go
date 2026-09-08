@@ -49,6 +49,7 @@ import (
 	userv1alpha1 "github.com/rossigee/provider-keycloak/apis/user/v1alpha1"
 	userfederationv1alpha1 "github.com/rossigee/provider-keycloak/apis/userfederation/v1alpha1"
 	controller "github.com/rossigee/provider-keycloak/internal/controller"
+	"github.com/rossigee/provider-keycloak/internal/features"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
@@ -72,6 +73,7 @@ func main() {
 		cacheInitTimeout        = app.Flag("cache-init-timeout", "Timeout for cache initialization on startup; increase this if the provider fails to start on slow Kubernetes API servers.").Default("5m").Duration()
 		pollStateMetricInterval = app.Flag("poll-state-metric", "State metric recording interval").Default("5s").Duration()
 		metricsBindAddress      = app.Flag("metrics-bind-address", "The address the metrics endpoint binds to.").Default(":8080").String()
+		enableManagementPolicies = app.Flag("enable-management-policies", "Enable support for Management Policies.").Default("true").Bool()
 
 		// namespace = app.Flag("namespace", "Namespace used to set as default scope in default secret store config.").Default("crossplane-system").Envar("POD_NAMESPACE").String()
 	)
@@ -127,6 +129,12 @@ func main() {
 	mrStateMetrics := statemetrics.NewMRStateMetrics()
 	metrics.Registry.MustRegister(mrStateMetrics)
 
+	featureFlags := &feature.Flags{}
+	if *enableManagementPolicies {
+		featureFlags.Enable(features.EnableAlphaManagementPolicies)
+		log.Info("Alpha feature enabled", "flag", features.EnableAlphaManagementPolicies)
+	}
+
 	mo := xpcontroller.MetricOptions{
 		PollStateMetricInterval: *pollStateMetricInterval,
 		MRStateMetrics:          mrStateMetrics,
@@ -137,7 +145,7 @@ func main() {
 		MaxConcurrentReconciles: *maxReconcileRate,
 		PollInterval:            *pollInterval,
 		GlobalRateLimiter:       ratelimiter.NewGlobal(*maxReconcileRate),
-		Features:                &feature.Flags{},
+		Features:                featureFlags,
 		MetricOptions:           &mo,
 	}
 

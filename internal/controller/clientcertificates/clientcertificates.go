@@ -7,6 +7,7 @@ import (
 	xpcontroller "github.com/crossplane/crossplane-runtime/v2/pkg/controller"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/event"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/reconciler/managed"
+	"github.com/rossigee/provider-keycloak/internal/features"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	"github.com/pkg/errors"
@@ -31,12 +32,18 @@ const (
 const controllerName = "clientcertificates.clientcertificates.keycloak.crossplane.io"
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
-	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(clientcertificatesv1alpha1.SchemeGroupVersion.WithKind("ClientCertificate")),
+	opts := []managed.ReconcilerOption{
 		managed.WithExternalConnector(&connector{kube: mgr.GetClient()}),
 		managed.WithLogger(o.Logger.WithValues("controller", "ClientCertificate")),
 		managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorder(controllerName))),
-	)
+	}
+	if o.Features.Enabled(features.EnableAlphaManagementPolicies) {
+		opts = append(opts, managed.WithManagementPolicies())
+	}
+
+	r := managed.NewReconciler(mgr,
+		resource.ManagedKind(clientcertificatesv1alpha1.SchemeGroupVersion.WithKind("ClientCertificate")),
+		opts...)
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
