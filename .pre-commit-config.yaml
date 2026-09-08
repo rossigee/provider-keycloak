@@ -1,84 +1,122 @@
 repos:
-  # Go formatting
-  - repo: local
-    hooks:
-      - id: go-fmt
-        name: Go fmt
-        entry: go fmt ./...
-        language: system
-        types: [go]
-        pass_filenames: false
-        stages: [commit]
-
-      - id: go-vet
-        name: Go vet
-        entry: go vet ./...
-        language: system
-        types: [go]
-        pass_filenames: false
-        stages: [commit]
-
-      - id: golangci-lint
-        name: golangci-lint
-        entry: golangci-lint run --fix
-        language: system
-        types: [go]
-        pass_filenames: false
-        stages: [commit]
-
-  # Prevent large files from being committed
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
-        name: Trim trailing whitespace
-        stages: [commit]
-
+        args: [--markdown-linebreak-ext=md]
       - id: end-of-file-fixer
-        name: Fix end of file
-        stages: [commit]
-
       - id: check-yaml
-        name: Check YAML
-        args: ['--safe']
-        stages: [commit]
-
+        args: [--allow-multiple-documents]
       - id: check-added-large-files
-        name: Check for large files
-        args: ['--maxkb=500']
-        stages: [commit]
-
+      - id: check-case-conflict
       - id: check-merge-conflict
-        name: Check for merge conflicts
-        stages: [commit]
+      - id: check-executables-have-shebangs
+      - id: check-json
+      - id: detect-private-key
 
-  # Markdown linting
-  - repo: https://github.com/markdownlint/markdownlint
-    rev: v0.12.0
+  - repo: https://github.com/psf/black
+    rev: 26.5.1
+    hooks:
+      - id: black
+        language_version: python3
+        files: \.py$
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black]
+
+  - repo: local
+    hooks:
+      - id: golangci-lint
+        name: golangci-lint
+        entry: golangci-lint run --timeout=5m
+        language: system
+        files: \.go$
+        pass_filenames: false
+
+  - repo: https://github.com/tekwizely/pre-commit-golang
+    rev: v1.0.0-rc.1
+    hooks:
+      - id: go-fmt
+        exclude: 'zz_generated\..*\.go$|tools/'
+      - id: go-imports
+        exclude: 'zz_generated\..*\.go$|tools/'
+      - id: go-vet-mod
+        exclude: 'tools/'
+      - id: go-mod-tidy
+        exclude: 'tools/'
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: [-c=.yamllint.yaml]
+
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.41.0
     hooks:
       - id: markdownlint
-        name: Markdown lint
-        types: [markdown]
-        args: ['--fix']
-        stages: [commit]
+        args: [--config=.markdownlint.yaml]
 
-  # YAML formatting
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.1.0
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
     hooks:
-      - id: prettier
-        name: Prettier (YAML/JSON)
-        types: [yaml, json]
-        stages: [commit]
+      - id: hadolint-docker
+        args: [--ignore=DL3008, --ignore=DL3009]
 
-  # Security checks
-  - repo: https://github.com/semgrep/semgrep
-    rev: v1.45.0
+  - repo: local
     hooks:
-      - id: semgrep
-        name: Semgrep security scan
-        types: [go]
+      - id: check-binaries
+        name: Check for binary files
+        entry: bash -c 'find . -type f -executable -exec file {} \; | grep -E "ELF|executable|binary" | grep -v "\.git" | grep -v "^./build/" | grep -v "^./_output/" | grep -v "^./.cache/" | grep -v "^./scripts/" && exit 1 || exit 0'
         language: system
-        entry: semgrep --quiet --error --config=p/security-audit
         pass_filenames: false
-        stages: [push]
+
+      - id: go-generate
+        name: go generate
+        entry: make generate
+        language: system
+        files: \.go$
+        pass_filenames: false
+
+      - id: go-test
+        name: go test
+        entry: make test
+        language: system
+        files: \.go$
+        pass_filenames: false
+
+      - id: no-commit-secrets
+        name: Check for secrets
+        entry: |
+          python3 -c "
+          import sys
+          import re
+
+          secret_patterns = [
+              r'(?i)(password|passwd|pwd)\s*[=:]\s*[\"\']\w+[\"\']\s*',
+              r'(?i)(api[_-]?key|apikey)\s*[=:]\s*[\"\']\w+[\"\']\s*',
+              r'(?i)(secret[_-]?key|secretkey)\s*[=:]\s*[\"\']\w+[\"\']\s*',
+              r'(?i)(access[_-]?token|accesstoken)\s*[=:]\s*[\"\']\w+[\"\']\s*',
+              r'(?i)(auth[_-]?token|authtoken)\s*[=:]\s*[\"\']\w+[\"\']\s*',
+              r'(?i)(discord[_-]?token|bot[_-]?token)\s*[=:]\s*[\"\']\w+[\"\']\s*',
+          ]
+
+          for filename in sys.argv[1:]:
+              if filename.endswith('.pre-commit-config.yaml') or filename.endswith('_test.go'):
+                  continue
+              try:
+                  with open(filename, 'r', encoding='utf-8', errors='ignore') as f:
+                      content = f.read()
+                      for pattern in secret_patterns:
+                          if re.search(pattern, content):
+                              print(f'Potential secret found in {filename}')
+                              sys.exit(1)
+              except Exception:
+                  pass
+          "
+        language: system
+        files: \.(go|yaml|yml|json|md|sh|env)$
+        exclude: (\.pre-commit-config\.yaml$|_test\.go$)
