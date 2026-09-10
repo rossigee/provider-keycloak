@@ -64,15 +64,15 @@ import (
 
 func main() {
 	var (
-		app                     = kingpin.New(filepath.Base(os.Args[0]), "Keycloak support for Crossplane.").DefaultEnvars()
-		debug                   = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
-		leaderElection          = app.Flag("leader-election", "Use leader election for the controller manager.").Short('l').Default("false").OverrideDefaultFromEnvar("LEADER_ELECTION").Bool()
-		syncInterval            = app.Flag("sync", "How often all resources will be double-checked for drift from the desired state.").Short('s').Default("1h").Duration()
-		pollInterval            = app.Flag("poll", "How often individual resources will be checked for drift from the desired state").Default("1m").Duration()
-		maxReconcileRate        = app.Flag("max-reconcile-rate", "The global maximum rate per second at which resources may checked for drift from the desired state.").Default("10").Int()
-		cacheInitTimeout        = app.Flag("cache-init-timeout", "Timeout for cache initialization on startup; increase this if the provider fails to start on slow Kubernetes API servers.").Default("5m").Duration()
-		pollStateMetricInterval = app.Flag("poll-state-metric", "State metric recording interval").Default("5s").Duration()
-		metricsBindAddress      = app.Flag("metrics-bind-address", "The address the metrics endpoint binds to.").Default(":8080").String()
+		app                      = kingpin.New(filepath.Base(os.Args[0]), "Keycloak support for Crossplane.").DefaultEnvars()
+		debug                    = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
+		leaderElection           = app.Flag("leader-election", "Use leader election for the controller manager.").Short('l').Default("false").OverrideDefaultFromEnvar("LEADER_ELECTION").Bool()
+		syncInterval             = app.Flag("sync", "How often all resources will be double-checked for drift from the desired state.").Short('s').Default("1h").Duration()
+		pollInterval             = app.Flag("poll", "How often individual resources will be checked for drift from the desired state").Default("1m").Duration()
+		maxReconcileRate         = app.Flag("max-reconcile-rate", "The global maximum rate per second at which resources may checked for drift from the desired state.").Default("10").Int()
+		cacheInitTimeout         = app.Flag("cache-init-timeout", "Timeout for cache initialization on startup; increase this if the provider fails to start on slow Kubernetes API servers.").Default("5m").Duration()
+		pollStateMetricInterval  = app.Flag("poll-state-metric", "State metric recording interval").Default("5s").Duration()
+		metricsBindAddress       = app.Flag("metrics-bind-address", "The address the metrics endpoint binds to.").Default(":8080").String()
 		enableManagementPolicies = app.Flag("enable-management-policies", "Enable support for Management Policies.").Default("true").Bool()
 
 		// namespace = app.Flag("namespace", "Namespace used to set as default scope in default secret store config.").Default("crossplane-system").Envar("POD_NAMESPACE").String()
