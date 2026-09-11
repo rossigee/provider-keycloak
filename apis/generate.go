@@ -16,8 +16,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// NOTE: This provider uses a native HTTP client and does not use angryjet or
-// upjet. Interface method implementations in zz_generated.managed.go are
+// NOTE: This provider uses a native HTTP client and does not use angryjet.
+// Interface method implementations in zz_generated.managed.go are
 // written by hand and must not be overwritten by code generators.
 
 // Remove existing CRDs
