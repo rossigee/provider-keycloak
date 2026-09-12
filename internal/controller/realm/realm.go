@@ -34,7 +34,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	realmv1alpha1 "github.com/rossigee/provider-keycloak/apis/realm/v1alpha1"
+	realmv1beta1 "github.com/rossigee/provider-keycloak/apis/realm/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 )
@@ -48,7 +48,7 @@ const (
 	errUpdateRealm       = "cannot update Keycloak realm"
 	errDeleteRealm       = "cannot delete Keycloak realm"
 
-	controllerName = "realms.realm.keycloak.crossplane.io"
+	controllerName = "realms.realm.keycloak.m.crossplane.io"
 )
 
 // Setup registers the Realm controller.
@@ -63,13 +63,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(realmv1alpha1.SchemeGroupVersion.WithKind("Realm")),
+		resource.ManagedKind(realmv1beta1.SchemeGroupVersion.WithKind("Realm")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&realmv1alpha1.Realm{}).
+		For(&realmv1beta1.Realm{}).
 		Complete(r)
 }
 
@@ -80,7 +80,7 @@ type external struct {
 }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*realmv1alpha1.Realm)
+	cr, ok := mg.(*realmv1beta1.Realm)
 	if !ok {
 		return nil, errors.New(errNotRealm)
 	}
@@ -106,7 +106,7 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 func (e *external) Disconnect(_ context.Context) error { return nil }
 
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
-	cr, ok := mg.(*realmv1alpha1.Realm)
+	cr, ok := mg.(*realmv1beta1.Realm)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotRealm)
 	}
@@ -142,7 +142,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 }
 
 func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
-	cr, ok := mg.(*realmv1alpha1.Realm)
+	cr, ok := mg.(*realmv1beta1.Realm)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotRealm)
 	}
@@ -155,7 +155,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
-	cr, ok := mg.(*realmv1alpha1.Realm)
+	cr, ok := mg.(*realmv1beta1.Realm)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotRealm)
 	}
@@ -357,7 +357,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
-	cr, ok := mg.(*realmv1alpha1.Realm)
+	cr, ok := mg.(*realmv1beta1.Realm)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotRealm)
 	}
@@ -369,7 +369,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
-func realmParamsToRepresentation(ctx context.Context, kube client.Client, p *realmv1alpha1.RealmParameters) *clients.Realm {
+func realmParamsToRepresentation(ctx context.Context, kube client.Client, p *realmv1beta1.RealmParameters) *clients.Realm {
 	r := &clients.Realm{Realm: p.Realm}
 	if p.Enabled != nil {
 		r.Enabled = *p.Enabled
@@ -538,7 +538,7 @@ func realmParamsToRepresentation(ctx context.Context, kube client.Client, p *rea
 	return r
 }
 
-func realmUpToDate(desired *realmv1alpha1.RealmParameters, actual *clients.Realm) bool {
+func realmUpToDate(desired *realmv1beta1.RealmParameters, actual *clients.Realm) bool {
 	if desired.Enabled != nil && *desired.Enabled != actual.Enabled {
 		return false
 	}
@@ -712,7 +712,7 @@ func realmUpToDate(desired *realmv1alpha1.RealmParameters, actual *clients.Realm
 // the flat map[string]string Keycloak expects for RealmRepresentation.smtpServer.
 // Keycloak 26.x rejects any nested-object form ("Cannot parse the JSON"),
 // so auth.username and auth.password are flattened to "user" / "password".
-func buildSmtpServerMap(ctx context.Context, kube client.Client, p *realmv1alpha1.SmtpServer) (map[string]string, error) {
+func buildSmtpServerMap(ctx context.Context, kube client.Client, p *realmv1beta1.SmtpServer) (map[string]string, error) {
 	m := buildSmtpServerMapFields(p)
 
 	if len(p.Auth) > 0 && p.Auth[0].PasswordSecretRef != nil {
@@ -739,7 +739,7 @@ func buildSmtpServerMap(ctx context.Context, kube client.Client, p *realmv1alpha
 
 // buildSmtpServerMapFields returns the non-secret fields of an SmtpServer
 // in the flat map[string]string shape Keycloak expects.
-func buildSmtpServerMapFields(p *realmv1alpha1.SmtpServer) map[string]string {
+func buildSmtpServerMapFields(p *realmv1beta1.SmtpServer) map[string]string {
 	m := map[string]string{}
 	if p.Host != nil {
 		m["host"] = *p.Host

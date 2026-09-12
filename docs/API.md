@@ -20,7 +20,7 @@ Complete reference for all 21 managed resources provided by provider-keycloak.
 Manages Keycloak realms (isolated authentication domains).
 
 **Kind**: `Realm`  
-**Group**: `realm.keycloak.crossplane.io`  
+**Group**: `realm.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -33,7 +33,7 @@ Manages Keycloak realms (isolated authentication domains).
 
 **Example**:
 ```yaml
-apiVersion: realm.keycloak.crossplane.io/v1alpha1
+apiVersion: realm.keycloak.m.crossplane.io/v1beta1
 kind: Realm
 metadata:
   name: my-realm
@@ -51,7 +51,7 @@ spec:
 Manages Keycloak OIDC clients for application authentication.
 
 **Kind**: `Client`  
-**Group**: `openidclient.keycloak.crossplane.io`  
+**Group**: `openidclient.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -68,7 +68,7 @@ Manages Keycloak OIDC clients for application authentication.
 
 **Example**:
 ```yaml
-apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+apiVersion: openidclient.keycloak.m.crossplane.io/v1beta1
 kind: Client
 metadata:
   name: web-app
@@ -94,7 +94,7 @@ spec:
 Manages Keycloak users within a realm.
 
 **Kind**: `User`  
-**Group**: `user.keycloak.crossplane.io`  
+**Group**: `user.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -108,7 +108,7 @@ Manages Keycloak users within a realm.
 
 **Example**:
 ```yaml
-apiVersion: user.keycloak.crossplane.io/v1alpha1
+apiVersion: user.keycloak.m.crossplane.io/v1beta1
 kind: User
 metadata:
   name: john-user
@@ -129,7 +129,7 @@ spec:
 Manages Keycloak user groups for role inheritance.
 
 **Kind**: `Group`  
-**Group**: `user.keycloak.crossplane.io`  
+**Group**: `user.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -140,7 +140,7 @@ Manages Keycloak user groups for role inheritance.
 
 **Example**:
 ```yaml
-apiVersion: user.keycloak.crossplane.io/v1alpha1
+apiVersion: user.keycloak.m.crossplane.io/v1beta1
 kind: Group
 metadata:
   name: admins-group
@@ -163,7 +163,7 @@ spec:
 Manages realm-level roles assigned across all clients.
 
 **Kind**: `Role`  
-**Group**: `role.keycloak.crossplane.io`  
+**Group**: `role.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -174,7 +174,7 @@ Manages realm-level roles assigned across all clients.
 
 **Example**:
 ```yaml
-apiVersion: role.keycloak.crossplane.io/v1alpha1
+apiVersion: role.keycloak.m.crossplane.io/v1beta1
 kind: Role
 metadata:
   name: admin-role
@@ -192,7 +192,7 @@ spec:
 Manages client-specific roles within a Keycloak client.
 
 **Kind**: `Role`  
-**Group**: `role.keycloak.crossplane.io`  
+**Group**: `role.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -208,7 +208,7 @@ Manages client-specific roles within a Keycloak client.
 Manages UMA (User-Managed Access) resources for fine-grained authorization.
 
 **Kind**: `AuthorizationResource`  
-**Group**: `authz.keycloak.crossplane.io`  
+**Group**: `authz.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -222,7 +222,7 @@ Manages UMA (User-Managed Access) resources for fine-grained authorization.
 
 **Example**:
 ```yaml
-apiVersion: authz.keycloak.crossplane.io/v1alpha1
+apiVersion: authz.keycloak.m.crossplane.io/v1beta1
 kind: AuthorizationResource
 metadata:
   name: protected-api
@@ -245,7 +245,7 @@ spec:
 Manages authorization policies for resource access decisions.
 
 **Kind**: `AuthorizationPolicy`  
-**Group**: `authorizationpolicy.keycloak.crossplane.io`  
+**Group**: `authorizationpolicy.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -266,7 +266,7 @@ Manages authorization policies for resource access decisions.
 
 **Example**:
 ```yaml
-apiVersion: authorizationpolicy.keycloak.crossplane.io/v1alpha1
+apiVersion: authorizationpolicy.keycloak.m.crossplane.io/v1beta1
 kind: AuthorizationPolicy
 metadata:
   name: admin-policy
@@ -292,7 +292,7 @@ spec:
 Configures how client claims are transformed and mapped.
 
 **Kind**: `ProtocolMapper`  
-**Group**: `client.keycloak.crossplane.io`  
+**Group**: `client.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -314,7 +314,7 @@ Configures how client claims are transformed and mapped.
 Assigns client-scoped roles to users.
 
 **Kind**: `ClientRoleMapping`  
-**Group**: `rolemappings.keycloak.crossplane.io`  
+**Group**: `rolemappings.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -325,7 +325,7 @@ Assigns client-scoped roles to users.
 
 **Example**:
 ```yaml
-apiVersion: rolemappings.keycloak.crossplane.io/v1alpha1
+apiVersion: rolemappings.keycloak.m.crossplane.io/v1beta1
 kind: ClientRoleMapping
 metadata:
   name: user-client-roles
@@ -346,7 +346,7 @@ spec:
 Assigns realm-level scopes to a client.
 
 **Kind**: `ClientScopeMapping`  
-**Group**: `scopes.keycloak.crossplane.io`  
+**Group**: `scopes.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -359,7 +359,7 @@ Assigns realm-level scopes to a client.
 Sets default OAuth2 scopes returned for client authorization requests.
 
 **Kind**: `ClientDefaultScopes`  
-**Group**: `openidclient.keycloak.crossplane.io`  
+**Group**: `openidclient.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -369,7 +369,7 @@ Sets default OAuth2 scopes returned for client authorization requests.
 
 **Example**:
 ```yaml
-apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+apiVersion: openidclient.keycloak.m.crossplane.io/v1beta1
 kind: ClientDefaultScopes
 metadata:
   name: app-default-scopes
@@ -390,7 +390,7 @@ spec:
 Defines optional OAuth2 scopes clients can request.
 
 **Kind**: `ClientOptionalScopes`  
-**Group**: `openidclient.keycloak.crossplane.io`  
+**Group**: `openidclient.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -407,7 +407,7 @@ Defines optional OAuth2 scopes clients can request.
 Manages SAML/OIDC identity providers for user federation.
 
 **Kind**: `IdentityProvider`  
-**Group**: `identityprovider.keycloak.crossplane.io`  
+**Group**: `identityprovider.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -430,7 +430,7 @@ Manages SAML/OIDC identity providers for user federation.
 
 **Example (OIDC)**:
 ```yaml
-apiVersion: identityprovider.keycloak.crossplane.io/v1alpha1
+apiVersion: identityprovider.keycloak.m.crossplane.io/v1beta1
 kind: IdentityProvider
 metadata:
   name: okta-provider
@@ -457,7 +457,7 @@ spec:
 Manages authentication execution chains for login/registration.
 
 **Kind**: `AuthenticationFlow`  
-**Group**: `authenticationflow.keycloak.crossplane.io`  
+**Group**: `authenticationflow.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -483,7 +483,7 @@ Manages authentication execution chains for login/registration.
 Integrates external user directories (LDAP, Kerberos, etc).
 
 **Kind**: `UserFederationProvider`  
-**Group**: `userfederation.keycloak.crossplane.io`  
+**Group**: `userfederation.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -498,7 +498,7 @@ Integrates external user directories (LDAP, Kerberos, etc).
 Manages realm components (LDAP providers, key providers, etc).
 
 **Kind**: `Component`  
-**Group**: `component.keycloak.crossplane.io`  
+**Group**: `component.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -513,7 +513,7 @@ Manages realm components (LDAP providers, key providers, etc).
 Generates client registration tokens for programmatic client creation.
 
 **Kind**: `ClientInitialAccess`  
-**Group**: `clientinitialaccess.keycloak.crossplane.io`  
+**Group**: `clientinitialaccess.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -526,7 +526,7 @@ Generates client registration tokens for programmatic client creation.
 Manages client certificates for mutual TLS authentication.
 
 **Kind**: `ClientCertificates`  
-**Group**: `clientcertificates.keycloak.crossplane.io`  
+**Group**: `clientcertificates.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -540,7 +540,7 @@ Manages client certificates for mutual TLS authentication.
 Configures realm event logging and auditing.
 
 **Kind**: `RealmEventsConfig`  
-**Group**: `events.keycloak.crossplane.io`  
+**Group**: `events.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -556,7 +556,7 @@ Configures realm event logging and auditing.
 Imports realm configuration from JSON (read-only operation).
 
 **Kind**: `RealmImport`  
-**Group**: `realmimpexp.keycloak.crossplane.io`  
+**Group**: `realmimpexp.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:
@@ -568,7 +568,7 @@ Imports realm configuration from JSON (read-only operation).
 Reads realm cryptographic keys (read-only).
 
 **Kind**: `RealmKeys`  
-**Group**: `keys.keycloak.crossplane.io`  
+**Group**: `keys.keycloak.m.crossplane.io`  
 **Scope**: Namespaced
 
 **Key Fields**:

@@ -30,7 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	csv1alpha1 "github.com/rossigee/provider-keycloak/apis/scopes/v1alpha1"
+	csv1beta1 "github.com/rossigee/provider-keycloak/apis/scopes/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -40,7 +40,7 @@ const (
 	errNotClientScopeMapping = "managed resource is not a ClientScopeMapping"
 	errGetProviderConfig     = "cannot get ProviderConfig"
 	errProviderNotReady      = "provider is not ready"
-	controllerName           = "clientscopemappings.scopes.keycloak.crossplane.io"
+	controllerName           = "clientscopemappings.scopes.keycloak.m.crossplane.io"
 )
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
@@ -54,13 +54,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(csv1alpha1.SchemeGroupVersion.WithKind("ClientScopeMapping")),
+		resource.ManagedKind(csv1beta1.SchemeGroupVersion.WithKind("ClientScopeMapping")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&csv1alpha1.ClientScopeMapping{}).
+		For(&csv1beta1.ClientScopeMapping{}).
 		Complete(r)
 }
 
@@ -68,7 +68,7 @@ type connector struct{ kube client.Client }
 type external struct{ client clients.Client }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*csv1alpha1.ClientScopeMapping)
+	cr, ok := mg.(*csv1beta1.ClientScopeMapping)
 	if !ok {
 		return nil, errors.New(errNotClientScopeMapping)
 	}
@@ -98,7 +98,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("ClientScopeMapping", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*csv1alpha1.ClientScopeMapping)
+	cr, ok := mg.(*csv1beta1.ClientScopeMapping)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotClientScopeMapping)
 	}
@@ -117,7 +117,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ClientScopeMapping", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*csv1alpha1.ClientScopeMapping)
+	cr, ok := mg.(*csv1beta1.ClientScopeMapping)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotClientScopeMapping)
 	}
@@ -134,7 +134,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ClientScopeMapping", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*csv1alpha1.ClientScopeMapping)
+	cr, ok := mg.(*csv1beta1.ClientScopeMapping)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotClientScopeMapping)
 	}
@@ -163,7 +163,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ClientScopeMapping", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*csv1alpha1.ClientScopeMapping)
+	cr, ok := mg.(*csv1beta1.ClientScopeMapping)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotClientScopeMapping)
 	}
@@ -180,7 +180,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
-func scopesMatch(desired []csv1alpha1.ScopeMapping, current []clients.RoleRepresentation) bool {
+func scopesMatch(desired []csv1beta1.ScopeMapping, current []clients.RoleRepresentation) bool {
 	if len(desired) != len(current) {
 		return false
 	}
@@ -216,7 +216,7 @@ func scopeDiff(desired, current []clients.RoleRepresentation) []clients.RoleRepr
 	return diff
 }
 
-func toRoleRepresentations(scopes []csv1alpha1.ScopeMapping) []clients.RoleRepresentation {
+func toRoleRepresentations(scopes []csv1beta1.ScopeMapping) []clients.RoleRepresentation {
 	result := make([]clients.RoleRepresentation, len(scopes))
 	for i, s := range scopes {
 		result[i] = clients.RoleRepresentation{ID: s.Id, Name: s.Name}
@@ -224,10 +224,10 @@ func toRoleRepresentations(scopes []csv1alpha1.ScopeMapping) []clients.RoleRepre
 	return result
 }
 
-func toScopeMappings(roles []clients.RoleRepresentation) []csv1alpha1.ScopeMapping {
-	result := make([]csv1alpha1.ScopeMapping, len(roles))
+func toScopeMappings(roles []clients.RoleRepresentation) []csv1beta1.ScopeMapping {
+	result := make([]csv1beta1.ScopeMapping, len(roles))
 	for i, r := range roles {
-		result[i] = csv1alpha1.ScopeMapping{Id: r.ID, Name: r.Name}
+		result[i] = csv1beta1.ScopeMapping{Id: r.ID, Name: r.Name}
 	}
 	return result
 }

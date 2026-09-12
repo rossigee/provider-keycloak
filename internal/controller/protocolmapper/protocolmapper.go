@@ -30,7 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	clientv1alpha1 "github.com/rossigee/provider-keycloak/apis/client/v1alpha1"
+	clientv1beta1 "github.com/rossigee/provider-keycloak/apis/client/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -46,7 +46,7 @@ const (
 	errDeleteMapper      = "cannot delete Keycloak protocol mapper"
 	errResolveClient     = "cannot resolve client UUID"
 
-	controllerName = "protocolmappers.client.keycloak.crossplane.io"
+	controllerName = "protocolmappers.client.keycloak.m.crossplane.io"
 )
 
 // Setup registers the ProtocolMapper controller.
@@ -61,13 +61,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(clientv1alpha1.SchemeGroupVersion.WithKind("ProtocolMapper")),
+		resource.ManagedKind(clientv1beta1.SchemeGroupVersion.WithKind("ProtocolMapper")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&clientv1alpha1.ProtocolMapper{}).
+		For(&clientv1beta1.ProtocolMapper{}).
 		Complete(r)
 }
 
@@ -78,7 +78,7 @@ type external struct {
 }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*clientv1alpha1.ProtocolMapper)
+	cr, ok := mg.(*clientv1beta1.ProtocolMapper)
 	if !ok {
 		return nil, errors.New(errNotMapper)
 	}
@@ -120,7 +120,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("ProtocolMapper", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*clientv1alpha1.ProtocolMapper)
+	cr, ok := mg.(*clientv1beta1.ProtocolMapper)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotMapper)
 	}
@@ -150,7 +150,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ProtocolMapper", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*clientv1alpha1.ProtocolMapper)
+	cr, ok := mg.(*clientv1beta1.ProtocolMapper)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotMapper)
 	}
@@ -176,7 +176,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ProtocolMapper", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*clientv1alpha1.ProtocolMapper)
+	cr, ok := mg.(*clientv1beta1.ProtocolMapper)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotMapper)
 	}
@@ -210,7 +210,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ProtocolMapper", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*clientv1alpha1.ProtocolMapper)
+	cr, ok := mg.(*clientv1beta1.ProtocolMapper)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotMapper)
 	}
@@ -239,7 +239,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
-func realmAndClient(cr *clientv1alpha1.ProtocolMapper) (realmId, clientId string, err error) {
+func realmAndClient(cr *clientv1beta1.ProtocolMapper) (realmId, clientId string, err error) {
 	if cr.Spec.ForProvider.RealmId == nil || *cr.Spec.ForProvider.RealmId == "" {
 		return "", "", errors.New("realmId is required")
 	}
@@ -249,7 +249,7 @@ func realmAndClient(cr *clientv1alpha1.ProtocolMapper) (realmId, clientId string
 	return *cr.Spec.ForProvider.RealmId, *cr.Spec.ForProvider.ClientId, nil
 }
 
-func mapperParamsToRepresentation(p *clientv1alpha1.ProtocolMapperParameters) *clients.ProtocolMapperRepresentation {
+func mapperParamsToRepresentation(p *clientv1beta1.ProtocolMapperParameters) *clients.ProtocolMapperRepresentation {
 	m := &clients.ProtocolMapperRepresentation{
 		Name:           p.Name,
 		Protocol:       p.Protocol,
@@ -261,7 +261,7 @@ func mapperParamsToRepresentation(p *clientv1alpha1.ProtocolMapperParameters) *c
 	return m
 }
 
-func mapperUpToDate(desired *clientv1alpha1.ProtocolMapperParameters, actual *clients.ProtocolMapperRepresentation) bool {
+func mapperUpToDate(desired *clientv1beta1.ProtocolMapperParameters, actual *clients.ProtocolMapperRepresentation) bool {
 	if desired.ProtocolMapper != actual.ProtocolMapper {
 		return false
 	}

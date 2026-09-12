@@ -13,7 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	eventv1alpha1 "github.com/rossigee/provider-keycloak/apis/events/v1alpha1"
+	eventv1beta1 "github.com/rossigee/provider-keycloak/apis/events/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -27,7 +27,7 @@ const (
 	errProviderNotReady        = "provider is not ready"
 )
 
-const controllerName = "realmeventsconfigs.events.keycloak.crossplane.io"
+const controllerName = "realmeventsconfigs.events.keycloak.m.crossplane.io"
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	opts := []managed.ReconcilerOption{
@@ -40,14 +40,14 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(eventv1alpha1.SchemeGroupVersion.WithKind("RealmEventsConfig")),
+		resource.ManagedKind(eventv1beta1.SchemeGroupVersion.WithKind("RealmEventsConfig")),
 		opts...)
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&eventv1alpha1.RealmEventsConfig{}).
+		For(&eventv1beta1.RealmEventsConfig{}).
 		Complete(r)
 }
 
@@ -60,7 +60,7 @@ type external struct {
 }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*eventv1alpha1.RealmEventsConfig)
+	cr, ok := mg.(*eventv1beta1.RealmEventsConfig)
 	if !ok {
 		return nil, errors.New(errNotRealmEventsConfig)
 	}
@@ -88,7 +88,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("RealmEventsConfig", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*eventv1alpha1.RealmEventsConfig)
+	cr, ok := mg.(*eventv1beta1.RealmEventsConfig)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotRealmEventsConfig)
 	}
@@ -111,7 +111,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("RealmEventsConfig", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*eventv1alpha1.RealmEventsConfig)
+	cr, ok := mg.(*eventv1beta1.RealmEventsConfig)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotRealmEventsConfig)
 	}
@@ -132,7 +132,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("RealmEventsConfig", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*eventv1alpha1.RealmEventsConfig)
+	cr, ok := mg.(*eventv1beta1.RealmEventsConfig)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotRealmEventsConfig)
 	}
@@ -158,7 +158,7 @@ func (e *external) Disconnect(_ context.Context) error {
 	return nil
 }
 
-func eventsConfigUpToDate(desired *eventv1alpha1.RealmEventsConfigParameters, actual *clients.RealmEventsConfigRepresentation) bool {
+func eventsConfigUpToDate(desired *eventv1beta1.RealmEventsConfigParameters, actual *clients.RealmEventsConfigRepresentation) bool {
 	if desired.EventsEnabled != nil {
 		if actual.EventsEnabled == nil || *desired.EventsEnabled != *actual.EventsEnabled {
 			return false
@@ -177,7 +177,7 @@ func eventsConfigUpToDate(desired *eventv1alpha1.RealmEventsConfigParameters, ac
 	return true
 }
 
-func eventsConfigParamsToRepresentation(p *eventv1alpha1.RealmEventsConfigParameters) *clients.RealmEventsConfigRepresentation {
+func eventsConfigParamsToRepresentation(p *eventv1beta1.RealmEventsConfigParameters) *clients.RealmEventsConfigRepresentation {
 	return &clients.RealmEventsConfigRepresentation{
 		EventsEnabled:             p.EventsEnabled,
 		EventsExpiration:          p.EventsExpiration,

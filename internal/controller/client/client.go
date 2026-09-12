@@ -34,7 +34,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	openidclientv1alpha1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1alpha1"
+	openidclientv1beta1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -51,7 +51,7 @@ const (
 	errProviderNotReady  = "provider is not ready"
 )
 
-const controllerName = "clients.openidclient.keycloak.crossplane.io"
+const controllerName = "clients.openidclient.keycloak.m.crossplane.io"
 
 // Setup creates and adds a new Controller.
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
@@ -65,14 +65,14 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(openidclientv1alpha1.SchemeGroupVersion.WithKind("Client")),
+		resource.ManagedKind(openidclientv1beta1.SchemeGroupVersion.WithKind("Client")),
 		opts...)
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&openidclientv1alpha1.Client{}).
+		For(&openidclientv1beta1.Client{}).
 		Complete(r)
 }
 
@@ -86,7 +86,7 @@ type external struct {
 }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*openidclientv1alpha1.Client)
+	cr, ok := mg.(*openidclientv1beta1.Client)
 	if !ok {
 		return nil, errors.New(errNotClient)
 	}
@@ -111,7 +111,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("Client", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*openidclientv1alpha1.Client)
+	cr, ok := mg.(*openidclientv1beta1.Client)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotClient)
 	}
@@ -162,7 +162,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 }
 
 // clientUpToDate returns true when the desired spec matches the live Keycloak state.
-func clientUpToDate(desired *openidclientv1alpha1.ClientParameters, actual *clients.ClientRepresentation) bool {
+func clientUpToDate(desired *openidclientv1beta1.ClientParameters, actual *clients.ClientRepresentation) bool {
 	return clientFlagsUpToDate(desired, actual) && clientURLsUpToDate(desired, actual)
 }
 
@@ -170,7 +170,7 @@ func boolChanged(desired *bool, actual bool) bool {
 	return desired != nil && *desired != actual
 }
 
-func clientFlagsUpToDate(desired *openidclientv1alpha1.ClientParameters, actual *clients.ClientRepresentation) bool {
+func clientFlagsUpToDate(desired *openidclientv1beta1.ClientParameters, actual *clients.ClientRepresentation) bool {
 	flags := []struct {
 		desired *bool
 		actual  bool
@@ -233,7 +233,7 @@ func pointerStringChanged(desired, actual *string) bool {
 	return *desired != actualVal
 }
 
-func clientURLsUpToDate(desired *openidclientv1alpha1.ClientParameters, actual *clients.ClientRepresentation) bool {
+func clientURLsUpToDate(desired *openidclientv1beta1.ClientParameters, actual *clients.ClientRepresentation) bool {
 	fields := []struct {
 		desired *string
 		actual  string
@@ -290,7 +290,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("Client", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*openidclientv1alpha1.Client)
+	cr, ok := mg.(*openidclientv1beta1.Client)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotClient)
 	}
@@ -367,7 +367,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalCreation{ConnectionDetails: details}, nil
 }
 
-func (e *external) readSecretFromK8s(ctx context.Context, ref *openidclientv1alpha1.SecretRef) (string, error) {
+func (e *external) readSecretFromK8s(ctx context.Context, ref *openidclientv1beta1.SecretRef) (string, error) {
 	secret := &corev1.Secret{}
 	nn := types.NamespacedName{Name: ref.Name, Namespace: ref.Namespace}
 	if err := e.kube.Get(ctx, nn, secret); err != nil {
@@ -383,7 +383,7 @@ func (e *external) readSecretFromK8s(ctx context.Context, ref *openidclientv1alp
 	return string(value), nil
 }
 
-func (e *external) writeClientSecret(ctx context.Context, ref *openidclientv1alpha1.SecretRef, secretValue string) error {
+func (e *external) writeClientSecret(ctx context.Context, ref *openidclientv1beta1.SecretRef, secretValue string) error {
 	secret := &corev1.Secret{}
 	nn := types.NamespacedName{Name: ref.Name, Namespace: ref.Namespace}
 	if err := e.kube.Get(ctx, nn, secret); err != nil {
@@ -408,7 +408,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("Client", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*openidclientv1alpha1.Client)
+	cr, ok := mg.(*openidclientv1beta1.Client)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotClient)
 	}
@@ -482,7 +482,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("Client", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*openidclientv1alpha1.Client)
+	cr, ok := mg.(*openidclientv1beta1.Client)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotClient)
 	}
@@ -513,7 +513,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 // clientParamsToRepresentation maps CR parameters to a Keycloak API representation.
-func clientParamsToRepresentation(p *openidclientv1alpha1.ClientParameters) *clients.ClientRepresentation {
+func clientParamsToRepresentation(p *openidclientv1beta1.ClientParameters) *clients.ClientRepresentation {
 	rep := &clients.ClientRepresentation{
 		ClientID:                               p.ClientId,
 		Enabled:                                boolVal(p.Enabled, true),
@@ -539,7 +539,7 @@ func clientParamsToRepresentation(p *openidclientv1alpha1.ClientParameters) *cli
 	return rep
 }
 
-func setClientStrings(rep *clients.ClientRepresentation, p *openidclientv1alpha1.ClientParameters) {
+func setClientStrings(rep *clients.ClientRepresentation, p *openidclientv1beta1.ClientParameters) {
 	stringFields := []struct {
 		source *string
 		target *string
@@ -571,7 +571,7 @@ func setClientStrings(rep *clients.ClientRepresentation, p *openidclientv1alpha1
 	}
 }
 
-func setClientSlices(rep *clients.ClientRepresentation, p *openidclientv1alpha1.ClientParameters) {
+func setClientSlices(rep *clients.ClientRepresentation, p *openidclientv1beta1.ClientParameters) {
 	if p.ValidRedirectUris != nil {
 		rep.ValidRedirectURIs = p.ValidRedirectUris
 	}

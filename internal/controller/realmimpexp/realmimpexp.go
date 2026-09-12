@@ -13,7 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	realmimpexpv1alpha1 "github.com/rossigee/provider-keycloak/apis/realmimpexp/v1alpha1"
+	realmimpexpv1beta1 "github.com/rossigee/provider-keycloak/apis/realmimpexp/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -27,7 +27,7 @@ const (
 	errRealmAlreadyExists = "realm already exists"
 )
 
-const controllerName = "realmimports.realmimpexp.keycloak.crossplane.io"
+const controllerName = "realmimports.realmimpexp.keycloak.m.crossplane.io"
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	opts := []managed.ReconcilerOption{
@@ -40,13 +40,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(realmimpexpv1alpha1.SchemeGroupVersion.WithKind("RealmImport")),
+		resource.ManagedKind(realmimpexpv1beta1.SchemeGroupVersion.WithKind("RealmImport")),
 		opts...)
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
-		For(&realmimpexpv1alpha1.RealmImport{}).
+		For(&realmimpexpv1beta1.RealmImport{}).
 		Complete(r)
 }
 
@@ -59,7 +59,7 @@ type external struct {
 }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*realmimpexpv1alpha1.RealmImport)
+	cr, ok := mg.(*realmimpexpv1beta1.RealmImport)
 	if !ok {
 		return nil, errors.New(errNotRealmImport)
 	}
@@ -87,7 +87,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("RealmImport", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*realmimpexpv1alpha1.RealmImport)
+	cr, ok := mg.(*realmimpexpv1beta1.RealmImport)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotRealmImport)
 	}
@@ -104,7 +104,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("RealmImport", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*realmimpexpv1alpha1.RealmImport)
+	cr, ok := mg.(*realmimpexpv1beta1.RealmImport)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotRealmImport)
 	}

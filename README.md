@@ -27,6 +27,8 @@ Provider-keycloak offers **complete Keycloak Admin API coverage** (100%) with 21
 
 ## Managed Resource Types (21 Controllers)
 
+All resources are namespaced `v1beta1` under per-resource `.m.` API groups (e.g. `realm.keycloak.m.crossplane.io/v1beta1`) for Crossplane v2 multi-tenancy.
+
 ### Core Infrastructure
 | Kind | Description |
 |------|-------------|
@@ -73,12 +75,16 @@ Provider-keycloak offers **complete Keycloak Admin API coverage** (100%) with 21
 | `RealmImport` | Realm configuration import |
 | `RealmKeys` | Realm cryptographic keys (read-only) |
 
+## API Coverage Gaps
+
+Keycloak Admin API surface not yet modeled: Organizations (members/invitations/IDP links), identity-provider mappers, authentication execution sub-resource config, brute-force/attack-detection controls, user sessions, and fine-grained admin permissions ( colon-separated `admin-fine-grained-authz` policies beyond UMA resources/policies).
+
 ## ProviderConfig
 
 The `ProviderConfig` references a Kubernetes Secret containing a JSON credentials blob:
 
 ```yaml
-apiVersion: keycloak.crossplane.io/v1beta1
+apiVersion: keycloak.m.crossplane.io/v1beta1
 kind: ProviderConfig
 metadata:
   name: keycloak-rossgolderltd
@@ -111,7 +117,7 @@ The provider authenticates via OAuth2 client credentials grant (`grant_type=clie
 ### OpenID Connect Client
 
 ```yaml
-apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+apiVersion: openidclient.keycloak.m.crossplane.io/v1beta1
 kind: Client
 metadata:
   name: my-app
@@ -135,13 +141,12 @@ spec:
       key: client-secret
   providerConfigRef:
     name: keycloak-rossgolderltd
-  deletionPolicy: Delete
 ```
 
 ### Realm
 
 ```yaml
-apiVersion: realm.keycloak.crossplane.io/v1alpha1
+apiVersion: realm.keycloak.m.crossplane.io/v1beta1
 kind: Realm
 metadata:
   name: my-realm
@@ -160,7 +165,7 @@ spec:
 ### User
 
 ```yaml
-apiVersion: user.keycloak.crossplane.io/v1alpha1
+apiVersion: user.keycloak.m.crossplane.io/v1beta1
 kind: User
 metadata:
   name: my-realm-alice

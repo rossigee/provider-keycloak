@@ -29,7 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	identityproviderv1alpha1 "github.com/rossigee/provider-keycloak/apis/identityprovider/v1alpha1"
+	identityproviderv1beta1 "github.com/rossigee/provider-keycloak/apis/identityprovider/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -39,7 +39,7 @@ const (
 	errNotIdentityProvider = "managed resource is not an IdentityProvider"
 	errGetProviderConfig   = "cannot get ProviderConfig"
 	errProviderNotReady    = "provider is not ready"
-	controllerName         = "identityprovider.keycloak.crossplane.io"
+	controllerName         = "identityprovider.keycloak.m.crossplane.io"
 )
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
@@ -53,13 +53,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(identityproviderv1alpha1.SchemeGroupVersion.WithKind("IdentityProvider")),
+		resource.ManagedKind(identityproviderv1beta1.SchemeGroupVersion.WithKind("IdentityProvider")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&identityproviderv1alpha1.IdentityProvider{}).
+		For(&identityproviderv1beta1.IdentityProvider{}).
 		Complete(r)
 }
 
@@ -67,7 +67,7 @@ type connector struct{ kube client.Client }
 type external struct{ client clients.Client }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*identityproviderv1alpha1.IdentityProvider)
+	cr, ok := mg.(*identityproviderv1beta1.IdentityProvider)
 	if !ok {
 		return nil, errors.New(errNotIdentityProvider)
 	}
@@ -97,7 +97,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("IdentityProvider", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*identityproviderv1alpha1.IdentityProvider)
+	cr, ok := mg.(*identityproviderv1beta1.IdentityProvider)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotIdentityProvider)
 	}
@@ -115,7 +115,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("IdentityProvider", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*identityproviderv1alpha1.IdentityProvider)
+	cr, ok := mg.(*identityproviderv1beta1.IdentityProvider)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotIdentityProvider)
 	}
@@ -142,7 +142,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("IdentityProvider", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*identityproviderv1alpha1.IdentityProvider)
+	cr, ok := mg.(*identityproviderv1beta1.IdentityProvider)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotIdentityProvider)
 	}
@@ -164,7 +164,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("IdentityProvider", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*identityproviderv1alpha1.IdentityProvider)
+	cr, ok := mg.(*identityproviderv1beta1.IdentityProvider)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotIdentityProvider)
 	}
@@ -175,7 +175,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
-func isIdentityProviderUpToDate(desired *identityproviderv1alpha1.IdentityProviderParameters, current *clients.IdentityProviderRepresentation) bool {
+func isIdentityProviderUpToDate(desired *identityproviderv1beta1.IdentityProviderParameters, current *clients.IdentityProviderRepresentation) bool {
 	if desired.Alias != current.Alias {
 		return false
 	}

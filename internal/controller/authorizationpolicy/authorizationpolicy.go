@@ -29,7 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	authorizationpolicyv1alpha1 "github.com/rossigee/provider-keycloak/apis/authorizationpolicy/v1alpha1"
+	authorizationpolicyv1beta1 "github.com/rossigee/provider-keycloak/apis/authorizationpolicy/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -39,7 +39,7 @@ const (
 	errNotAuthorizationPolicy = "managed resource is not an AuthorizationPolicy"
 	errGetProviderConfig      = "cannot get ProviderConfig"
 	errProviderNotReady       = "provider is not ready"
-	controllerName            = "authorizationpolicy.keycloak.crossplane.io"
+	controllerName            = "authorizationpolicy.keycloak.m.crossplane.io"
 )
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
@@ -53,13 +53,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(authorizationpolicyv1alpha1.SchemeGroupVersion.WithKind("AuthorizationPolicy")),
+		resource.ManagedKind(authorizationpolicyv1beta1.SchemeGroupVersion.WithKind("AuthorizationPolicy")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&authorizationpolicyv1alpha1.AuthorizationPolicy{}).
+		For(&authorizationpolicyv1beta1.AuthorizationPolicy{}).
 		Complete(r)
 }
 
@@ -67,7 +67,7 @@ type connector struct{ kube client.Client }
 type external struct{ client clients.Client }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*authorizationpolicyv1alpha1.AuthorizationPolicy)
+	cr, ok := mg.(*authorizationpolicyv1beta1.AuthorizationPolicy)
 	if !ok {
 		return nil, errors.New(errNotAuthorizationPolicy)
 	}
@@ -97,7 +97,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("AuthorizationPolicy", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*authorizationpolicyv1alpha1.AuthorizationPolicy)
+	cr, ok := mg.(*authorizationpolicyv1beta1.AuthorizationPolicy)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotAuthorizationPolicy)
 	}
@@ -115,7 +115,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("AuthorizationPolicy", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*authorizationpolicyv1alpha1.AuthorizationPolicy)
+	cr, ok := mg.(*authorizationpolicyv1beta1.AuthorizationPolicy)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotAuthorizationPolicy)
 	}
@@ -140,7 +140,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("AuthorizationPolicy", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*authorizationpolicyv1alpha1.AuthorizationPolicy)
+	cr, ok := mg.(*authorizationpolicyv1beta1.AuthorizationPolicy)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotAuthorizationPolicy)
 	}
@@ -159,7 +159,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("AuthorizationPolicy", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*authorizationpolicyv1alpha1.AuthorizationPolicy)
+	cr, ok := mg.(*authorizationpolicyv1beta1.AuthorizationPolicy)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotAuthorizationPolicy)
 	}
@@ -170,7 +170,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
-func isAuthorizationPolicyUpToDate(desired *authorizationpolicyv1alpha1.AuthorizationPolicyParameters, current *clients.AuthorizationPolicyRepresentation) bool {
+func isAuthorizationPolicyUpToDate(desired *authorizationpolicyv1beta1.AuthorizationPolicyParameters, current *clients.AuthorizationPolicyRepresentation) bool {
 	if desired.Name != current.Name {
 		return false
 	}

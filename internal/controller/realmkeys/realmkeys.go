@@ -29,7 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	keysv1alpha1 "github.com/rossigee/provider-keycloak/apis/keys/v1alpha1"
+	keysv1beta1 "github.com/rossigee/provider-keycloak/apis/keys/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -39,7 +39,7 @@ const (
 	errNotRealmKeys      = "managed resource is not RealmKeys"
 	errGetProviderConfig = "cannot get ProviderConfig"
 	errProviderNotReady  = "provider is not ready"
-	controllerName       = "realmkeys.keys.keycloak.crossplane.io"
+	controllerName       = "realmkeys.keys.keycloak.m.crossplane.io"
 )
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
@@ -53,13 +53,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(keysv1alpha1.SchemeGroupVersion.WithKind("RealmKeys")),
+		resource.ManagedKind(keysv1beta1.SchemeGroupVersion.WithKind("RealmKeys")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&keysv1alpha1.RealmKeys{}).
+		For(&keysv1beta1.RealmKeys{}).
 		Complete(r)
 }
 
@@ -67,7 +67,7 @@ type connector struct{ kube client.Client }
 type external struct{ client clients.Client }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*keysv1alpha1.RealmKeys)
+	cr, ok := mg.(*keysv1beta1.RealmKeys)
 	if !ok {
 		return nil, errors.New(errNotRealmKeys)
 	}
@@ -97,7 +97,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("RealmKeys", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*keysv1alpha1.RealmKeys)
+	cr, ok := mg.(*keysv1beta1.RealmKeys)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotRealmKeys)
 	}
@@ -107,7 +107,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	}
 	cr.Status.SetConditions(xpv1.Available())
 	for _, k := range keys.Keys {
-		cr.Status.Keys = append(cr.Status.Keys, keysv1alpha1.KeyInfo{
+		cr.Status.Keys = append(cr.Status.Keys, keysv1beta1.KeyInfo{
 			Kid:         k.Kid,
 			Type:        k.Type,
 			Algorithm:   k.Algorithm,
@@ -123,7 +123,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("RealmKeys", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*keysv1alpha1.RealmKeys)
+	cr, ok := mg.(*keysv1beta1.RealmKeys)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotRealmKeys)
 	}
@@ -144,7 +144,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("RealmKeys", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*keysv1alpha1.RealmKeys)
+	cr, ok := mg.(*keysv1beta1.RealmKeys)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotRealmKeys)
 	}

@@ -114,7 +114,7 @@ docker run -p 8080:8080 \
 
 3. Configure provider connection:
 ```yaml
-apiVersion: keycloak.crossplane.io/v1beta1
+apiVersion: keycloak.m.crossplane.io/v1beta1
 kind: ProviderConfig
 metadata:
   name: keycloak-local

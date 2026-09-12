@@ -14,7 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	clientcertificatesv1alpha1 "github.com/rossigee/provider-keycloak/apis/clientcertificates/v1alpha1"
+	clientcertificatesv1beta1 "github.com/rossigee/provider-keycloak/apis/clientcertificates/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -29,7 +29,7 @@ const (
 	errProviderNotReady     = "provider is not ready"
 )
 
-const controllerName = "clientcertificates.clientcertificates.keycloak.crossplane.io"
+const controllerName = "clientcertificates.clientcertificates.keycloak.m.crossplane.io"
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	opts := []managed.ReconcilerOption{
@@ -42,14 +42,14 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(clientcertificatesv1alpha1.SchemeGroupVersion.WithKind("ClientCertificate")),
+		resource.ManagedKind(clientcertificatesv1beta1.SchemeGroupVersion.WithKind("ClientCertificate")),
 		opts...)
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&clientcertificatesv1alpha1.ClientCertificate{}).
+		For(&clientcertificatesv1beta1.ClientCertificate{}).
 		Complete(r)
 }
 
@@ -62,7 +62,7 @@ type external struct {
 }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*clientcertificatesv1alpha1.ClientCertificate)
+	cr, ok := mg.(*clientcertificatesv1beta1.ClientCertificate)
 	if !ok {
 		return nil, errors.New(errNotClientCertificate)
 	}
@@ -90,7 +90,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("ClientCertificate", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*clientcertificatesv1alpha1.ClientCertificate)
+	cr, ok := mg.(*clientcertificatesv1beta1.ClientCertificate)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotClientCertificate)
 	}
@@ -128,7 +128,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ClientCertificate", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*clientcertificatesv1alpha1.ClientCertificate)
+	cr, ok := mg.(*clientcertificatesv1beta1.ClientCertificate)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotClientCertificate)
 	}

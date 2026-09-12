@@ -26,8 +26,8 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	realmv1alpha1 "github.com/rossigee/provider-keycloak/apis/realm/v1alpha1"
-	userv1alpha1 "github.com/rossigee/provider-keycloak/apis/user/v1alpha1"
+	realmv1beta1 "github.com/rossigee/provider-keycloak/apis/realm/v1beta1"
+	userv1beta1 "github.com/rossigee/provider-keycloak/apis/user/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 )
 
@@ -192,18 +192,18 @@ func (m *mockRealmClient) CreateClientScope(_ context.Context, _ string, _ clien
 }
 func (m *mockRealmClient) DeleteClientScope(_ context.Context, _, _ string) error { return nil }
 
-func newRealmCR(name string) *realmv1alpha1.Realm {
-	return &realmv1alpha1.Realm{
+func newRealmCR(name string) *realmv1beta1.Realm {
+	return &realmv1beta1.Realm{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-realm", Namespace: "default"},
-		Spec: realmv1alpha1.RealmSpec{
-			ForProvider: realmv1alpha1.RealmParameters{
+		Spec: realmv1beta1.RealmSpec{
+			ForProvider: realmv1beta1.RealmParameters{
 				Realm: name,
 			},
 		},
 	}
 }
 
-type wrongRealmMG = userv1alpha1.User
+type wrongRealmMG = userv1beta1.User
 
 func TestRealmObserve(t *testing.T) {
 	tests := []struct {

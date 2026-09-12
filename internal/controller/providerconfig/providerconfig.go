@@ -32,7 +32,7 @@ import (
 	"github.com/rossigee/provider-keycloak/internal/clients"
 )
 
-const controllerName = "providerconfig.keycloak.crossplane.io"
+const controllerName = "providerconfig.keycloak.m.crossplane.io"
 
 // Setup registers the ProviderConfig controller.
 func Setup(mgr ctrl.Manager) error {

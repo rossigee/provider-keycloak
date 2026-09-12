@@ -13,7 +13,7 @@ provider-keycloak maintains API compatibility with [crossplane-contrib/provider-
 
 ---
 
-## Client (openidclient.keycloak.crossplane.io/v1alpha1)
+## Client (openidclient.keycloak.m.crossplane.io/v1beta1)
 
 ### Field Support Matrix
 
@@ -77,7 +77,7 @@ provider-keycloak maintains API compatibility with [crossplane-contrib/provider-
 
 ---
 
-## Realm (realm.keycloak.crossplane.io/v1alpha1)
+## Realm (realm.keycloak.m.crossplane.io/v1beta1)
 
 ### Field Support Matrix
 
@@ -101,7 +101,7 @@ provider-keycloak maintains API compatibility with [crossplane-contrib/provider-
 
 ---
 
-## User (user.keycloak.crossplane.io/v1alpha1)
+## User (user.keycloak.m.crossplane.io/v1beta1)
 
 ### Field Support Matrix
 
@@ -124,7 +124,7 @@ provider-keycloak maintains API compatibility with [crossplane-contrib/provider-
 
 ---
 
-## Role (role.keycloak.crossplane.io/v1alpha1)
+## Role (role.keycloak.m.crossplane.io/v1beta1)
 
 ### Field Support Matrix
 
@@ -142,7 +142,7 @@ provider-keycloak maintains API compatibility with [crossplane-contrib/provider-
 
 ---
 
-## Group (user.keycloak.crossplane.io/v1alpha1)
+## Group (user.keycloak.m.crossplane.io/v1beta1)
 
 ### Field Support Matrix
 
@@ -158,7 +158,7 @@ provider-keycloak maintains API compatibility with [crossplane-contrib/provider-
 
 ---
 
-## Groups (user.keycloak.crossplane.io/v1alpha1)
+## Groups (user.keycloak.m.crossplane.io/v1beta1)
 
 Group membership management for users.
 
@@ -172,7 +172,7 @@ Group membership management for users.
 
 ---
 
-## ProtocolMapper (client.keycloak.crossplane.io/v1alpha1)
+## ProtocolMapper (client.keycloak.m.crossplane.io/v1beta1)
 
 Protocol mapper configuration for clients.
 
@@ -189,7 +189,7 @@ Protocol mapper configuration for clients.
 
 ---
 
-## ClientDefaultScopes (openidclient.keycloak.crossplane.io/v1alpha1)
+## ClientDefaultScopes (openidclient.keycloak.m.crossplane.io/v1beta1)
 
 Default scope assignment for clients.
 
@@ -203,7 +203,7 @@ Default scope assignment for clients.
 
 ---
 
-## ClientOptionalScopes (openidclient.keycloak.crossplane.io/v1alpha1)
+## ClientOptionalScopes (openidclient.keycloak.m.crossplane.io/v1beta1)
 
 Optional scope assignment for clients.
 
@@ -230,7 +230,7 @@ Optional scope assignment for clients.
 
 ```yaml
 # Before (crossplane-contrib)
-apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+apiVersion: openidclient.keycloak.m.crossplane.io/v1beta1
 kind: Client
 metadata:
   name: my-app
@@ -240,7 +240,7 @@ spec:
     # ... existing config ...
 
 # After (provider-keycloak) - No changes needed!
-apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+apiVersion: openidclient.keycloak.m.crossplane.io/v1beta1
 kind: Client
 metadata:
   name: my-app

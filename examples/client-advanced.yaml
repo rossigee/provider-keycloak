@@ -1,4 +1,4 @@
-apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+apiVersion: openidclient.keycloak.m.crossplane.io/v1beta1
 kind: Client
 metadata:
   name: advanced-oauth2-client
@@ -73,10 +73,9 @@ spec:
 
   providerConfigRef:
     name: keycloak-config
-  deletionPolicy: Delete
 
 ---
-apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+apiVersion: openidclient.keycloak.m.crossplane.io/v1beta1
 kind: Client
 metadata:
   name: public-spa-client
@@ -125,10 +124,9 @@ spec:
 
   providerConfigRef:
     name: keycloak-config
-  deletionPolicy: Delete
 
 ---
-apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+apiVersion: openidclient.keycloak.m.crossplane.io/v1beta1
 kind: Client
 metadata:
   name: service-account-client
@@ -165,10 +163,9 @@ spec:
 
   providerConfigRef:
     name: keycloak-config
-  deletionPolicy: Delete
 
 ---
-apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+apiVersion: openidclient.keycloak.m.crossplane.io/v1beta1
 kind: Client
 metadata:
   name: legacy-bearer-client
@@ -193,4 +190,3 @@ spec:
 
   providerConfigRef:
     name: keycloak-config
-  deletionPolicy: Delete

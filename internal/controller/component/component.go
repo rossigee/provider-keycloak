@@ -30,7 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	compv1alpha1 "github.com/rossigee/provider-keycloak/apis/component/v1alpha1"
+	compv1beta1 "github.com/rossigee/provider-keycloak/apis/component/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -40,7 +40,7 @@ const (
 	errNotComponent      = "managed resource is not a Component"
 	errGetProviderConfig = "cannot get ProviderConfig"
 	errProviderNotReady  = "provider is not ready"
-	controllerName       = "components.component.keycloak.crossplane.io"
+	controllerName       = "components.component.keycloak.m.crossplane.io"
 )
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
@@ -54,13 +54,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(compv1alpha1.SchemeGroupVersion.WithKind("Component")),
+		resource.ManagedKind(compv1beta1.SchemeGroupVersion.WithKind("Component")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&compv1alpha1.Component{}).
+		For(&compv1beta1.Component{}).
 		Complete(r)
 }
 
@@ -68,7 +68,7 @@ type connector struct{ kube client.Client }
 type external struct{ client clients.Client }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*compv1alpha1.Component)
+	cr, ok := mg.(*compv1beta1.Component)
 	if !ok {
 		return nil, errors.New(errNotComponent)
 	}
@@ -98,7 +98,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("Component", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*compv1alpha1.Component)
+	cr, ok := mg.(*compv1beta1.Component)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotComponent)
 	}
@@ -122,7 +122,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("Component", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*compv1alpha1.Component)
+	cr, ok := mg.(*compv1beta1.Component)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotComponent)
 	}
@@ -151,7 +151,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("Component", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*compv1alpha1.Component)
+	cr, ok := mg.(*compv1beta1.Component)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotComponent)
 	}
@@ -179,7 +179,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("Component", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*compv1alpha1.Component)
+	cr, ok := mg.(*compv1beta1.Component)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotComponent)
 	}
@@ -194,7 +194,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
-func getComponentID(cr *compv1alpha1.Component) string {
+func getComponentID(cr *compv1beta1.Component) string {
 	if cr.Annotations != nil {
 		if id, ok := cr.Annotations["keycloak.crossplane.io/component-id"]; ok {
 			return id
@@ -203,7 +203,7 @@ func getComponentID(cr *compv1alpha1.Component) string {
 	return ""
 }
 
-func setComponentID(cr *compv1alpha1.Component, id string) {
+func setComponentID(cr *compv1beta1.Component, id string) {
 	if cr.Annotations == nil {
 		cr.Annotations = make(map[string]string)
 	}

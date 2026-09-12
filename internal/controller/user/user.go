@@ -30,7 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	userv1alpha1 "github.com/rossigee/provider-keycloak/apis/user/v1alpha1"
+	userv1beta1 "github.com/rossigee/provider-keycloak/apis/user/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -45,7 +45,7 @@ const (
 	errUpdateUser        = "cannot update Keycloak user"
 	errDeleteUser        = "cannot delete Keycloak user"
 
-	controllerName = "users.user.keycloak.crossplane.io"
+	controllerName = "users.user.keycloak.m.crossplane.io"
 )
 
 // Setup registers the User controller.
@@ -60,13 +60,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(userv1alpha1.SchemeGroupVersion.WithKind("User")),
+		resource.ManagedKind(userv1beta1.SchemeGroupVersion.WithKind("User")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&userv1alpha1.User{}).
+		For(&userv1beta1.User{}).
 		Complete(r)
 }
 
@@ -74,7 +74,7 @@ type connector struct{ kube client.Client }
 type external struct{ client clients.Client }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*userv1alpha1.User)
+	cr, ok := mg.(*userv1beta1.User)
 	if !ok {
 		return nil, errors.New(errNotUser)
 	}
@@ -104,7 +104,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("User", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*userv1alpha1.User)
+	cr, ok := mg.(*userv1beta1.User)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotUser)
 	}
@@ -131,7 +131,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("User", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*userv1alpha1.User)
+	cr, ok := mg.(*userv1beta1.User)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotUser)
 	}
@@ -152,7 +152,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("User", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*userv1alpha1.User)
+	cr, ok := mg.(*userv1beta1.User)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotUser)
 	}
@@ -180,7 +180,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("User", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*userv1alpha1.User)
+	cr, ok := mg.(*userv1beta1.User)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotUser)
 	}
@@ -203,14 +203,14 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
-func realmID(cr *userv1alpha1.User) (string, error) {
+func realmID(cr *userv1beta1.User) (string, error) {
 	if cr.Spec.ForProvider.RealmId == nil || *cr.Spec.ForProvider.RealmId == "" {
 		return "", errors.New("realmId is required")
 	}
 	return *cr.Spec.ForProvider.RealmId, nil
 }
 
-func userParamsToRepresentation(p *userv1alpha1.UserParameters) *clients.UserRepresentation {
+func userParamsToRepresentation(p *userv1beta1.UserParameters) *clients.UserRepresentation {
 	u := &clients.UserRepresentation{Username: p.Username}
 	if p.Email != nil {
 		u.Email = *p.Email
@@ -231,11 +231,11 @@ func userParamsToRepresentation(p *userv1alpha1.UserParameters) *clients.UserRep
 	return u
 }
 
-func userUpToDate(desired *userv1alpha1.UserParameters, actual *clients.UserRepresentation) bool {
+func userUpToDate(desired *userv1beta1.UserParameters, actual *clients.UserRepresentation) bool {
 	return userFlagsUpToDate(desired, actual) && userDetailsUpToDate(desired, actual)
 }
 
-func userFlagsUpToDate(desired *userv1alpha1.UserParameters, actual *clients.UserRepresentation) bool {
+func userFlagsUpToDate(desired *userv1beta1.UserParameters, actual *clients.UserRepresentation) bool {
 	if desired.Enabled != nil && *desired.Enabled != actual.Enabled {
 		return false
 	}
@@ -245,7 +245,7 @@ func userFlagsUpToDate(desired *userv1alpha1.UserParameters, actual *clients.Use
 	return true
 }
 
-func userDetailsUpToDate(desired *userv1alpha1.UserParameters, actual *clients.UserRepresentation) bool {
+func userDetailsUpToDate(desired *userv1beta1.UserParameters, actual *clients.UserRepresentation) bool {
 	if desired.Email != nil && *desired.Email != actual.Email {
 		return false
 	}

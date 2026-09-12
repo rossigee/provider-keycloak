@@ -14,7 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	authzv1alpha1 "github.com/rossigee/provider-keycloak/apis/authz/v1alpha1"
+	authzv1beta1 "github.com/rossigee/provider-keycloak/apis/authz/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -31,7 +31,7 @@ const (
 	errClientNotFound      = "client not found"
 )
 
-const controllerName = "authzresources.authz.keycloak.crossplane.io"
+const controllerName = "authzresources.authz.keycloak.m.crossplane.io"
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	opts := []managed.ReconcilerOption{
@@ -44,14 +44,14 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(authzv1alpha1.SchemeGroupVersion.WithKind("AuthzResource")),
+		resource.ManagedKind(authzv1beta1.SchemeGroupVersion.WithKind("AuthzResource")),
 		opts...)
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&authzv1alpha1.AuthzResource{}).
+		For(&authzv1beta1.AuthzResource{}).
 		Complete(r)
 }
 
@@ -64,7 +64,7 @@ type external struct {
 }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*authzv1alpha1.AuthzResource)
+	cr, ok := mg.(*authzv1beta1.AuthzResource)
 	if !ok {
 		return nil, errors.New(errNotAuthzResource)
 	}
@@ -92,7 +92,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("AuthzResource", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*authzv1alpha1.AuthzResource)
+	cr, ok := mg.(*authzv1beta1.AuthzResource)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotAuthzResource)
 	}
@@ -136,7 +136,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("AuthzResource", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*authzv1alpha1.AuthzResource)
+	cr, ok := mg.(*authzv1beta1.AuthzResource)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotAuthzResource)
 	}
@@ -162,7 +162,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("AuthzResource", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*authzv1alpha1.AuthzResource)
+	cr, ok := mg.(*authzv1beta1.AuthzResource)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotAuthzResource)
 	}
@@ -203,7 +203,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("AuthzResource", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*authzv1alpha1.AuthzResource)
+	cr, ok := mg.(*authzv1beta1.AuthzResource)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotAuthzResource)
 	}
@@ -242,7 +242,7 @@ func (e *external) Disconnect(_ context.Context) error {
 	return nil
 }
 
-func authzResourceUpToDate(desired *authzv1alpha1.AuthzResourceParameters, actual *clients.AuthzResourceRepresentation) bool {
+func authzResourceUpToDate(desired *authzv1beta1.AuthzResourceParameters, actual *clients.AuthzResourceRepresentation) bool {
 	if desired.Name != actual.Name {
 		return false
 	}
@@ -254,7 +254,7 @@ func authzResourceUpToDate(desired *authzv1alpha1.AuthzResourceParameters, actua
 	return true
 }
 
-func authzResourceParamsToRepresentation(p *authzv1alpha1.AuthzResourceParameters) *clients.AuthzResourceRepresentation {
+func authzResourceParamsToRepresentation(p *authzv1beta1.AuthzResourceParameters) *clients.AuthzResourceRepresentation {
 	return &clients.AuthzResourceRepresentation{
 		Name:        p.Name,
 		URIs:        p.URIs,

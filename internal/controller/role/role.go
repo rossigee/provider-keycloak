@@ -30,7 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	rolev1alpha1 "github.com/rossigee/provider-keycloak/apis/role/v1alpha1"
+	rolev1beta1 "github.com/rossigee/provider-keycloak/apis/role/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -45,7 +45,7 @@ const (
 	errUpdateRole        = "cannot update Keycloak role"
 	errDeleteRole        = "cannot delete Keycloak role"
 
-	controllerName = "roles.role.keycloak.crossplane.io"
+	controllerName = "roles.role.keycloak.m.crossplane.io"
 )
 
 // Setup registers the Role controller.
@@ -60,13 +60,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(rolev1alpha1.SchemeGroupVersion.WithKind("Role")),
+		resource.ManagedKind(rolev1beta1.SchemeGroupVersion.WithKind("Role")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&rolev1alpha1.Role{}).
+		For(&rolev1beta1.Role{}).
 		Complete(r)
 }
 
@@ -74,7 +74,7 @@ type connector struct{ kube client.Client }
 type external struct{ client clients.Client }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*rolev1alpha1.Role)
+	cr, ok := mg.(*rolev1beta1.Role)
 	if !ok {
 		return nil, errors.New(errNotRole)
 	}
@@ -104,7 +104,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("Role", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*rolev1alpha1.Role)
+	cr, ok := mg.(*rolev1beta1.Role)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotRole)
 	}
@@ -124,7 +124,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
 
-func (e *external) getRole(ctx context.Context, realmId string, cr *rolev1alpha1.Role) (*clients.RoleRepresentation, bool, error) {
+func (e *external) getRole(ctx context.Context, realmId string, cr *rolev1beta1.Role) (*clients.RoleRepresentation, bool, error) {
 	if cr.Spec.ForProvider.ClientId != nil {
 		clientId, err := clientID(cr)
 		if err != nil {
@@ -160,7 +160,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("Role", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*rolev1alpha1.Role)
+	cr, ok := mg.(*rolev1beta1.Role)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotRole)
 	}
@@ -191,7 +191,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("Role", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*rolev1alpha1.Role)
+	cr, ok := mg.(*rolev1beta1.Role)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotRole)
 	}
@@ -221,7 +221,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("Role", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*rolev1alpha1.Role)
+	cr, ok := mg.(*rolev1beta1.Role)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotRole)
 	}
@@ -246,21 +246,21 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
-func realmID(cr *rolev1alpha1.Role) (string, error) {
+func realmID(cr *rolev1beta1.Role) (string, error) {
 	if cr.Spec.ForProvider.RealmId == nil || *cr.Spec.ForProvider.RealmId == "" {
 		return "", errors.New("realmId is required")
 	}
 	return *cr.Spec.ForProvider.RealmId, nil
 }
 
-func clientID(cr *rolev1alpha1.Role) (string, error) {
+func clientID(cr *rolev1beta1.Role) (string, error) {
 	if cr.Spec.ForProvider.ClientId == nil || *cr.Spec.ForProvider.ClientId == "" {
 		return "", errors.New("clientId is required")
 	}
 	return *cr.Spec.ForProvider.ClientId, nil
 }
 
-func roleParamsToRepresentation(p *rolev1alpha1.RoleParameters) *clients.RoleRepresentation {
+func roleParamsToRepresentation(p *rolev1beta1.RoleParameters) *clients.RoleRepresentation {
 	r := &clients.RoleRepresentation{Name: p.Name}
 	if p.Description != nil {
 		r.Description = *p.Description

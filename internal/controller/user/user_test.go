@@ -26,8 +26,8 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	realmv1alpha1 "github.com/rossigee/provider-keycloak/apis/realm/v1alpha1"
-	userv1alpha1 "github.com/rossigee/provider-keycloak/apis/user/v1alpha1"
+	realmv1beta1 "github.com/rossigee/provider-keycloak/apis/realm/v1beta1"
+	userv1beta1 "github.com/rossigee/provider-keycloak/apis/user/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 )
 
@@ -306,11 +306,11 @@ func (m *mockUserClient) ListAuthorizationPolicies(_ context.Context, _, _ strin
 	return nil, nil
 }
 
-func newUserCR(realmId, username string) *userv1alpha1.User {
-	cr := &userv1alpha1.User{
+func newUserCR(realmId, username string) *userv1beta1.User {
+	cr := &userv1beta1.User{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-user", Namespace: "default"},
-		Spec: userv1alpha1.UserSpec{
-			ForProvider: userv1alpha1.UserParameters{
+		Spec: userv1beta1.UserSpec{
+			ForProvider: userv1beta1.UserParameters{
 				Username: username,
 			},
 		},
@@ -321,7 +321,7 @@ func newUserCR(realmId, username string) *userv1alpha1.User {
 	return cr
 }
 
-type wrongUserMG = realmv1alpha1.Realm
+type wrongUserMG = realmv1beta1.Realm
 
 func TestUserObserve(t *testing.T) {
 	tests := []struct {

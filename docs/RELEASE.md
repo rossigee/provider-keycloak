@@ -74,7 +74,7 @@ The user should validate the test image (`ghcr.io/rossigee/provider-keycloak:tes
 
 2. **Verify the RBAC fix** (Bug #1)
    - Deploy provider with test image
-   - Delete a CRD (e.g., clients.openidclient.keycloak.crossplane.io)
+   - Delete a CRD (e.g., clients.openidclient.keycloak.m.crossplane.io)
    - Recreate the same CRD
    - Provider should continue operating (no RBAC initialization failure)
 

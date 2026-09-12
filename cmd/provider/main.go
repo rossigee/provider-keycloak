@@ -29,25 +29,25 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/ratelimiter"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/statemetrics"
 	"github.com/rossigee/provider-keycloak/apis"
-	authenticationflowv1alpha1 "github.com/rossigee/provider-keycloak/apis/authenticationflow/v1alpha1"
-	authorizationpolicyv1alpha1 "github.com/rossigee/provider-keycloak/apis/authorizationpolicy/v1alpha1"
-	authzv1alpha1 "github.com/rossigee/provider-keycloak/apis/authz/v1alpha1"
-	clientv1alpha1 "github.com/rossigee/provider-keycloak/apis/client/v1alpha1"
-	clientcertificatesv1alpha1 "github.com/rossigee/provider-keycloak/apis/clientcertificates/v1alpha1"
-	clientinitialaccessv1alpha1 "github.com/rossigee/provider-keycloak/apis/clientinitialaccess/v1alpha1"
-	componentv1alpha1 "github.com/rossigee/provider-keycloak/apis/component/v1alpha1"
-	eventsv1alpha1 "github.com/rossigee/provider-keycloak/apis/events/v1alpha1"
-	groupv1alpha1 "github.com/rossigee/provider-keycloak/apis/group/v1alpha1"
-	identityproviderv1alpha1 "github.com/rossigee/provider-keycloak/apis/identityprovider/v1alpha1"
-	keysv1alpha1 "github.com/rossigee/provider-keycloak/apis/keys/v1alpha1"
-	openidclientv1alpha1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1alpha1"
-	realmv1alpha1 "github.com/rossigee/provider-keycloak/apis/realm/v1alpha1"
-	realmimpexpv1alpha1 "github.com/rossigee/provider-keycloak/apis/realmimpexp/v1alpha1"
-	rolev1alpha1 "github.com/rossigee/provider-keycloak/apis/role/v1alpha1"
-	rolemappingsv1alpha1 "github.com/rossigee/provider-keycloak/apis/rolemappings/v1alpha1"
-	scopesv1alpha1 "github.com/rossigee/provider-keycloak/apis/scopes/v1alpha1"
-	userv1alpha1 "github.com/rossigee/provider-keycloak/apis/user/v1alpha1"
-	userfederationv1alpha1 "github.com/rossigee/provider-keycloak/apis/userfederation/v1alpha1"
+	authenticationflowv1beta1 "github.com/rossigee/provider-keycloak/apis/authenticationflow/v1beta1"
+	authorizationpolicyv1beta1 "github.com/rossigee/provider-keycloak/apis/authorizationpolicy/v1beta1"
+	authzv1beta1 "github.com/rossigee/provider-keycloak/apis/authz/v1beta1"
+	clientv1beta1 "github.com/rossigee/provider-keycloak/apis/client/v1beta1"
+	clientcertificatesv1beta1 "github.com/rossigee/provider-keycloak/apis/clientcertificates/v1beta1"
+	clientinitialaccessv1beta1 "github.com/rossigee/provider-keycloak/apis/clientinitialaccess/v1beta1"
+	componentv1beta1 "github.com/rossigee/provider-keycloak/apis/component/v1beta1"
+	eventsv1beta1 "github.com/rossigee/provider-keycloak/apis/events/v1beta1"
+	groupv1beta1 "github.com/rossigee/provider-keycloak/apis/group/v1beta1"
+	identityproviderv1beta1 "github.com/rossigee/provider-keycloak/apis/identityprovider/v1beta1"
+	keysv1beta1 "github.com/rossigee/provider-keycloak/apis/keys/v1beta1"
+	openidclientv1beta1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1beta1"
+	realmv1beta1 "github.com/rossigee/provider-keycloak/apis/realm/v1beta1"
+	realmimpexpv1beta1 "github.com/rossigee/provider-keycloak/apis/realmimpexp/v1beta1"
+	rolev1beta1 "github.com/rossigee/provider-keycloak/apis/role/v1beta1"
+	rolemappingsv1beta1 "github.com/rossigee/provider-keycloak/apis/rolemappings/v1beta1"
+	scopesv1beta1 "github.com/rossigee/provider-keycloak/apis/scopes/v1beta1"
+	userv1beta1 "github.com/rossigee/provider-keycloak/apis/user/v1beta1"
+	userfederationv1beta1 "github.com/rossigee/provider-keycloak/apis/userfederation/v1beta1"
 	controller "github.com/rossigee/provider-keycloak/internal/controller"
 	"github.com/rossigee/provider-keycloak/internal/features"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -151,29 +151,29 @@ func main() {
 
 	kingpin.FatalIfError(controller.Setup(mgr, o), "Cannot setup Keycloak controllers")
 
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &authenticationflowv1alpha1.AuthenticationFlowList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for AuthenticationFlow")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &authorizationpolicyv1alpha1.AuthorizationPolicyList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for AuthorizationPolicy")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &authzv1alpha1.AuthzResourceList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for AuthzResource")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &clientv1alpha1.ProtocolMapperList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ProtocolMapper")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &clientcertificatesv1alpha1.ClientCertificateList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientCertificate")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &clientinitialaccessv1alpha1.ClientInitialAccessList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientInitialAccess")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &componentv1alpha1.ComponentList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Component")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &eventsv1alpha1.RealmEventsConfigList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for RealmEventsConfig")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &groupv1alpha1.GroupList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Group")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &identityproviderv1alpha1.IdentityProviderList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for IdentityProvider")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &keysv1alpha1.RealmKeysList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for RealmKeys")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &openidclientv1alpha1.ClientList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Client")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &openidclientv1alpha1.ClientDefaultScopesList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientDefaultScopes")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &openidclientv1alpha1.ClientOptionalScopesList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientOptionalScopes")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &realmv1alpha1.RealmList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Realm")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &realmimpexpv1alpha1.RealmImportList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for RealmImport")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &rolev1alpha1.RoleList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Role")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &rolemappingsv1alpha1.ClientRoleMappingList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientRoleMapping")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &scopesv1alpha1.ClientScopeMappingList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientScopeMapping")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &scopesv1alpha1.ClientScopeList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientScope")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &userv1alpha1.UserList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for User")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &userv1alpha1.GroupsList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Groups")
-	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &userfederationv1alpha1.UserFederationProviderList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for UserFederationProvider")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &authenticationflowv1beta1.AuthenticationFlowList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for AuthenticationFlow")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &authorizationpolicyv1beta1.AuthorizationPolicyList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for AuthorizationPolicy")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &authzv1beta1.AuthzResourceList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for AuthzResource")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &clientv1beta1.ProtocolMapperList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ProtocolMapper")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &clientcertificatesv1beta1.ClientCertificateList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientCertificate")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &clientinitialaccessv1beta1.ClientInitialAccessList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientInitialAccess")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &componentv1beta1.ComponentList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Component")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &eventsv1beta1.RealmEventsConfigList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for RealmEventsConfig")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &groupv1beta1.GroupList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Group")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &identityproviderv1beta1.IdentityProviderList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for IdentityProvider")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &keysv1beta1.RealmKeysList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for RealmKeys")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &openidclientv1beta1.ClientList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Client")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &openidclientv1beta1.ClientDefaultScopesList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientDefaultScopes")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &openidclientv1beta1.ClientOptionalScopesList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientOptionalScopes")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &realmv1beta1.RealmList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Realm")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &realmimpexpv1beta1.RealmImportList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for RealmImport")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &rolev1beta1.RoleList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Role")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &rolemappingsv1beta1.ClientRoleMappingList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientRoleMapping")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &scopesv1beta1.ClientScopeMappingList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientScopeMapping")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &scopesv1beta1.ClientScopeList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for ClientScope")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &userv1beta1.UserList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for User")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &userv1beta1.GroupsList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Groups")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &userfederationv1beta1.UserFederationProviderList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for UserFederationProvider")
 
 	kingpin.FatalIfError(mgr.AddHealthzCheck("healthz", healthz.Ping), "Cannot add health check")
 	kingpin.FatalIfError(mgr.AddReadyzCheck("readyz", healthz.Ping), "Cannot add ready check")

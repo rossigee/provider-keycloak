@@ -30,7 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	crv1alpha1 "github.com/rossigee/provider-keycloak/apis/rolemappings/v1alpha1"
+	crv1beta1 "github.com/rossigee/provider-keycloak/apis/rolemappings/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -40,7 +40,7 @@ const (
 	errNotClientRoleMapping = "managed resource is not a ClientRoleMapping"
 	errGetProviderConfig    = "cannot get ProviderConfig"
 	errProviderNotReady     = "provider is not ready"
-	controllerName          = "clientrolemappings.rolemappings.keycloak.crossplane.io"
+	controllerName          = "clientrolemappings.rolemappings.keycloak.m.crossplane.io"
 )
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
@@ -54,13 +54,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(crv1alpha1.SchemeGroupVersion.WithKind("ClientRoleMapping")),
+		resource.ManagedKind(crv1beta1.SchemeGroupVersion.WithKind("ClientRoleMapping")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&crv1alpha1.ClientRoleMapping{}).
+		For(&crv1beta1.ClientRoleMapping{}).
 		Complete(r)
 }
 
@@ -68,7 +68,7 @@ type connector struct{ kube client.Client }
 type external struct{ client clients.Client }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*crv1alpha1.ClientRoleMapping)
+	cr, ok := mg.(*crv1beta1.ClientRoleMapping)
 	if !ok {
 		return nil, errors.New(errNotClientRoleMapping)
 	}
@@ -98,7 +98,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("ClientRoleMapping", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*crv1alpha1.ClientRoleMapping)
+	cr, ok := mg.(*crv1beta1.ClientRoleMapping)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotClientRoleMapping)
 	}
@@ -117,7 +117,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ClientRoleMapping", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*crv1alpha1.ClientRoleMapping)
+	cr, ok := mg.(*crv1beta1.ClientRoleMapping)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotClientRoleMapping)
 	}
@@ -134,7 +134,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ClientRoleMapping", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*crv1alpha1.ClientRoleMapping)
+	cr, ok := mg.(*crv1beta1.ClientRoleMapping)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotClientRoleMapping)
 	}
@@ -163,7 +163,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ClientRoleMapping", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*crv1alpha1.ClientRoleMapping)
+	cr, ok := mg.(*crv1beta1.ClientRoleMapping)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotClientRoleMapping)
 	}
@@ -180,7 +180,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
-func rolesMatch(desired []crv1alpha1.RoleMapping, current []clients.RoleRepresentation) bool {
+func rolesMatch(desired []crv1beta1.RoleMapping, current []clients.RoleRepresentation) bool {
 	if len(desired) != len(current) {
 		return false
 	}
@@ -216,7 +216,7 @@ func roleDiff(desired, current []clients.RoleRepresentation) []clients.RoleRepre
 	return diff
 }
 
-func toRoleRepresentations(roles []crv1alpha1.RoleMapping) []clients.RoleRepresentation {
+func toRoleRepresentations(roles []crv1beta1.RoleMapping) []clients.RoleRepresentation {
 	result := make([]clients.RoleRepresentation, len(roles))
 	for i, r := range roles {
 		result[i] = clients.RoleRepresentation{ID: r.Id, Name: r.Name}
@@ -224,10 +224,10 @@ func toRoleRepresentations(roles []crv1alpha1.RoleMapping) []clients.RoleReprese
 	return result
 }
 
-func toRoleMappings(roles []clients.RoleRepresentation) []crv1alpha1.RoleMapping {
-	result := make([]crv1alpha1.RoleMapping, len(roles))
+func toRoleMappings(roles []clients.RoleRepresentation) []crv1beta1.RoleMapping {
+	result := make([]crv1beta1.RoleMapping, len(roles))
 	for i, r := range roles {
-		result[i] = crv1alpha1.RoleMapping{Id: r.ID, Name: r.Name}
+		result[i] = crv1beta1.RoleMapping{Id: r.ID, Name: r.Name}
 	}
 	return result
 }

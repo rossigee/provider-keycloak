@@ -26,8 +26,8 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	realmv1alpha1 "github.com/rossigee/provider-keycloak/apis/realm/v1alpha1"
-	rolev1alpha1 "github.com/rossigee/provider-keycloak/apis/role/v1alpha1"
+	realmv1beta1 "github.com/rossigee/provider-keycloak/apis/realm/v1beta1"
+	rolev1beta1 "github.com/rossigee/provider-keycloak/apis/role/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 )
 
@@ -304,11 +304,11 @@ func (m *mockRoleClient) ListAuthorizationPolicies(_ context.Context, _, _ strin
 	return nil, nil
 }
 
-func newRoleCR(realmId, name string) *rolev1alpha1.Role {
-	cr := &rolev1alpha1.Role{
+func newRoleCR(realmId, name string) *rolev1beta1.Role {
+	cr := &rolev1beta1.Role{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-role", Namespace: "default"},
-		Spec: rolev1alpha1.RoleSpec{
-			ForProvider: rolev1alpha1.RoleParameters{
+		Spec: rolev1beta1.RoleSpec{
+			ForProvider: rolev1beta1.RoleParameters{
 				Name: name,
 			},
 		},
@@ -319,7 +319,7 @@ func newRoleCR(realmId, name string) *rolev1alpha1.Role {
 	return cr
 }
 
-type wrongRoleMG = realmv1alpha1.Realm
+type wrongRoleMG = realmv1beta1.Realm
 
 func TestRoleObserve(t *testing.T) {
 	tests := []struct {

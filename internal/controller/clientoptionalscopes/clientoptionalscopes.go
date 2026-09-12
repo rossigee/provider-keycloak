@@ -30,7 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	openidclientv1alpha1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1alpha1"
+	openidclientv1beta1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -40,7 +40,7 @@ const (
 	errNotClientOptionalScopes = "managed resource is not a ClientOptionalScopes"
 	errGetProviderConfig       = "cannot get ProviderConfig"
 	errProviderNotReady        = "provider is not ready"
-	controllerName             = "clientoptionalscopes.client.keycloak.crossplane.io"
+	controllerName             = "clientoptionalscopes.client.keycloak.m.crossplane.io"
 )
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
@@ -54,13 +54,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(openidclientv1alpha1.SchemeGroupVersion.WithKind("ClientOptionalScopes")),
+		resource.ManagedKind(openidclientv1beta1.SchemeGroupVersion.WithKind("ClientOptionalScopes")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&openidclientv1alpha1.ClientOptionalScopes{}).
+		For(&openidclientv1beta1.ClientOptionalScopes{}).
 		Complete(r)
 }
 
@@ -68,7 +68,7 @@ type connector struct{ kube client.Client }
 type external struct{ client clients.Client }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*openidclientv1alpha1.ClientOptionalScopes)
+	cr, ok := mg.(*openidclientv1beta1.ClientOptionalScopes)
 	if !ok {
 		return nil, errors.New(errNotClientOptionalScopes)
 	}
@@ -98,7 +98,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("ClientOptionalScopes", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*openidclientv1alpha1.ClientOptionalScopes)
+	cr, ok := mg.(*openidclientv1beta1.ClientOptionalScopes)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotClientOptionalScopes)
 	}
@@ -116,7 +116,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ClientOptionalScopes", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*openidclientv1alpha1.ClientOptionalScopes)
+	cr, ok := mg.(*openidclientv1beta1.ClientOptionalScopes)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotClientOptionalScopes)
 	}
@@ -133,7 +133,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ClientOptionalScopes", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*openidclientv1alpha1.ClientOptionalScopes)
+	cr, ok := mg.(*openidclientv1beta1.ClientOptionalScopes)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotClientOptionalScopes)
 	}
@@ -162,7 +162,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ClientOptionalScopes", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*openidclientv1alpha1.ClientOptionalScopes)
+	cr, ok := mg.(*openidclientv1beta1.ClientOptionalScopes)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotClientOptionalScopes)
 	}

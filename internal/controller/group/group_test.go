@@ -26,8 +26,8 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	groupv1alpha1 "github.com/rossigee/provider-keycloak/apis/group/v1alpha1"
-	realmv1alpha1 "github.com/rossigee/provider-keycloak/apis/realm/v1alpha1"
+	groupv1beta1 "github.com/rossigee/provider-keycloak/apis/group/v1beta1"
+	realmv1beta1 "github.com/rossigee/provider-keycloak/apis/realm/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 )
 
@@ -190,11 +190,11 @@ func (m *mockGroupClient) CreateClientScope(_ context.Context, _ string, _ clien
 }
 func (m *mockGroupClient) DeleteClientScope(_ context.Context, _, _ string) error { return nil }
 
-func newGroupCR(realmId, name string) *groupv1alpha1.Group {
-	cr := &groupv1alpha1.Group{
+func newGroupCR(realmId, name string) *groupv1beta1.Group {
+	cr := &groupv1beta1.Group{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-group", Namespace: "default"},
-		Spec: groupv1alpha1.GroupSpec{
-			ForProvider: groupv1alpha1.GroupParameters{
+		Spec: groupv1beta1.GroupSpec{
+			ForProvider: groupv1beta1.GroupParameters{
 				Name: name,
 			},
 		},
@@ -205,7 +205,7 @@ func newGroupCR(realmId, name string) *groupv1alpha1.Group {
 	return cr
 }
 
-type wrongGroupMG = realmv1alpha1.Realm
+type wrongGroupMG = realmv1beta1.Realm
 
 func TestGroupObserve(t *testing.T) {
 	tests := []struct {

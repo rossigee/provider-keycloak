@@ -13,7 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	userfederationv1alpha1 "github.com/rossigee/provider-keycloak/apis/userfederation/v1alpha1"
+	userfederationv1beta1 "github.com/rossigee/provider-keycloak/apis/userfederation/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -29,7 +29,7 @@ const (
 	errProviderNotReady             = "provider is not ready"
 )
 
-const controllerName = "userfederationproviders.userfederation.keycloak.crossplane.io"
+const controllerName = "userfederationproviders.userfederation.keycloak.m.crossplane.io"
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	opts := []managed.ReconcilerOption{
@@ -42,14 +42,14 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(userfederationv1alpha1.SchemeGroupVersion.WithKind("UserFederationProvider")),
+		resource.ManagedKind(userfederationv1beta1.SchemeGroupVersion.WithKind("UserFederationProvider")),
 		opts...)
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&userfederationv1alpha1.UserFederationProvider{}).
+		For(&userfederationv1beta1.UserFederationProvider{}).
 		Complete(r)
 }
 
@@ -62,7 +62,7 @@ type external struct {
 }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*userfederationv1alpha1.UserFederationProvider)
+	cr, ok := mg.(*userfederationv1beta1.UserFederationProvider)
 	if !ok {
 		return nil, errors.New(errNotUserFederationProvider)
 	}
@@ -90,7 +90,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("UserFederationProvider", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*userfederationv1alpha1.UserFederationProvider)
+	cr, ok := mg.(*userfederationv1beta1.UserFederationProvider)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotUserFederationProvider)
 	}
@@ -126,7 +126,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("UserFederationProvider", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*userfederationv1alpha1.UserFederationProvider)
+	cr, ok := mg.(*userfederationv1beta1.UserFederationProvider)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotUserFederationProvider)
 	}
@@ -147,7 +147,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("UserFederationProvider", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*userfederationv1alpha1.UserFederationProvider)
+	cr, ok := mg.(*userfederationv1beta1.UserFederationProvider)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotUserFederationProvider)
 	}
@@ -183,7 +183,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("UserFederationProvider", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*userfederationv1alpha1.UserFederationProvider)
+	cr, ok := mg.(*userfederationv1beta1.UserFederationProvider)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotUserFederationProvider)
 	}
@@ -217,7 +217,7 @@ func (e *external) Disconnect(_ context.Context) error {
 	return nil
 }
 
-func userFederationUpToDate(desired *userfederationv1alpha1.UserFederationProviderParameters, actual *clients.UserFederationProviderRepresentation) bool {
+func userFederationUpToDate(desired *userfederationv1beta1.UserFederationProviderParameters, actual *clients.UserFederationProviderRepresentation) bool {
 	if desired.Name != actual.Name {
 		return false
 	}
@@ -235,7 +235,7 @@ func userFederationUpToDate(desired *userfederationv1alpha1.UserFederationProvid
 	return true
 }
 
-func userFederationParamsToRepresentation(p *userfederationv1alpha1.UserFederationProviderParameters) *clients.UserFederationProviderRepresentation {
+func userFederationParamsToRepresentation(p *userfederationv1beta1.UserFederationProviderParameters) *clients.UserFederationProviderRepresentation {
 	rep := &clients.UserFederationProviderRepresentation{
 		Name:         p.Name,
 		ProviderName: p.ProviderName,

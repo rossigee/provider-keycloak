@@ -30,7 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	groupv1alpha1 "github.com/rossigee/provider-keycloak/apis/group/v1alpha1"
+	groupv1beta1 "github.com/rossigee/provider-keycloak/apis/group/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -45,7 +45,7 @@ const (
 	errUpdateGroup       = "cannot update Keycloak group"
 	errDeleteGroup       = "cannot delete Keycloak group"
 
-	controllerName = "groups.group.keycloak.crossplane.io"
+	controllerName = "groups.group.keycloak.m.crossplane.io"
 )
 
 // Setup registers the Group controller.
@@ -60,13 +60,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(groupv1alpha1.SchemeGroupVersion.WithKind("Group")),
+		resource.ManagedKind(groupv1beta1.SchemeGroupVersion.WithKind("Group")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&groupv1alpha1.Group{}).
+		For(&groupv1beta1.Group{}).
 		Complete(r)
 }
 
@@ -74,7 +74,7 @@ type connector struct{ kube client.Client }
 type external struct{ client clients.Client }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*groupv1alpha1.Group)
+	cr, ok := mg.(*groupv1beta1.Group)
 	if !ok {
 		return nil, errors.New(errNotGroup)
 	}
@@ -104,7 +104,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("Group", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*groupv1alpha1.Group)
+	cr, ok := mg.(*groupv1beta1.Group)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotGroup)
 	}
@@ -130,7 +130,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("Group", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*groupv1alpha1.Group)
+	cr, ok := mg.(*groupv1beta1.Group)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotGroup)
 	}
@@ -155,7 +155,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("Group", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*groupv1alpha1.Group)
+	cr, ok := mg.(*groupv1beta1.Group)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotGroup)
 	}
@@ -188,7 +188,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("Group", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*groupv1alpha1.Group)
+	cr, ok := mg.(*groupv1beta1.Group)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotGroup)
 	}
@@ -213,7 +213,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
-func realmID(cr *groupv1alpha1.Group) (string, error) {
+func realmID(cr *groupv1beta1.Group) (string, error) {
 	if cr.Spec.ForProvider.RealmId == nil || *cr.Spec.ForProvider.RealmId == "" {
 		return "", errors.New("realmId is required")
 	}

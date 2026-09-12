@@ -2,7 +2,7 @@
 
 ## Controller Comparison & Expansion Opportunities
 
-### Client (openidclient.keycloak.crossplane.io/v1alpha1) - ✅ Optimized
+### Client (openidclient.keycloak.m.crossplane.io/v1beta1) - ✅ Optimized
 **Status:** Fully featured with comprehensive configuration support  
 **Lines of code:** ~500  
 **Field comparisons:** 45+ (split across clientFlagsUpToDate and clientURLsUpToDate)  
@@ -11,7 +11,7 @@
 
 ---
 
-### User (user.keycloak.crossplane.io/v1alpha1) - ⚠️ Basic Implementation
+### User (user.keycloak.m.crossplane.io/v1beta1) - ⚠️ Basic Implementation
 **Status:** Functional but minimal configuration  
 **Lines of code:** ~400  
 **Field comparisons:** 5  
@@ -30,7 +30,7 @@
 
 ---
 
-### Realm (realm.keycloak.crossplane.io/v1alpha1) - ⚠️ Basic Implementation  
+### Realm (realm.keycloak.m.crossplane.io/v1beta1) - ⚠️ Basic Implementation  
 **Status:** Functional core realm management  
 **Lines of code:** ~450  
 **Field comparisons:** 4  
@@ -51,7 +51,7 @@
 
 ---
 
-### Role (role.keycloak.crossplane.io/v1alpha1) - ✅ Adequate
+### Role (role.keycloak.m.crossplane.io/v1beta1) - ✅ Adequate
 **Status:** Simple but complete (realm and client roles)  
 **Lines of code:** ~400  
 **Field comparisons:** 0 (very simple)  
@@ -63,7 +63,7 @@
 
 ---
 
-### ProtocolMapper (client.keycloak.crossplane.io/v1alpha1) - ✅ Adequate
+### ProtocolMapper (client.keycloak.m.crossplane.io/v1beta1) - ✅ Adequate
 **Status:** Functional protocol mapper management  
 **Lines of code:** ~450  
 **Field comparisons:** Minimal  
@@ -74,7 +74,7 @@
 
 ---
 
-### Groups & Group (user.keycloak.crossplane.io/v1alpha1) - ✅ Adequate
+### Groups & Group (user.keycloak.m.crossplane.io/v1beta1) - ✅ Adequate
 **Status:** Group and group membership management working  
 **Assessment:** Sufficient for typical use cases  
 **Recommendation:** Keep as-is

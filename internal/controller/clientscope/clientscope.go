@@ -29,7 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	scopesv1alpha1 "github.com/rossigee/provider-keycloak/apis/scopes/v1alpha1"
+	scopesv1beta1 "github.com/rossigee/provider-keycloak/apis/scopes/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -39,7 +39,7 @@ const (
 	errNotClientScope    = "managed resource is not a ClientScope"
 	errGetProviderConfig = "cannot get ProviderConfig"
 	errProviderNotReady  = "provider is not ready"
-	controllerName       = "clientscopes.scopes.keycloak.crossplane.io"
+	controllerName       = "clientscopes.scopes.keycloak.m.crossplane.io"
 )
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
@@ -53,13 +53,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(scopesv1alpha1.SchemeGroupVersion.WithKind("ClientScope")),
+		resource.ManagedKind(scopesv1beta1.SchemeGroupVersion.WithKind("ClientScope")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&scopesv1alpha1.ClientScope{}).
+		For(&scopesv1beta1.ClientScope{}).
 		Complete(r)
 }
 
@@ -67,7 +67,7 @@ type connector struct{ kube client.Client }
 type external struct{ client clients.Client }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*scopesv1alpha1.ClientScope)
+	cr, ok := mg.(*scopesv1beta1.ClientScope)
 	if !ok {
 		return nil, errors.New(errNotClientScope)
 	}
@@ -97,7 +97,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("ClientScope", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*scopesv1alpha1.ClientScope)
+	cr, ok := mg.(*scopesv1beta1.ClientScope)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotClientScope)
 	}
@@ -120,7 +120,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ClientScope", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*scopesv1alpha1.ClientScope)
+	cr, ok := mg.(*scopesv1beta1.ClientScope)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotClientScope)
 	}
@@ -155,7 +155,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ClientScope", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*scopesv1alpha1.ClientScope)
+	cr, ok := mg.(*scopesv1beta1.ClientScope)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotClientScope)
 	}
@@ -186,7 +186,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("ClientScope", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*scopesv1alpha1.ClientScope)
+	cr, ok := mg.(*scopesv1beta1.ClientScope)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotClientScope)
 	}

@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	openidclientv1alpha1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1alpha1"
+	openidclientv1beta1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/controller/testhelpers"
 )
@@ -211,11 +211,11 @@ func (m *mockClient) CreateClientScope(_ context.Context, _ string, _ clients.Cl
 func (m *mockClient) DeleteClientScope(_ context.Context, _, _ string) error { return nil }
 
 // newCR returns a minimal Client CR for testing.
-func newCR(realmId, clientId string) *openidclientv1alpha1.Client {
-	cr := &openidclientv1alpha1.Client{
+func newCR(realmId, clientId string) *openidclientv1beta1.Client {
+	cr := &openidclientv1beta1.Client{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-client", Namespace: "default"},
-		Spec: openidclientv1alpha1.ClientSpec{
-			ForProvider: openidclientv1alpha1.ClientParameters{
+		Spec: openidclientv1beta1.ClientSpec{
+			ForProvider: openidclientv1beta1.ClientParameters{
 				ClientId: clientId,
 			},
 		},
@@ -228,9 +228,9 @@ func newCR(realmId, clientId string) *openidclientv1alpha1.Client {
 
 // newCRWithSecretRef returns a Client CR configured to write the client
 // secret to the named Kubernetes secret key.
-func newCRWithSecretRef(realmId, clientId, secretName, namespace, key string) *openidclientv1alpha1.Client {
+func newCRWithSecretRef(realmId, clientId, secretName, namespace, key string) *openidclientv1beta1.Client {
 	cr := newCR(realmId, clientId)
-	cr.Spec.ForProvider.ClientSecretSecretRef = &openidclientv1alpha1.ClientSecretSecretRef{
+	cr.Spec.ForProvider.ClientSecretSecretRef = &openidclientv1beta1.ClientSecretSecretRef{
 		Name:      secretName,
 		Namespace: namespace,
 		Key:       key,
@@ -240,7 +240,7 @@ func newCRWithSecretRef(realmId, clientId, secretName, namespace, key string) *o
 
 // wrongMG is a non-Client managed resource used to test type assertion failures.
 // We use ClientDefaultScopes because it IS a resource.Managed but is not *Client.
-type wrongMG = openidclientv1alpha1.ClientDefaultScopes
+type wrongMG = openidclientv1beta1.ClientDefaultScopes
 
 // =============================================================================
 // Observe
@@ -310,7 +310,7 @@ func TestObserve(t *testing.T) {
 				t.Errorf("ResourceExists = %v, want %v", obs.ResourceExists, tt.wantExists)
 			}
 			if tt.wantExists {
-				cr := tt.mg.(*openidclientv1alpha1.Client)
+				cr := tt.mg.(*openidclientv1beta1.Client)
 				cond := cr.Status.GetCondition(xpv1.TypeReady)
 				if cond.Status != corev1.ConditionTrue {
 					t.Errorf("expected Ready condition True, got %v", cond.Status)
@@ -395,7 +395,7 @@ func TestCreateWritesClientSecretRef(t *testing.T) {
 	}
 	scheme := runtime.NewScheme()
 	_ = corev1.AddToScheme(scheme)
-	_ = openidclientv1alpha1.AddToScheme(scheme)
+	_ = openidclientv1beta1.AddToScheme(scheme)
 	kube := fake.NewClientBuilder().WithScheme(scheme).Build()
 	e := &external{kube: kube, client: mc}
 
@@ -664,7 +664,7 @@ func TestClientParamsToRepresentation(t *testing.T) {
 	rootURL := "https://app.example.com"
 	name := "My App"
 
-	p := &openidclientv1alpha1.ClientParameters{
+	p := &openidclientv1beta1.ClientParameters{
 		ClientId:               "my-app",
 		Enabled:                &enabled,
 		StandardFlowEnabled:    &stdFlow,
@@ -704,7 +704,7 @@ func TestClientParamsToRepresentation(t *testing.T) {
 }
 
 func TestClientParamsToRepresentationDefaults(t *testing.T) {
-	p := &openidclientv1alpha1.ClientParameters{ClientId: "bare"}
+	p := &openidclientv1beta1.ClientParameters{ClientId: "bare"}
 	rep := clientParamsToRepresentation(p)
 	if !rep.Enabled {
 		t.Error("Enabled default should be true")
@@ -723,73 +723,73 @@ func TestClientUpToDate(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		desired openidclientv1alpha1.ClientParameters
+		desired openidclientv1beta1.ClientParameters
 		actual  clients.ClientRepresentation
 		want    bool
 	}{
 		{
 			name:    "no desired overrides — always up to date",
-			desired: openidclientv1alpha1.ClientParameters{ClientId: testAppID},
+			desired: openidclientv1beta1.ClientParameters{ClientId: testAppID},
 			actual:  clients.ClientRepresentation{ClientID: testAppID, Enabled: true},
 			want:    true,
 		},
 		{
 			name:    "enabled matches",
-			desired: openidclientv1alpha1.ClientParameters{Enabled: &trueVal},
+			desired: openidclientv1beta1.ClientParameters{Enabled: &trueVal},
 			actual:  clients.ClientRepresentation{Enabled: true},
 			want:    true,
 		},
 		{
 			name:    "enabled drifted",
-			desired: openidclientv1alpha1.ClientParameters{Enabled: &trueVal},
+			desired: openidclientv1beta1.ClientParameters{Enabled: &trueVal},
 			actual:  clients.ClientRepresentation{Enabled: false},
 			want:    false,
 		},
 		{
 			name:    "standardFlowEnabled drifted",
-			desired: openidclientv1alpha1.ClientParameters{StandardFlowEnabled: &trueVal},
+			desired: openidclientv1beta1.ClientParameters{StandardFlowEnabled: &trueVal},
 			actual:  clients.ClientRepresentation{StandardFlowEnabled: false},
 			want:    false,
 		},
 		{
 			name:    "directAccessGrantsEnabled drifted",
-			desired: openidclientv1alpha1.ClientParameters{DirectAccessGrantsEnabled: &falseVal},
+			desired: openidclientv1beta1.ClientParameters{DirectAccessGrantsEnabled: &falseVal},
 			actual:  clients.ClientRepresentation{DirectAccessGrantsEnabled: true},
 			want:    false,
 		},
 		{
 			name:    "serviceAccountsEnabled drifted",
-			desired: openidclientv1alpha1.ClientParameters{ServiceAccountsEnabled: &trueVal},
+			desired: openidclientv1beta1.ClientParameters{ServiceAccountsEnabled: &trueVal},
 			actual:  clients.ClientRepresentation{ServiceAccountsEnabled: false},
 			want:    false,
 		},
 		{
 			name:    "rootUrl drifted",
-			desired: openidclientv1alpha1.ClientParameters{RootUrl: &rootURL},
+			desired: openidclientv1beta1.ClientParameters{RootUrl: &rootURL},
 			actual:  clients.ClientRepresentation{RootURL: otherURL},
 			want:    false,
 		},
 		{
 			name:    "rootUrl matches",
-			desired: openidclientv1alpha1.ClientParameters{RootUrl: &rootURL},
+			desired: openidclientv1beta1.ClientParameters{RootUrl: &rootURL},
 			actual:  clients.ClientRepresentation{RootURL: rootURL},
 			want:    true,
 		},
 		{
 			name:    "validRedirectUris drifted (different values)",
-			desired: openidclientv1alpha1.ClientParameters{ValidRedirectUris: []string{"https://a.com/*"}},
+			desired: openidclientv1beta1.ClientParameters{ValidRedirectUris: []string{"https://a.com/*"}},
 			actual:  clients.ClientRepresentation{ValidRedirectURIs: []string{"https://b.com/*"}},
 			want:    false,
 		},
 		{
 			name:    "validRedirectUris matches (order-independent)",
-			desired: openidclientv1alpha1.ClientParameters{ValidRedirectUris: []string{"https://b.com/*", "https://a.com/*"}},
+			desired: openidclientv1beta1.ClientParameters{ValidRedirectUris: []string{"https://b.com/*", "https://a.com/*"}},
 			actual:  clients.ClientRepresentation{ValidRedirectURIs: []string{"https://a.com/*", "https://b.com/*"}},
 			want:    true,
 		},
 		{
 			name:    "webOrigins drifted",
-			desired: openidclientv1alpha1.ClientParameters{WebOrigins: []string{"+"}},
+			desired: openidclientv1beta1.ClientParameters{WebOrigins: []string{"+"}},
 			actual:  clients.ClientRepresentation{WebOrigins: []string{"https://app.example.com"}},
 			want:    false,
 		},

@@ -29,7 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	authenticationflowv1alpha1 "github.com/rossigee/provider-keycloak/apis/authenticationflow/v1alpha1"
+	authenticationflowv1beta1 "github.com/rossigee/provider-keycloak/apis/authenticationflow/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
@@ -39,7 +39,7 @@ const (
 	errNotAuthenticationFlow = "managed resource is not an AuthenticationFlow"
 	errGetProviderConfig     = "cannot get ProviderConfig"
 	errProviderNotReady      = "provider is not ready"
-	controllerName           = "authenticationflow.keycloak.crossplane.io"
+	controllerName           = "authenticationflow.keycloak.m.crossplane.io"
 )
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
@@ -53,13 +53,13 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(authenticationflowv1alpha1.SchemeGroupVersion.WithKind("AuthenticationFlow")),
+		resource.ManagedKind(authenticationflowv1beta1.SchemeGroupVersion.WithKind("AuthenticationFlow")),
 		opts...)
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).
-		For(&authenticationflowv1alpha1.AuthenticationFlow{}).
+		For(&authenticationflowv1beta1.AuthenticationFlow{}).
 		Complete(r)
 }
 
@@ -67,7 +67,7 @@ type connector struct{ kube client.Client }
 type external struct{ client clients.Client }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*authenticationflowv1alpha1.AuthenticationFlow)
+	cr, ok := mg.(*authenticationflowv1beta1.AuthenticationFlow)
 	if !ok {
 		return nil, errors.New(errNotAuthenticationFlow)
 	}
@@ -97,7 +97,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		tracing.SpanAttrs("AuthenticationFlow", mg.GetName(), "observe")...)
 	defer span.End()
 
-	cr, ok := mg.(*authenticationflowv1alpha1.AuthenticationFlow)
+	cr, ok := mg.(*authenticationflowv1beta1.AuthenticationFlow)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotAuthenticationFlow)
 	}
@@ -115,7 +115,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("AuthenticationFlow", mg.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*authenticationflowv1alpha1.AuthenticationFlow)
+	cr, ok := mg.(*authenticationflowv1beta1.AuthenticationFlow)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotAuthenticationFlow)
 	}
@@ -139,7 +139,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("AuthenticationFlow", mg.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*authenticationflowv1alpha1.AuthenticationFlow)
+	cr, ok := mg.(*authenticationflowv1beta1.AuthenticationFlow)
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotAuthenticationFlow)
 	}
@@ -158,7 +158,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		tracing.SpanAttrs("AuthenticationFlow", mg.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*authenticationflowv1alpha1.AuthenticationFlow)
+	cr, ok := mg.(*authenticationflowv1beta1.AuthenticationFlow)
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotAuthenticationFlow)
 	}
@@ -169,7 +169,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
-func isAuthenticationFlowUpToDate(desired *authenticationflowv1alpha1.AuthenticationFlowParameters, current *clients.AuthenticationFlowRepresentation) bool {
+func isAuthenticationFlowUpToDate(desired *authenticationflowv1beta1.AuthenticationFlowParameters, current *clients.AuthenticationFlowRepresentation) bool {
 	if desired.Alias != current.Alias {
 		return false
 	}

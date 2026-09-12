@@ -26,8 +26,8 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	clientv1alpha1 "github.com/rossigee/provider-keycloak/apis/client/v1alpha1"
-	realmv1alpha1 "github.com/rossigee/provider-keycloak/apis/realm/v1alpha1"
+	clientv1beta1 "github.com/rossigee/provider-keycloak/apis/client/v1beta1"
+	realmv1beta1 "github.com/rossigee/provider-keycloak/apis/realm/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 )
 
@@ -191,11 +191,11 @@ func (m *mockMapperClient) CreateClientScope(_ context.Context, _ string, _ clie
 }
 func (m *mockMapperClient) DeleteClientScope(_ context.Context, _, _ string) error { return nil }
 
-func newMapperCR(realmId, clientId, name string) *clientv1alpha1.ProtocolMapper {
-	cr := &clientv1alpha1.ProtocolMapper{
+func newMapperCR(realmId, clientId, name string) *clientv1beta1.ProtocolMapper {
+	cr := &clientv1beta1.ProtocolMapper{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-mapper", Namespace: "default"},
-		Spec: clientv1alpha1.ProtocolMapperSpec{
-			ForProvider: clientv1alpha1.ProtocolMapperParameters{
+		Spec: clientv1beta1.ProtocolMapperSpec{
+			ForProvider: clientv1beta1.ProtocolMapperParameters{
 				Name:     name,
 				Protocol: "openid-connect",
 			},
@@ -210,7 +210,7 @@ func newMapperCR(realmId, clientId, name string) *clientv1alpha1.ProtocolMapper 
 	return cr
 }
 
-type wrongMapperMG = realmv1alpha1.Realm
+type wrongMapperMG = realmv1beta1.Realm
 
 func TestMapperObserve(t *testing.T) {
 	tests := []struct {

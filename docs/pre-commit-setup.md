@@ -112,10 +112,10 @@ pre-commit run --all-files
 
 ```bash
 # Make changes
-nano apis/openidclient/v1alpha1/types.go
+nano apis/openidclient/v1beta1/types.go
 
 # Stage changes
-git add apis/openidclient/v1alpha1/types.go
+git add apis/openidclient/v1beta1/types.go
 
 # Commit - hooks run automatically
 git commit -m "docs: update client types"
