@@ -26,9 +26,10 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	"github.com/pkg/errors"
-	"github.com/rossigee/provider-keycloak/internal/features"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/rossigee/provider-keycloak/internal/features"
 
 	openidclientv1beta1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
@@ -292,14 +293,6 @@ func scopeDiff(desired, current []clients.ClientScopeRepresentation) []clients.C
 		}
 	}
 	return diff
-}
-
-func stringSliceToScopes(scopes []string) []clients.ClientScopeRepresentation {
-	result := make([]clients.ClientScopeRepresentation, len(scopes))
-	for i, s := range scopes {
-		result[i] = clients.ClientScopeRepresentation{ID: s}
-	}
-	return result
 }
 
 func deref(s *string) string {

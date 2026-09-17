@@ -26,9 +26,10 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	"github.com/pkg/errors"
-	"github.com/rossigee/provider-keycloak/internal/features"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/rossigee/provider-keycloak/internal/features"
 
 	openidclientv1beta1 "github.com/rossigee/provider-keycloak/apis/openidclient/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
@@ -44,34 +45,6 @@ const (
 	errResolveScope            = "cannot resolve client scope"
 	controllerName             = "clientoptionalscopes.client.keycloak.m.crossplane.io"
 )
-
-// resolveClientUUID looks up the Keycloak internal client UUID from the clientId.
-func (e *external) resolveClientUUID(ctx context.Context, realm, clientID string) (string, error) {
-	c, err := e.client.GetClient(ctx, realm, clientID)
-	if err != nil {
-		return "", errors.Wrap(err, errResolveClient)
-	}
-	if c == nil {
-		return "", errors.Errorf("client %q not found in realm %q", clientID, realm)
-	}
-	return c.ID, nil
-}
-
-// resolveScopeIDs maps scope names to their Keycloak internal UUIDs.
-func (e *external) resolveScopeIDs(ctx context.Context, realm string, names []string) ([]clients.ClientScopeRepresentation, error) {
-	result := make([]clients.ClientScopeRepresentation, 0, len(names))
-	for _, n := range names {
-		s, err := e.client.GetClientScope(ctx, realm, n)
-		if err != nil {
-			return nil, errors.Wrap(err, errResolveScope)
-		}
-		if s == nil {
-			return nil, errors.Errorf("client scope %q not found in realm %q", n, realm)
-		}
-		result = append(result, *s)
-	}
-	return result, nil
-}
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	opts := []managed.ReconcilerOption{
@@ -320,14 +293,6 @@ func scopeDiff(desired, current []clients.ClientScopeRepresentation) []clients.C
 		}
 	}
 	return diff
-}
-
-func stringSliceToScopes(scopes []string) []clients.ClientScopeRepresentation {
-	result := make([]clients.ClientScopeRepresentation, len(scopes))
-	for i, s := range scopes {
-		result[i] = clients.ClientScopeRepresentation{ID: s}
-	}
-	return result
 }
 
 func deref(s *string) string {
