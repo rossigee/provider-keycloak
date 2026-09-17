@@ -124,19 +124,49 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 func (e *external) Disconnect(_ context.Context) error { return nil }
 
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
-	_, span := tracing.StartSpan(ctx, "clientoptionalscopes.observe",
-		tracing.SpanAttrs("ClientOptionalScopes", mg.GetName(), "observe")...)
-	defer span.End()
-
 	cr, ok := mg.(*openidclientv1beta1.ClientOptionalScopes)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotClientOptionalScopes)
 	}
-	clientUUID, err := e.resolveClientUUID(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
+	return ObserveClientOptionalScopes(ctx, e.client, cr)
+}
+
+func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
+	cr, ok := mg.(*openidclientv1beta1.ClientOptionalScopes)
+	if !ok {
+		return managed.ExternalCreation{}, errors.New(errNotClientOptionalScopes)
+	}
+	return CreateClientOptionalScopes(ctx, e.client, cr)
+}
+
+func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	cr, ok := mg.(*openidclientv1beta1.ClientOptionalScopes)
+	if !ok {
+		return managed.ExternalUpdate{}, errors.New(errNotClientOptionalScopes)
+	}
+	return UpdateClientOptionalScopes(ctx, e.client, cr)
+}
+
+func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
+	cr, ok := mg.(*openidclientv1beta1.ClientOptionalScopes)
+	if !ok {
+		return managed.ExternalDelete{}, errors.New(errNotClientOptionalScopes)
+	}
+	return DeleteClientOptionalScopes(ctx, e.client, cr)
+}
+
+// ObserveClientOptionalScopes reports whether the requested optional scopes
+// match the scopes already assigned to the client.
+func ObserveClientOptionalScopes(ctx context.Context, kc clients.Client, cr *openidclientv1beta1.ClientOptionalScopes) (managed.ExternalObservation, error) {
+	_, span := tracing.StartSpan(ctx, "clientoptionalscopes.observe",
+		tracing.SpanAttrs("ClientOptionalScopes", cr.GetName(), "observe")...)
+	defer span.End()
+
+	clientUUID, err := resolveClientUUIDOpt(ctx, kc, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
 	if err != nil {
 		return managed.ExternalObservation{}, err
 	}
-	current, err := e.client.ListClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID)
+	current, err := kc.ListClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID)
 	if err != nil {
 		return managed.ExternalObservation{}, err
 	}
@@ -145,93 +175,115 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
 
-func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
+// CreateClientOptionalScopes adds every requested optional scope UUID to the
+// client. Errors out if any scope name does not exist in the realm.
+func CreateClientOptionalScopes(ctx context.Context, kc clients.Client, cr *openidclientv1beta1.ClientOptionalScopes) (managed.ExternalCreation, error) {
 	_, span := tracing.StartSpan(ctx, "clientoptionalscopes.create",
-		tracing.SpanAttrs("ClientOptionalScopes", mg.GetName(), "create")...)
+		tracing.SpanAttrs("ClientOptionalScopes", cr.GetName(), "create")...)
 	defer span.End()
 
-	cr, ok := mg.(*openidclientv1beta1.ClientOptionalScopes)
-	if !ok {
-		return managed.ExternalCreation{}, errors.New(errNotClientOptionalScopes)
-	}
-	clientUUID, err := e.resolveClientUUID(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
+	clientUUID, err := resolveClientUUIDOpt(ctx, kc, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
 	if err != nil {
 		return managed.ExternalCreation{}, err
 	}
-	scopes, err := e.resolveScopeIDs(ctx, deref(cr.Spec.ForProvider.RealmId), cr.Spec.ForProvider.OptionalScopes)
+	scopes, err := resolveScopeIDsOpt(ctx, kc, deref(cr.Spec.ForProvider.RealmId), cr.Spec.ForProvider.OptionalScopes)
 	if err != nil {
 		return managed.ExternalCreation{}, err
 	}
-	if err := e.client.AddClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID, scopes); err != nil {
+	if err := kc.AddClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID, scopes); err != nil {
 		return managed.ExternalCreation{}, err
 	}
 	cr.Status.SetConditions(xpv1.Creating())
 	return managed.ExternalCreation{}, nil
 }
 
-func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+// UpdateClientOptionalScopes reconciles the client's optional scopes with the
+// desired list by adding missing and removing obsolete ones.
+func UpdateClientOptionalScopes(ctx context.Context, kc clients.Client, cr *openidclientv1beta1.ClientOptionalScopes) (managed.ExternalUpdate, error) {
 	_, span := tracing.StartSpan(ctx, "clientoptionalscopes.update",
-		tracing.SpanAttrs("ClientOptionalScopes", mg.GetName(), "update")...)
+		tracing.SpanAttrs("ClientOptionalScopes", cr.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*openidclientv1beta1.ClientOptionalScopes)
-	if !ok {
-		return managed.ExternalUpdate{}, errors.New(errNotClientOptionalScopes)
-	}
-	clientUUID, err := e.resolveClientUUID(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
+	clientUUID, err := resolveClientUUIDOpt(ctx, kc, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
 	if err != nil {
 		return managed.ExternalUpdate{}, err
 	}
-	current, err := e.client.ListClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID)
+	current, err := kc.ListClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID)
 	if err != nil {
 		return managed.ExternalUpdate{}, err
 	}
-	desired, err := e.resolveScopeIDs(ctx, deref(cr.Spec.ForProvider.RealmId), cr.Spec.ForProvider.OptionalScopes)
+	desired, err := resolveScopeIDsOpt(ctx, kc, deref(cr.Spec.ForProvider.RealmId), cr.Spec.ForProvider.OptionalScopes)
 	if err != nil {
 		return managed.ExternalUpdate{}, err
 	}
 	toAdd := scopeDiff(desired, current)
 	toRemove := scopeDiff(current, desired)
 	if len(toAdd) > 0 {
-		if err := e.client.AddClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID, toAdd); err != nil {
+		if err := kc.AddClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID, toAdd); err != nil {
 			return managed.ExternalUpdate{}, err
 		}
 	}
 	if len(toRemove) > 0 {
-		if err := e.client.RemoveClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID, toRemove); err != nil {
+		if err := kc.RemoveClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID, toRemove); err != nil {
 			return managed.ExternalUpdate{}, err
 		}
 	}
 	return managed.ExternalUpdate{}, nil
 }
 
-func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
+// DeleteClientOptionalScopes removes every optional scope the client currently
+// has. No-op when the client does not exist.
+func DeleteClientOptionalScopes(ctx context.Context, kc clients.Client, cr *openidclientv1beta1.ClientOptionalScopes) (managed.ExternalDelete, error) {
 	_, span := tracing.StartSpan(ctx, "clientoptionalscopes.delete",
-		tracing.SpanAttrs("ClientOptionalScopes", mg.GetName(), "delete")...)
+		tracing.SpanAttrs("ClientOptionalScopes", cr.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*openidclientv1beta1.ClientOptionalScopes)
-	if !ok {
-		return managed.ExternalDelete{}, errors.New(errNotClientOptionalScopes)
-	}
-	clientUUID, err := e.resolveClientUUID(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
+	clientUUID, err := resolveClientUUIDOpt(ctx, kc, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return managed.ExternalDelete{}, nil
 		}
 		return managed.ExternalDelete{}, err
 	}
-	current, err := e.client.ListClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID)
+	current, err := kc.ListClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID)
 	if err != nil && !strings.Contains(err.Error(), "404") {
 		return managed.ExternalDelete{}, err
 	}
 	if len(current) > 0 {
-		if err := e.client.RemoveClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID, current); err != nil {
+		if err := kc.RemoveClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID, current); err != nil {
 			return managed.ExternalDelete{}, err
 		}
 	}
 	cr.Status.SetConditions(xpv1.Deleting())
 	return managed.ExternalDelete{}, nil
+}
+
+// resolveClientUUIDOpt looks up the Keycloak internal client UUID by clientId.
+func resolveClientUUIDOpt(ctx context.Context, kc clients.Client, realm, clientID string) (string, error) {
+	c, err := kc.GetClient(ctx, realm, clientID)
+	if err != nil {
+		return "", errors.Wrap(err, errResolveClient)
+	}
+	if c == nil {
+		return "", errors.Errorf("client %q not found in realm %q", clientID, realm)
+	}
+	return c.ID, nil
+}
+
+// resolveScopeIDsOpt maps scope names to their Keycloak internal UUIDs.
+func resolveScopeIDsOpt(ctx context.Context, kc clients.Client, realm string, names []string) ([]clients.ClientScopeRepresentation, error) {
+	result := make([]clients.ClientScopeRepresentation, 0, len(names))
+	for _, n := range names {
+		s, err := kc.GetClientScope(ctx, realm, n)
+		if err != nil {
+			return nil, errors.Wrap(err, errResolveScope)
+		}
+		if s == nil {
+			return nil, errors.Errorf("client scope %q not found in realm %q", n, realm)
+		}
+		result = append(result, *s)
+	}
+	return result, nil
 }
 
 func stringsScopeMatch(desired []string, current []clients.ClientScopeRepresentation) bool {

@@ -93,37 +93,60 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 func (e *external) Disconnect(_ context.Context) error { return nil }
 
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
-	_, span := tracing.StartSpan(ctx, "clientscope.observe",
-		tracing.SpanAttrs("ClientScope", mg.GetName(), "observe")...)
-	defer span.End()
-
 	cr, ok := mg.(*scopesv1beta1.ClientScope)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotClientScope)
 	}
-
-	scope, err := e.client.GetClientScope(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.Name)
-	if err != nil {
-		return managed.ExternalObservation{}, err
-	}
-
-	if scope == nil {
-		return managed.ExternalObservation{ResourceExists: false}, nil
-	}
-
-	cr.Status.SetConditions(xpv1.Available())
-	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: true}, nil
+	return ObserveClientScope(ctx, e.client, cr)
 }
 
 func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
-	_, span := tracing.StartSpan(ctx, "clientscope.create",
-		tracing.SpanAttrs("ClientScope", mg.GetName(), "create")...)
-	defer span.End()
-
 	cr, ok := mg.(*scopesv1beta1.ClientScope)
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotClientScope)
 	}
+	return CreateClientScope(ctx, e.client, cr)
+}
+
+func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	cr, ok := mg.(*scopesv1beta1.ClientScope)
+	if !ok {
+		return managed.ExternalUpdate{}, errors.New(errNotClientScope)
+	}
+	return UpdateClientScope(ctx, e.client, cr)
+}
+
+func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
+	cr, ok := mg.(*scopesv1beta1.ClientScope)
+	if !ok {
+		return managed.ExternalDelete{}, errors.New(errNotClientScope)
+	}
+	return DeleteClientScope(ctx, e.client, cr)
+}
+
+// ObserveClientScope returns whether the realm scope exists. Exported so unit
+// tests can cover the controller logic without standing up the managed runtime.
+func ObserveClientScope(ctx context.Context, kc clients.Client, cr *scopesv1beta1.ClientScope) (managed.ExternalObservation, error) {
+	_, span := tracing.StartSpan(ctx, "clientscope.observe",
+		tracing.SpanAttrs("ClientScope", cr.GetName(), "observe")...)
+	defer span.End()
+
+	scope, err := kc.GetClientScope(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.Name)
+	if err != nil {
+		return managed.ExternalObservation{}, err
+	}
+	if scope == nil {
+		return managed.ExternalObservation{ResourceExists: false}, nil
+	}
+	cr.Status.SetConditions(xpv1.Available())
+	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: true}, nil
+}
+
+// CreateClientScope issues the Keycloak POST /client-scopes call.
+func CreateClientScope(ctx context.Context, kc clients.Client, cr *scopesv1beta1.ClientScope) (managed.ExternalCreation, error) {
+	_, span := tracing.StartSpan(ctx, "clientscope.create",
+		tracing.SpanAttrs("ClientScope", cr.GetName(), "create")...)
+	defer span.End()
 
 	scope := clients.ClientScopeRepresentation{
 		Name:                cr.Spec.ForProvider.Name,
@@ -131,7 +154,6 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		Protocol:            "openid-connect",
 		IncludeInTokenScope: true,
 	}
-
 	if cr.Spec.ForProvider.Description != nil {
 		scope.Description = *cr.Spec.ForProvider.Description
 	}
@@ -141,60 +163,46 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	if cr.Spec.ForProvider.IncludeInTokenScope != nil {
 		scope.IncludeInTokenScope = *cr.Spec.ForProvider.IncludeInTokenScope
 	}
-
-	if err := e.client.CreateClientScope(ctx, cr.Spec.ForProvider.RealmId, scope); err != nil {
+	if err := kc.CreateClientScope(ctx, cr.Spec.ForProvider.RealmId, scope); err != nil {
 		return managed.ExternalCreation{}, err
 	}
-
 	cr.Status.SetConditions(xpv1.Creating())
 	return managed.ExternalCreation{}, nil
 }
 
-func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+// UpdateClientScope issues the Keycloak PUT /client-scopes/{id} call after
+// resolving the realm-level UUID via GetClientScope.
+func UpdateClientScope(ctx context.Context, kc clients.Client, cr *scopesv1beta1.ClientScope) (managed.ExternalUpdate, error) {
 	_, span := tracing.StartSpan(ctx, "clientscope.update",
-		tracing.SpanAttrs("ClientScope", mg.GetName(), "update")...)
+		tracing.SpanAttrs("ClientScope", cr.GetName(), "update")...)
 	defer span.End()
 
-	cr, ok := mg.(*scopesv1beta1.ClientScope)
-	if !ok {
-		return managed.ExternalUpdate{}, errors.New(errNotClientScope)
-	}
-
-	scope, err := e.client.GetClientScope(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.Name)
+	scope, err := kc.GetClientScope(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.Name)
 	if err != nil {
 		return managed.ExternalUpdate{}, err
 	}
-
 	if scope == nil {
 		return managed.ExternalUpdate{}, errors.New("client scope not found")
 	}
-
 	scope.Description = ""
 	if cr.Spec.ForProvider.Description != nil {
 		scope.Description = *cr.Spec.ForProvider.Description
 	}
-
-	if err := e.client.UpdateClientScope(ctx, cr.Spec.ForProvider.RealmId, *scope); err != nil {
+	if err := kc.UpdateClientScope(ctx, cr.Spec.ForProvider.RealmId, *scope); err != nil {
 		return managed.ExternalUpdate{}, err
 	}
-
 	return managed.ExternalUpdate{}, nil
 }
 
-func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
+// DeleteClientScope removes the realm scope by name (handler resolves UUID).
+func DeleteClientScope(ctx context.Context, kc clients.Client, cr *scopesv1beta1.ClientScope) (managed.ExternalDelete, error) {
 	_, span := tracing.StartSpan(ctx, "clientscope.delete",
-		tracing.SpanAttrs("ClientScope", mg.GetName(), "delete")...)
+		tracing.SpanAttrs("ClientScope", cr.GetName(), "delete")...)
 	defer span.End()
 
-	cr, ok := mg.(*scopesv1beta1.ClientScope)
-	if !ok {
-		return managed.ExternalDelete{}, errors.New(errNotClientScope)
-	}
-
-	if err := e.client.DeleteClientScope(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.Name); err != nil {
+	if err := kc.DeleteClientScope(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.Name); err != nil {
 		return managed.ExternalDelete{}, err
 	}
-
 	cr.Status.SetConditions(xpv1.Deleting())
 	return managed.ExternalDelete{}, nil
 }
