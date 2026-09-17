@@ -390,3 +390,220 @@ func TestDeleteClient(t *testing.T) {
 		}
 	})
 }
+
+const (
+	testScopeName = "groups"
+	testScopeUUID = "scope-uuid-1"
+)
+
+func TestListClientScopes(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.Path, "/client-scopes") || strings.Contains(r.URL.Path, "/clients/") {
+			http.Error(w, "unexpected path "+r.URL.Path, http.StatusBadRequest)
+			return
+		}
+		if err := json.NewEncoder(w).Encode([]ClientScopeRepresentation{
+			{ID: "id-a", Name: "profile"},
+			{ID: testScopeUUID, Name: testScopeName},
+			{ID: "id-b", Name: "email"},
+		}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}))
+	defer srv.Close()
+
+	kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+	scopes, err := kc.ListClientScopes(context.Background(), "myrealm")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(scopes) != 3 {
+		t.Errorf("got %d scopes, want 3", len(scopes))
+	}
+	if scopes[1].Name != testScopeName || scopes[1].ID != testScopeUUID {
+		t.Errorf("scope mismatch: %+v", scopes[1])
+	}
+}
+
+func TestGetClientScopeByName(t *testing.T) {
+	t.Run("found by name", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Query().Get("clientId") != "" || strings.Contains(r.URL.Path, "/clients/") {
+				http.Error(w, "must be list endpoint", http.StatusInternalServerError)
+				return
+			}
+			if err := json.NewEncoder(w).Encode([]ClientScopeRepresentation{
+				{ID: testScopeUUID, Name: testScopeName},
+			}); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+		}))
+		defer srv.Close()
+
+		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		got, err := kc.GetClientScope(context.Background(), "myrealm", testScopeName)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected non-nil scope")
+		}
+		if got.ID != testScopeUUID {
+			t.Errorf("ID = %q, want %q", got.ID, testScopeUUID)
+		}
+	})
+
+	t.Run("not found returns nil without error", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewEncoder(w).Encode([]ClientScopeRepresentation{
+				{ID: "id-a", Name: "profile"},
+			}); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+		}))
+		defer srv.Close()
+
+		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		got, err := kc.GetClientScope(context.Background(), "myrealm", "missing")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != nil {
+			t.Errorf("expected nil, got %+v", got)
+		}
+	})
+
+	t.Run("404 responds nil without error", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "not found", http.StatusNotFound)
+		}))
+		defer srv.Close()
+
+		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		got, err := kc.GetClientScope(context.Background(), "myrealm", "anything")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != nil {
+			t.Errorf("expected nil, got %+v", got)
+		}
+	})
+}
+
+func TestUpdateClientScopeUsesUUID(t *testing.T) {
+	t.Run("uses supplied ID and resolves name when missing", func(t *testing.T) {
+		var lastPath string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			lastPath = r.URL.Path
+			// PUT must come second; the resolve GET returns the scope with UUID.
+			if r.Method == http.MethodGet {
+				if err := json.NewEncoder(w).Encode([]ClientScopeRepresentation{
+					{ID: testScopeUUID, Name: testScopeName},
+				}); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		defer srv.Close()
+
+		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		scope := ClientScopeRepresentation{Name: testScopeName} // no ID
+		if err := kc.UpdateClientScope(context.Background(), "myrealm", scope); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !strings.Contains(lastPath, testScopeUUID) {
+			t.Errorf("expected path to contain %q, got %q", testScopeUUID, lastPath)
+		}
+	})
+
+	t.Run("name lookup 404 returns errors", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !strings.Contains(r.URL.Path, "/client-scopes") {
+				http.Error(w, "bad path", http.StatusBadRequest)
+				return
+			}
+			// Empty list - name not present.
+			if err := json.NewEncoder(w).Encode([]ClientScopeRepresentation{}); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+		}))
+		defer srv.Close()
+
+		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		// Update with a name but no ID should resolve the name first.
+		err := kc.UpdateClientScope(context.Background(), "myrealm", ClientScopeRepresentation{Name: testScopeName})
+		if err == nil {
+			t.Fatal("expected 'not found' error")
+		}
+		if !strings.Contains(err.Error(), "not found") {
+			t.Errorf("error %q does not contain 'not found'", err.Error())
+		}
+	})
+}
+
+func TestDeleteClientScopeUsesUUID(t *testing.T) {
+	t.Run("resolves name to UUID before delete", func(t *testing.T) {
+		var lastPath string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			lastPath = r.URL.Path
+			// The resolve GET must return the scope first.
+			if r.Method == http.MethodGet {
+				if err := json.NewEncoder(w).Encode([]ClientScopeRepresentation{
+					{ID: testScopeUUID, Name: testScopeName},
+				}); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		defer srv.Close()
+
+		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		if err := kc.DeleteClientScope(context.Background(), "myrealm", testScopeName); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !strings.Contains(lastPath, testScopeUUID) {
+			t.Errorf("expected path to contain %q, got %q", testScopeUUID, lastPath)
+		}
+	})
+
+	t.Run("absent scope is a no-op", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewEncoder(w).Encode([]ClientScopeRepresentation{}); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+		}))
+		defer srv.Close()
+
+		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		if err := kc.DeleteClientScope(context.Background(), "myrealm", "missing"); err != nil {
+			t.Fatalf("expected nil error for missing scope, got %v", err)
+		}
+	})
+}
+
+func TestListClientDefaultScopesUsesUUIDEndpoint(t *testing.T) {
+	var lastPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		lastPath = r.URL.Path
+		if !strings.Contains(lastPath, "/clients/"+testClientUUID+"/default-client-scopes") {
+			http.Error(w, "expected UUID-based path, got "+lastPath, http.StatusBadRequest)
+			return
+		}
+		if err := json.NewEncoder(w).Encode([]ClientScopeRepresentation{}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}))
+	defer srv.Close()
+
+	kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+	if _, err := kc.ListClientDefaultScopes(context.Background(), "myrealm", testClientUUID); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(lastPath, testClientUUID) {
+		t.Errorf("path did not contain UUID: %q", lastPath)
+	}
+}
