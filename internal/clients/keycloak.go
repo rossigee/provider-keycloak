@@ -2149,20 +2149,35 @@ func (c *keycloakClient) ListAuthorizationPolicies(ctx context.Context, realm, c
 	return policies, nil
 }
 
-func (c *keycloakClient) GetClientScope(ctx context.Context, realm, name string) (*ClientScopeRepresentation, error) {
-	path := realmPath(realm) + "/client-scopes/" + url.PathEscape(name)
+func (c *keycloakClient) ListClientScopes(ctx context.Context, realm string) ([]ClientScopeRepresentation, error) {
+	path := realmPath(realm) + "/client-scopes"
 	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var scopes []ClientScopeRepresentation
+	if err := json.Unmarshal(respBody, &scopes); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal client scopes")
+	}
+	return scopes, nil
+}
+
+func (c *keycloakClient) GetClientScope(ctx context.Context, realm, name string) (*ClientScopeRepresentation, error) {
+	// Keycloak's GET /client-scopes/{id} requires the internal UUID, not
+	// the scope name, so list all scopes and filter by name.
+	scopes, err := c.ListClientScopes(ctx, realm)
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
 			return nil, nil
 		}
 		return nil, err
 	}
-	var scope ClientScopeRepresentation
-	if err := json.Unmarshal(respBody, &scope); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal client scope")
+	for i := range scopes {
+		if scopes[i].Name == name {
+			return &scopes[i], nil
+		}
 	}
-	return &scope, nil
+	return nil, nil
 }
 
 func (c *keycloakClient) CreateClientScope(ctx context.Context, realm string, scope ClientScopeRepresentation) error {
@@ -2172,13 +2187,33 @@ func (c *keycloakClient) CreateClientScope(ctx context.Context, realm string, sc
 }
 
 func (c *keycloakClient) UpdateClientScope(ctx context.Context, realm string, scope ClientScopeRepresentation) error {
-	path := realmPath(realm) + "/client-scopes/" + url.PathEscape(scope.Name)
+	// Keycloak's PUT /client-scopes/{id} requires the internal UUID.
+	id := scope.ID
+	if id == "" {
+		existing, err := c.GetClientScope(ctx, realm, scope.Name)
+		if err != nil {
+			return err
+		}
+		if existing == nil {
+			return errors.Errorf("client scope %q not found in realm %q", scope.Name, realm)
+		}
+		id = existing.ID
+	}
+	path := realmPath(realm) + "/client-scopes/" + url.PathEscape(id)
 	_, err := c.doRequest(ctx, http.MethodPut, path, scope)
 	return err
 }
 
 func (c *keycloakClient) DeleteClientScope(ctx context.Context, realm, name string) error {
-	path := realmPath(realm) + "/client-scopes/" + url.PathEscape(name)
-	_, err := c.doRequest(ctx, http.MethodDelete, path, nil)
+	// Keycloak's DELETE /client-scopes/{id} requires the internal UUID.
+	existing, err := c.GetClientScope(ctx, realm, name)
+	if err != nil {
+		return err
+	}
+	if existing == nil {
+		return nil
+	}
+	path := realmPath(realm) + "/client-scopes/" + url.PathEscape(existing.ID)
+	_, err = c.doRequest(ctx, http.MethodDelete, path, nil)
 	return err
 }

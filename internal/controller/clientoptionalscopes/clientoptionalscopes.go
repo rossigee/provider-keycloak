@@ -40,8 +40,38 @@ const (
 	errNotClientOptionalScopes = "managed resource is not a ClientOptionalScopes"
 	errGetProviderConfig       = "cannot get ProviderConfig"
 	errProviderNotReady        = "provider is not ready"
-	controllerName             = "clientoptionalscopes.client.keycloak.m.crossplane.io"
+	errResolveClient          = "cannot resolve client UUID"
+	errResolveScope           = "cannot resolve client scope"
+	controllerName              = "clientoptionalscopes.client.keycloak.m.crossplane.io"
 )
+
+// resolveClientUUID looks up the Keycloak internal client UUID from the clientId.
+func (e *external) resolveClientUUID(ctx context.Context, realm, clientID string) (string, error) {
+	c, err := e.client.GetClient(ctx, realm, clientID)
+	if err != nil {
+		return "", errors.Wrap(err, errResolveClient)
+	}
+	if c == nil {
+		return "", errors.Errorf("client %q not found in realm %q", clientID, realm)
+	}
+	return c.ID, nil
+}
+
+// resolveScopeIDs maps scope names to their Keycloak internal UUIDs.
+func (e *external) resolveScopeIDs(ctx context.Context, realm string, names []string) ([]clients.ClientScopeRepresentation, error) {
+	result := make([]clients.ClientScopeRepresentation, 0, len(names))
+	for _, n := range names {
+		s, err := e.client.GetClientScope(ctx, realm, n)
+		if err != nil {
+			return nil, errors.Wrap(err, errResolveScope)
+		}
+		if s == nil {
+			return nil, errors.Errorf("client scope %q not found in realm %q", n, realm)
+		}
+		result = append(result, *s)
+	}
+	return result, nil
+}
 
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 	opts := []managed.ReconcilerOption{
@@ -102,7 +132,11 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotClientOptionalScopes)
 	}
-	current, err := e.client.ListClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
+	clientUUID, err := e.resolveClientUUID(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
+	if err != nil {
+		return managed.ExternalObservation{}, err
+	}
+	current, err := e.client.ListClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID)
 	if err != nil {
 		return managed.ExternalObservation{}, err
 	}
@@ -120,8 +154,15 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotClientOptionalScopes)
 	}
-	scopes := stringSliceToScopes(cr.Spec.ForProvider.OptionalScopes)
-	if err := e.client.AddClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId), scopes); err != nil {
+	clientUUID, err := e.resolveClientUUID(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
+	if err != nil {
+		return managed.ExternalCreation{}, err
+	}
+	scopes, err := e.resolveScopeIDs(ctx, deref(cr.Spec.ForProvider.RealmId), cr.Spec.ForProvider.OptionalScopes)
+	if err != nil {
+		return managed.ExternalCreation{}, err
+	}
+	if err := e.client.AddClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID, scopes); err != nil {
 		return managed.ExternalCreation{}, err
 	}
 	cr.Status.SetConditions(xpv1.Creating())
@@ -137,20 +178,27 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	if !ok {
 		return managed.ExternalUpdate{}, errors.New(errNotClientOptionalScopes)
 	}
-	current, err := e.client.ListClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
+	clientUUID, err := e.resolveClientUUID(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
 	if err != nil {
 		return managed.ExternalUpdate{}, err
 	}
-	desired := stringSliceToScopes(cr.Spec.ForProvider.OptionalScopes)
+	current, err := e.client.ListClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID)
+	if err != nil {
+		return managed.ExternalUpdate{}, err
+	}
+	desired, err := e.resolveScopeIDs(ctx, deref(cr.Spec.ForProvider.RealmId), cr.Spec.ForProvider.OptionalScopes)
+	if err != nil {
+		return managed.ExternalUpdate{}, err
+	}
 	toAdd := scopeDiff(desired, current)
 	toRemove := scopeDiff(current, desired)
 	if len(toAdd) > 0 {
-		if err := e.client.AddClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId), toAdd); err != nil {
+		if err := e.client.AddClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID, toAdd); err != nil {
 			return managed.ExternalUpdate{}, err
 		}
 	}
 	if len(toRemove) > 0 {
-		if err := e.client.RemoveClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId), toRemove); err != nil {
+		if err := e.client.RemoveClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID, toRemove); err != nil {
 			return managed.ExternalUpdate{}, err
 		}
 	}
@@ -166,12 +214,19 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotClientOptionalScopes)
 	}
-	current, err := e.client.ListClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
+	clientUUID, err := e.resolveClientUUID(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return managed.ExternalDelete{}, nil
+		}
+		return managed.ExternalDelete{}, err
+	}
+	current, err := e.client.ListClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID)
 	if err != nil && !strings.Contains(err.Error(), "404") {
 		return managed.ExternalDelete{}, err
 	}
 	if len(current) > 0 {
-		if err := e.client.RemoveClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId), current); err != nil {
+		if err := e.client.RemoveClientOptionalScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID, current); err != nil {
 			return managed.ExternalDelete{}, err
 		}
 	}
