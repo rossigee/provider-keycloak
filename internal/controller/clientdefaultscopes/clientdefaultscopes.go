@@ -40,8 +40,8 @@ const (
 	errNotClientDefaultScopes = "managed resource is not a ClientDefaultScopes"
 	errGetProviderConfig      = "cannot get ProviderConfig"
 	errProviderNotReady       = "provider is not ready"
-	errResolveClient         = "cannot resolve client UUID"
-	errResolveScope          = "cannot resolve client scope"
+	errResolveClient          = "cannot resolve client UUID"
+	errResolveScope           = "cannot resolve client scope"
 	controllerName            = "clientdefaultscopes.client.keycloak.m.crossplane.io"
 )
 

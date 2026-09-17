@@ -40,9 +40,9 @@ const (
 	errNotClientOptionalScopes = "managed resource is not a ClientOptionalScopes"
 	errGetProviderConfig       = "cannot get ProviderConfig"
 	errProviderNotReady        = "provider is not ready"
-	errResolveClient          = "cannot resolve client UUID"
-	errResolveScope           = "cannot resolve client scope"
-	controllerName              = "clientoptionalscopes.client.keycloak.m.crossplane.io"
+	errResolveClient           = "cannot resolve client UUID"
+	errResolveScope            = "cannot resolve client scope"
+	controllerName             = "clientoptionalscopes.client.keycloak.m.crossplane.io"
 )
 
 // resolveClientUUID looks up the Keycloak internal client UUID from the clientId.
