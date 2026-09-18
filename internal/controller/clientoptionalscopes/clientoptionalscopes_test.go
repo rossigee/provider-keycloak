@@ -105,6 +105,9 @@ func TestObserveClientOptionalScopes(t *testing.T) {
 		if !obs.ResourceUpToDate {
 			t.Errorf("expected up-to-date")
 		}
+		if !obs.ResourceExists {
+			t.Errorf("expected resource to exist while scopes are attached")
+		}
 	})
 
 	t.Run("drift when scopes differ", func(t *testing.T) {
@@ -116,6 +119,23 @@ func TestObserveClientOptionalScopes(t *testing.T) {
 		}
 		if obs.ResourceUpToDate {
 			t.Errorf("expected drift to be reported")
+		}
+		if !obs.ResourceExists {
+			t.Errorf("expected resource to exist while scopes are attached")
+		}
+	})
+
+	t.Run("does not exist during deletion once scopes are removed", func(t *testing.T) {
+		s := newOptsStub()
+		cr := newOptCR([]string{"groups"})
+		now := metav1.Now()
+		cr.SetDeletionTimestamp(&now)
+		obs, err := ObserveClientOptionalScopes(context.Background(), s, cr)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if obs.ResourceExists {
+			t.Errorf("expected resource NOT to exist during deletion once scopes are detached")
 		}
 	})
 }
