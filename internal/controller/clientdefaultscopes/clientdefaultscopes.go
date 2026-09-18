@@ -173,7 +173,14 @@ func ObserveClientDefaultScopes(ctx context.Context, kc clients.Client, cr *open
 	}
 	cr.Status.SetConditions(xpv1.Available())
 	upToDate := stringsScopeMatch(cr.Spec.ForProvider.DefaultScopes, current)
-	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
+	// Outside deletion the external "resource" is the scope assignment on the
+	// client; we report it as existing so the reconciler drives changes through
+	// Update (Create is not used for this resource type). During deletion we
+	// must report it as gone once no scopes remain: the managed reconciler only
+	// finalizes a delete when Observe reports ResourceExists=false, otherwise it
+	// re-enters the delete branch forever.
+	exists := cr.GetDeletionTimestamp() == nil || len(current) > 0
+	return managed.ExternalObservation{ResourceExists: exists, ResourceUpToDate: upToDate}, nil
 }
 
 // CreateClientDefaultScopes adds every requested default scope UUID to the
