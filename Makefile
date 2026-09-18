@@ -48,6 +48,24 @@ XPKGS = provider-keycloak
 # we ensure image is present in daemon.
 xpkg.build.provider-keycloak: do.build.images
 
+# Ensure CLI is available for package builds and publishing
+$(foreach x,$(XPKGS),$(eval xpkg.build.$(x): $(CROSSPLANE_CLI)))
+
+# Rules to build packages for each platform
+$(foreach p,$(filter linux_%,$(PLATFORMS)),$(foreach x,$(XPKGS),$(eval $(XPKG_OUTPUT_DIR)/$(p)/$(x)-$(VERSION).xpkg: $(CROSSPLANE_CLI); @$(MAKE) xpkg.build.$(x) PLATFORM=$(p))))
+
+# Ensure packages are built for all platforms before publishing
+$(foreach r,$(XPKG_REG_ORGS),$(foreach x,$(XPKGS),$(eval xpkg.release.publish.$(r).$(x): $(CROSSPLANE_CLI) $(foreach p,$(filter linux_%,$(PLATFORMS)),$(XPKG_OUTPUT_DIR)/$(p)/$(x)-$(VERSION).xpkg))))
+
+# Ensure publish only happens on release branches
+publish.artifacts:
+	@if ! echo "$(BRANCH_NAME)" | grep -qE "$(subst $(SPACE),|,main|master|release-.*)"; then \
+		echo "FAIL: Publishing is only allowed on branches matching: main|master|release-.* current=$(BRANCH_NAME)"; \
+		exit 1; \
+	fi
+	$(foreach r,$(XPKG_REG_ORGS), $(foreach x,$(XPKGS),@$(MAKE) xpkg.release.publish.$(r).$(x)))
+	$(foreach r,$(REGISTRY_ORGS), $(foreach i,$(IMAGES),@$(MAKE) img.release.publish.$(r).$(i)))
+
 fallthrough: submodules
 	@echo Initial setup complete. Running make again . . .
 	@make
