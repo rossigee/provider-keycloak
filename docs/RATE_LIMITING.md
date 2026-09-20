@@ -4,6 +4,30 @@
 
 Provider-keycloak implements automatic rate limit handling for HTTP 429 (Too Many Requests) responses from Keycloak. This prevents controller thrashing and enables graceful degradation under load.
 
+### User-Facing Behavior
+
+When you encounter rate limiting:
+- Resources show reconciliation errors mentioning "rate limited"
+- Provider automatically retries within seconds, respecting server `Retry-After` hints
+- No manual intervention needed
+- Resources become Ready once backoff window expires
+
+### Common Causes
+
+- High-frequency deployments creating/updating many resources simultaneously
+- Keycloak server under load with rate limiting enabled
+- Multiple controller instances hitting the same server
+- Large batch operations processed concurrently
+
+### How It Works (Simple)
+
+1. **Detection**: HTTP 429 response received from Keycloak
+2. **Backoff**: Wait 1-30 seconds (exponential or server-specified)
+3. **Retry**: Automatic retry after backoff expires
+4. **Recovery**: First successful response clears backoff state
+
+No configuration needed—backoff is automatic and optimized for typical Keycloak deployments (10-30s rate limit windows).
+
 ## Implementation Details
 
 ### Architecture
