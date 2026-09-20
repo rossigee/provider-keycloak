@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.2] - 2026-09-20
+
+### Fixed
+- **Critical:** HTTP 429 rate limit backoff mechanism was incorrectly clearing on error responses, preventing backoff from working
+  - Rate limit backoff now persists until successful (2xx) response
+  - Applies Retry-After header from server when present (RFC 7231 compliant)
+  - Falls back to exponential backoff (1s → 2s → 4s... capped at 30s) for consecutive hits
+- Scope deletion now correctly reports `ResourceExists=false` when scope not found
+
+### Added
+- Comprehensive rate limit test coverage (7 new test functions, coverage 38.1% → 41.5%)
+  - Tests for Retry-After parsing, backoff state management, exponential backoff progression
+  - Integration tests for doRequest() and doCreate() with rate limiting
+- Rate limit tracking for `doCreate()` POST operations (was missing)
+- Rate limit tracking for `UpdateRealmRaw()` raw realm updates (was missing)
+- Complete technical documentation: [docs/RATE_LIMITING.md](docs/RATE_LIMITING.md)
+
+### Changed
+- Rate limit handling now consistent across all HTTP methods (doRequest, doCreate, UpdateRealmRaw)
+- Release workflow now on canonical single-job pattern
+
 ## [0.1.0] - 2026-06-06
 
 ### Fixed
