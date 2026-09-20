@@ -358,6 +358,32 @@ Provider-keycloak maintains feature parity with [crossplane-contrib/provider-key
 2. Ensure ProviderConfig has appropriate admin permissions
 3. Review Keycloak audit logs for conflicts
 
+### Rate Limiting (HTTP 429)
+
+Provider-keycloak automatically handles Keycloak rate limiting with intelligent backoff:
+
+**Behavior**:
+- **Detection**: Recognizes HTTP 429 responses from Keycloak
+- **Retry Strategy**: Respects `Retry-After` headers when present
+- **Fallback**: Uses exponential backoff (1s → 2s → 4s → 8s... capped at 30s) if no header
+- **Auto-recovery**: Returns to normal operation after backoff window expires
+- **Error Visibility**: Logs backoff details so you can see when rate limiting occurs
+
+**What you'll see**:
+- Resource stuck with reconciliation errors mentioning "rate limited"
+- Automatic retry within seconds (respecting server hints)
+- No manual intervention required
+- Resource becomes Ready once backoff clears
+
+**Why it happens**:
+- High-frequency deployments creating/updating many resources
+- Keycloak under load with rate limiting enabled
+- Concurrent controllers hitting the same server
+- Large batch operations
+
+**Configuration**:
+No configuration needed! Backoff is automatic and optimized for typical Keycloak deployments (10-30s rate limit windows at proxy layer).
+
 ## Contributing
 
 We welcome contributions! Areas for enhancement:
