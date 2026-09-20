@@ -56,6 +56,14 @@ const (
 	backoffMax     = 5 * time.Minute
 )
 
+// Rate limit backoff schedule for API errors (HTTP 429).
+// Uses a separate, shorter schedule than token acquisition since rate limit
+// windows are typically 10-30 seconds at the proxy layer.
+const (
+	rateLimitBackoffInitial = 1 * time.Second
+	rateLimitBackoffMax     = 30 * time.Second
+)
+
 // debugHTTP enables verbose request/response logging in doRequest, gated by
 // an env var so it can be toggled without a code change. Temporary
 // diagnostic aid.
@@ -82,6 +90,11 @@ func (c *countingReader) Read(p []byte) (int, error) {
 // Controllers should map this to a RequeueAfter rather than letting it
 // bubble as an unrecoverable reconcile error.
 var ErrAuthUnavailable = errors.New("Keycloak authentication unavailable")
+
+// ErrRateLimited indicates that the Keycloak server returned HTTP 429 Too
+// Many Requests. The caller should apply the backoff specified in the error
+// message rather than immediately retrying.
+var ErrRateLimited = errors.New("Keycloak rate limited")
 
 // realmPath returns the safely encoded admin API path for a realm.
 func realmPath(realm string) string {
@@ -254,6 +267,10 @@ type keycloakClient struct {
 	lastFailureAt    time.Time
 	backoffUntil     time.Time
 	consecutiveFails int
+
+	// Failure tracking for API rate limit backoff (HTTP 429).
+	rateLimitUntil       time.Time
+	rateLimitConsecutive int
 }
 
 // NewClient creates a new Keycloak API client using OAuth2 client credentials.
@@ -438,6 +455,67 @@ func (k *keycloakClient) recordSuccessLocked(token string, exp time.Time, _ time
 	k.consecutiveFails = 0
 }
 
+// parseRetryAfter parses a Retry-After header value, returning the duration
+// in seconds. It handles both HTTP-date (RFC 7231) and delta-seconds formats.
+func parseRetryAfter(hdr string) time.Duration {
+	if hdr == "" {
+		return 0
+	}
+	if d, err := strconv.Atoi(hdr); err == nil && d > 0 {
+		return time.Duration(d) * time.Second
+	}
+	if t, err := http.ParseTime(hdr); err == nil {
+		if wait := time.Until(t); wait > 0 {
+			return wait
+		}
+	}
+	return 0
+}
+
+// checkRateLimitBackoff returns ErrRateLimited if we are currently in a rate
+// limit backoff window, along with the remaining duration. Callers should
+// treat this like ErrAuthUnavailable and apply RequeueAfter.
+func (k *keycloakClient) checkRateLimitBackoff() (time.Duration, error) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	if time.Now().Before(k.rateLimitUntil) {
+		return time.Until(k.rateLimitUntil), ErrRateLimited
+	}
+	return 0, nil
+}
+
+// recordRateLimitHit records a 429 response. If a Retry-After header was
+// present, use that value as the backoff (capped at rateLimitBackoffMax).
+// Otherwise, use exponential backoff starting at rateLimitBackoffInitial and
+// doubling on each consecutive hit, up to rateLimitBackoffMax.
+func (k *keycloakClient) recordRateLimitHit(retryAfter time.Duration) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	now := time.Now()
+	if retryAfter > 0 {
+		if retryAfter > rateLimitBackoffMax {
+			retryAfter = rateLimitBackoffMax
+		}
+		k.rateLimitUntil = now.Add(retryAfter)
+		k.rateLimitConsecutive++
+		return
+	}
+	k.rateLimitConsecutive++
+	delay := rateLimitBackoffInitial << (k.rateLimitConsecutive - 1)
+	if delay <= 0 || delay > rateLimitBackoffMax {
+		delay = rateLimitBackoffMax
+	}
+	k.rateLimitUntil = now.Add(delay)
+}
+
+// clearRateLimitBackoff clears the rate limit backoff state on success.
+func (k *keycloakClient) clearRateLimitBackoff() {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	k.rateLimitUntil = time.Time{}
+	k.rateLimitConsecutive = 0
+}
+
 // =============================================================================
 // HTTP Methods
 // =============================================================================
@@ -445,6 +523,10 @@ func (k *keycloakClient) recordSuccessLocked(token string, exp time.Time, _ time
 func (c *keycloakClient) doRequest(ctx context.Context, method, path string, body interface{}) ([]byte, error) {
 	if err := c.refreshToken(ctx); err != nil {
 		return nil, errors.Wrap(err, "failed to refresh access token")
+	}
+
+	if wait, err := c.checkRateLimitBackoff(); err != nil {
+		return nil, errors.Wrapf(err, "rate limit backoff until %s (wait %v)", time.Now().Add(wait).Format(time.RFC3339), wait)
 	}
 
 	var bodyReader io.Reader
@@ -525,6 +607,16 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if resp.StatusCode == http.StatusTooManyRequests {
+			retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
+			c.recordRateLimitHit(retryAfter)
+			backoffStr := "exponential backoff"
+			if retryAfter > 0 {
+				backoffStr = fmt.Sprintf("Retry-After %v", retryAfter)
+			}
+			return nil, errors.Wrapf(ErrRateLimited, "request failed with status %d: rate limited, %s until %s",
+				http.StatusTooManyRequests, backoffStr, time.Now().Add(retryAfter).Format(time.RFC3339))
+		}
 		msg := string(respBody)
 		if len(msg) > maxErrBodyLen {
 			msg = msg[:maxErrBodyLen] + "..."
@@ -532,6 +624,7 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, msg)
 	}
 
+	c.clearRateLimitBackoff()
 	return respBody, nil
 }
 
@@ -669,13 +762,19 @@ func (c *keycloakClient) UpdateRealmRaw(ctx context.Context, realm string, realm
 	if err := c.refreshToken(ctx); err != nil {
 		return errors.Wrap(err, "failed to refresh access token")
 	}
+
+	if wait, err := c.checkRateLimitBackoff(); err != nil {
+		return errors.Wrapf(err, "rate limit backoff until %s (wait %v)", time.Now().Add(wait).Format(time.RFC3339), wait)
+	}
+
+	c.mu.Lock()
+	token := c.token
+	c.mu.Unlock()
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.baseURL+realmPath(realm), bytes.NewReader(realmJSON))
 	if err != nil {
 		return errors.Wrap(err, "failed to create request")
 	}
-	c.mu.Lock()
-	token := c.token
-	c.mu.Unlock()
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.httpClient.Do(req)
@@ -688,8 +787,19 @@ func (c *keycloakClient) UpdateRealmRaw(ctx context.Context, realm string, realm
 		return errors.Wrap(err, "failed to read response body")
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if resp.StatusCode == http.StatusTooManyRequests {
+			retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
+			c.recordRateLimitHit(retryAfter)
+			backoffStr := "exponential backoff"
+			if retryAfter > 0 {
+				backoffStr = fmt.Sprintf("Retry-After %v", retryAfter)
+			}
+			return errors.Wrapf(ErrRateLimited, "request failed with status %d: rate limited, %s until %s",
+				http.StatusTooManyRequests, backoffStr, time.Now().Add(retryAfter).Format(time.RFC3339))
+		}
 		return errors.New(fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(body)))
 	}
+	c.clearRateLimitBackoff()
 	return nil
 }
 
@@ -1036,16 +1146,28 @@ func (c *keycloakClient) CreateClient(ctx context.Context, realm string, client 
 // doCreate POSTs body to path and extracts the created resource UUID from the
 // Location response header.  Keycloak returns Location: .../clients/{uuid}.
 func (c *keycloakClient) doCreate(ctx context.Context, path string, body interface{}) (string, error) {
+	if err := c.refreshToken(ctx); err != nil {
+		return "", errors.Wrap(err, "failed to refresh access token")
+	}
+
+	if wait, err := c.checkRateLimitBackoff(); err != nil {
+		return "", errors.Wrapf(err, "rate limit backoff until %s (wait %v)", time.Now().Add(wait).Format(time.RFC3339), wait)
+	}
+
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal request body")
 	}
 
+	c.mu.Lock()
+	token := c.token
+	c.mu.Unlock()
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create request")
 	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -1058,6 +1180,16 @@ func (c *keycloakClient) doCreate(ctx context.Context, path string, body interfa
 	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrBodyLen+1))
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if resp.StatusCode == http.StatusTooManyRequests {
+			retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
+			c.recordRateLimitHit(retryAfter)
+			backoffStr := "exponential backoff"
+			if retryAfter > 0 {
+				backoffStr = fmt.Sprintf("Retry-After %v", retryAfter)
+			}
+			return "", errors.Wrapf(ErrRateLimited, "request failed with status %d: rate limited, %s until %s",
+				http.StatusTooManyRequests, backoffStr, time.Now().Add(retryAfter).Format(time.RFC3339))
+		}
 		msg := string(respBody)
 		if len(msg) > maxErrBodyLen {
 			msg = msg[:maxErrBodyLen] + "..."
@@ -1065,6 +1197,7 @@ func (c *keycloakClient) doCreate(ctx context.Context, path string, body interfa
 		return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, msg)
 	}
 
+	c.clearRateLimitBackoff()
 	loc := resp.Header.Get("Location")
 	if loc == "" {
 		return "", nil
