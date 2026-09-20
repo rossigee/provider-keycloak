@@ -358,6 +358,12 @@ Provider-keycloak maintains feature parity with [crossplane-contrib/provider-key
 2. Ensure ProviderConfig has appropriate admin permissions
 3. Review Keycloak audit logs for conflicts
 
+### Rate Limiting (HTTP 429)
+
+Provider-keycloak automatically handles rate limiting with exponential backoff (1s → 2s → 4s... capped at 30s) and respects `Retry-After` headers. Resources may briefly show reconciliation errors mentioning "rate limited" but will recover automatically without intervention.
+
+See [RATE_LIMITING.md](docs/RATE_LIMITING.md) for detailed technical documentation.
+
 ## Contributing
 
 We welcome contributions! Areas for enhancement:

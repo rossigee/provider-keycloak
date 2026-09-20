@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 const (
@@ -605,5 +606,261 @@ func TestListClientDefaultScopesUsesUUIDEndpoint(t *testing.T) {
 	}
 	if !strings.Contains(lastPath, testClientUUID) {
 		t.Errorf("path did not contain UUID: %q", lastPath)
+	}
+}
+
+// Rate Limit Tests
+
+func TestParseRetryAfter(t *testing.T) {
+	tests := []struct {
+		name     string
+		header   string
+		expected int64 // seconds
+	}{
+		{"delta-seconds: 60", "60", 60},
+		{"delta-seconds: 1", "1", 1},
+		{"delta-seconds: 0 is invalid", "0", 0},
+		{"invalid number returns 0", "abc", 0},
+		{"empty string returns 0", "", 0},
+		{"negative number returns 0", "-5", 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseRetryAfter(tt.header)
+			expected := time.Duration(tt.expected) * time.Second
+			if got != expected {
+				t.Errorf("parseRetryAfter(%q) = %v, want %v", tt.header, got, expected)
+			}
+		})
+	}
+}
+
+func TestRateLimitBackoffTracking(t *testing.T) {
+	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com"}
+
+	// Initially no backoff
+	wait, err := kc.checkRateLimitBackoff()
+	if err != nil {
+		t.Fatalf("unexpected error checking initial backoff: %v", err)
+	}
+	if wait != 0 {
+		t.Errorf("expected no initial backoff, got %v", wait)
+	}
+
+	// Record a 429 with Retry-After header
+	kc.recordRateLimitHit(10 * time.Second)
+
+	// Should now report backoff
+	wait, err = kc.checkRateLimitBackoff()
+	if err == nil {
+		t.Fatal("expected ErrRateLimited when in backoff")
+	}
+	if !strings.Contains(err.Error(), "rate limited") {
+		t.Errorf("error should mention rate limiting, got: %v", err)
+	}
+	if wait < 9*time.Second || wait > 11*time.Second {
+		t.Errorf("expected ~10s backoff, got %v", wait)
+	}
+
+	// Clear backoff
+	kc.clearRateLimitBackoff()
+	wait, err = kc.checkRateLimitBackoff()
+	if err != nil {
+		t.Fatalf("unexpected error after clearing backoff: %v", err)
+	}
+	if wait != 0 {
+		t.Errorf("expected no backoff after clear, got %v", wait)
+	}
+}
+
+func TestRateLimitExponentialBackoff(t *testing.T) {
+	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com"}
+
+	// Consecutive hits without Retry-After should use exponential backoff
+	// Hit 1: 1s * 2^(1-1) = 1s
+	kc.recordRateLimitHit(0)
+	wait, err := kc.checkRateLimitBackoff()
+	if err == nil {
+		t.Fatal("expected backoff after 1st hit")
+	}
+	if wait < 900*time.Millisecond || wait > 1100*time.Millisecond {
+		t.Errorf("expected ~1s after 1st hit, got %v", wait)
+	}
+
+	kc.clearRateLimitBackoff()
+
+	// Hit 2: 1s * 2^(2-1) = 2s
+	kc.recordRateLimitHit(0)
+	kc.recordRateLimitHit(0)
+	wait, err = kc.checkRateLimitBackoff()
+	if err == nil {
+		t.Fatal("expected backoff after 2nd hit")
+	}
+	if wait < 1900*time.Millisecond || wait > 2100*time.Millisecond {
+		t.Errorf("expected ~2s after 2nd hit, got %v", wait)
+	}
+
+	kc.clearRateLimitBackoff()
+
+	// Hit 3: 1s * 2^(3-1) = 4s
+	for i := 0; i < 3; i++ {
+		kc.recordRateLimitHit(0)
+	}
+	wait, err = kc.checkRateLimitBackoff()
+	if err == nil {
+		t.Fatal("expected backoff after 3rd hit")
+	}
+	if wait < 3900*time.Millisecond || wait > 4100*time.Millisecond {
+		t.Errorf("expected ~4s after 3rd hit, got %v", wait)
+	}
+}
+
+func TestRateLimitRetryAfterCap(t *testing.T) {
+	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com"}
+
+	// Retry-After larger than max should be capped at 30s
+	kc.recordRateLimitHit(120 * time.Second)
+
+	wait, err := kc.checkRateLimitBackoff()
+	if err == nil {
+		t.Fatal("expected ErrRateLimited")
+	}
+	if wait > 31*time.Second {
+		t.Errorf("expected backoff capped at 30s, got %v", wait)
+	}
+}
+
+func TestDoRequestHandles429(t *testing.T) {
+	callCount := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		// Handle token endpoint
+		if strings.Contains(r.URL.Path, "/protocol/openid-connect/token") {
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(tokenResponse{
+				AccessToken: "test-token",
+				ExpiresIn:   3600,
+			}); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+
+		// Rate limit the first call
+		if callCount == 2 {
+			w.Header().Set("Retry-After", "1")
+			http.Error(w, "rate limited", http.StatusTooManyRequests)
+			return
+		}
+		// Subsequent calls succeed
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(map[string]string{"realm": "test"}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}))
+	defer srv.Close()
+
+	cfg := &Config{
+		BaseURL:      srv.URL,
+		Realm:        "test",
+		ClientID:     "test-client",
+		ClientSecret: "secret",
+	}
+
+	kc, err := NewClientFromConfig(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	// First request should get 429 and trigger backoff
+	_, err = kc.doRequest(context.Background(), http.MethodGet, "/admin/realms/test", nil)
+	if err == nil {
+		t.Fatal("expected error on 429 response")
+	}
+	if !strings.Contains(err.Error(), "rate limited") {
+		t.Errorf("expected rate limited error, got: %v", err)
+	}
+
+	// Second request should fail due to backoff still being active
+	_, err = kc.doRequest(context.Background(), http.MethodGet, "/admin/realms/test", nil)
+	if err == nil {
+		t.Fatal("expected error due to active backoff")
+	}
+	if !strings.Contains(err.Error(), "rate limit backoff") {
+		t.Errorf("expected backoff error, got: %v", err)
+	}
+
+	// Wait for backoff to clear and try again
+	time.Sleep(1100 * time.Millisecond)
+	_, err = kc.doRequest(context.Background(), http.MethodGet, "/admin/realms/test", nil)
+	if err != nil {
+		t.Fatalf("expected success after backoff cleared, got: %v", err)
+	}
+}
+
+func TestDoCreateHandles429(t *testing.T) {
+	callCount := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		// Handle token endpoint
+		if strings.Contains(r.URL.Path, "/protocol/openid-connect/token") {
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(tokenResponse{
+				AccessToken: "test-token",
+				ExpiresIn:   3600,
+			}); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+
+		// Rate limit the first client creation call
+		if callCount == 2 {
+			w.Header().Set("Retry-After", "1")
+			http.Error(w, "rate limited", http.StatusTooManyRequests)
+			return
+		}
+		// Subsequent calls succeed
+		w.Header().Set("Location", "/admin/realms/test/clients/new-uuid")
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer srv.Close()
+
+	cfg := &Config{
+		BaseURL:      srv.URL,
+		Realm:        "test",
+		ClientID:     "test-client",
+		ClientSecret: "secret",
+	}
+
+	kc, err := NewClientFromConfig(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	// First request should get 429 and trigger backoff
+	_, err = kc.doCreate(context.Background(), "/admin/realms/test/clients", map[string]string{"clientId": "test"})
+	if err == nil {
+		t.Fatal("expected error on 429 response")
+	}
+	if !strings.Contains(err.Error(), "rate limited") {
+		t.Errorf("expected rate limited error, got: %v", err)
+	}
+
+	// Second request should fail due to active backoff
+	_, err = kc.doCreate(context.Background(), "/admin/realms/test/clients", map[string]string{"clientId": "test"})
+	if err == nil {
+		t.Fatal("expected error due to active backoff")
+	}
+
+	// Wait for backoff and retry
+	time.Sleep(1100 * time.Millisecond)
+	id, err := kc.doCreate(context.Background(), "/admin/realms/test/clients", map[string]string{"clientId": "test"})
+	if err != nil {
+		t.Fatalf("expected success after backoff cleared, got: %v", err)
+	}
+	if id != "new-uuid" {
+		t.Errorf("expected extracted UUID, got %q", id)
 	}
 }
