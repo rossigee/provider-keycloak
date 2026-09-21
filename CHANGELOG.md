@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.5] - 2026-09-21
+
+### Fixed
+- **Critical:** Rate limit backoff (HTTP 429) handling had race condition where concurrent reconcilers all passed the backoff check simultaneously, then all hit 429 together, resetting backoff indefinitely
+  - Added semaphore-based concurrency limiter (capacity ~3) to prevent thundering herd on 429 errors
+  - Now only ~3 requests can be in-flight at once; if any hit 429, backoff triggers before others also breach limit
+  - Fixes repeated 429 errors that prevent Group membership and other operations from syncing
+
 ## [0.19.4] - 2026-09-21
 
 ### Added
