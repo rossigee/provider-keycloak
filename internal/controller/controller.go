@@ -66,6 +66,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 		client.Setup,
 		realm.Setup,
 		user.Setup,
+		user.SetupGroups,
 		group.Setup,
 		role.Setup,
 		protocolmapper.Setup,

@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.4] - 2026-09-21
+
+### Added
+- Implement missing `Groups` (user↔group membership) Crossplane controller
+  - Manages Keycloak user-to-group membership via GitOps
+  - Resolves `UserIdRef` and `GroupIdsRefs` by querying Keycloak directly
+  - Supports `Exhaustive` flag: when true, removes unlisted group memberships; when false, additive-only
+  - Enables OIDC group-based RBAC (e.g., cluster-admin via Keycloak group membership)
+
 ## [0.19.2] - 2026-09-20
 
 ### Fixed
