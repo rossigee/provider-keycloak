@@ -821,7 +821,8 @@ func TestDoRequestHandles429(t *testing.T) {
 	}
 
 	// Wait for backoff to clear and try again
-	time.Sleep(1100 * time.Millisecond)
+	// Backoff is 1s (Retry-After) + 2s (jitter), so wait 3.5s to be safe
+	time.Sleep(3500 * time.Millisecond)
 	_, err = kc.doRequest(context.Background(), http.MethodGet, "/admin/realms/test", nil)
 	if err != nil {
 		t.Fatalf("expected success after backoff cleared, got: %v", err)
@@ -884,7 +885,8 @@ func TestDoCreateHandles429(t *testing.T) {
 	}
 
 	// Wait for backoff and retry
-	time.Sleep(1100 * time.Millisecond)
+	// Backoff is 1s (Retry-After) + 2s (jitter), so wait 3.5s to be safe
+	time.Sleep(3500 * time.Millisecond)
 	id, err := kc.doCreate(context.Background(), "/admin/realms/test/clients", map[string]string{"clientId": "test"})
 	if err != nil {
 		t.Fatalf("expected success after backoff cleared, got: %v", err)
