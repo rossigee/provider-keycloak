@@ -271,6 +271,13 @@ type keycloakClient struct {
 	// Failure tracking for API rate limit backoff (HTTP 429).
 	rateLimitUntil       time.Time
 	rateLimitConsecutive int
+
+	// requestSemaphore limits concurrent API requests to prevent thundering
+	// herd on 429 errors. With N concurrent reconcile workers all passing
+	// the rate-limit backoff check simultaneously, they all hit a 429
+	// together, causing the rate limit backoff to reset. A buffered channel
+	// ensures only ~3 requests are in-flight at once.
+	requestSemaphore chan struct{}
 }
 
 // NewClient creates a new Keycloak API client using OAuth2 client credentials.
@@ -326,11 +333,12 @@ func NewClientFromConfig(ctx context.Context, cfg *Config) (*keycloakClient, err
 	}
 
 	return &keycloakClient{
-		httpClient: httpClient,
-		baseURL:    baseURL,
-		token:      token,
-		tokenExp:   exp,
-		cfg:        cfg,
+		httpClient:       httpClient,
+		baseURL:          baseURL,
+		token:            token,
+		tokenExp:         exp,
+		cfg:              cfg,
+		requestSemaphore: make(chan struct{}, 3), // Allow ~3 concurrent requests
 	}, nil
 }
 
@@ -527,6 +535,16 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 
 	if wait, err := c.checkRateLimitBackoff(); err != nil {
 		return nil, errors.Wrapf(err, "rate limit backoff until %s (wait %v)", time.Now().Add(wait).Format(time.RFC3339), wait)
+	}
+
+	// Acquire semaphore slot to limit concurrent requests. This prevents
+	// thundering herd on 429 errors where all N concurrent workers slip
+	// through the backoff check and hit the server simultaneously.
+	select {
+	case <-ctx.Done():
+		return nil, errors.Wrap(ctx.Err(), "request cancelled while waiting for concurrency slot")
+	case c.requestSemaphore <- struct{}{}:
+		defer func() { <-c.requestSemaphore }()
 	}
 
 	var bodyReader io.Reader
