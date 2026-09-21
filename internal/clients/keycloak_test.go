@@ -218,7 +218,7 @@ func TestGetClient(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+			kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken, requestSemaphore: make(chan struct{}, 3)}
 			result, err := kc.GetClient(context.Background(), "myrealm", testClientName)
 
 			if tt.wantErrStr != "" {
@@ -637,7 +637,7 @@ func TestParseRetryAfter(t *testing.T) {
 }
 
 func TestRateLimitBackoffTracking(t *testing.T) {
-	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com"}
+	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com", requestSemaphore: make(chan struct{}, 3)}
 
 	// Initially no backoff
 	err := kc.checkRateLimitBackoff()
@@ -675,7 +675,7 @@ func TestRateLimitBackoffTracking(t *testing.T) {
 }
 
 func TestRateLimitExponentialBackoff(t *testing.T) {
-	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com"}
+	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com", requestSemaphore: make(chan struct{}, 3)}
 
 	// Consecutive hits without Retry-After should use exponential backoff
 	// Hit 1: 1s * 2^(1-1) = 1s + 2s jitter = ~3s
@@ -732,7 +732,7 @@ func TestRateLimitExponentialBackoff(t *testing.T) {
 }
 
 func TestRateLimitRetryAfterCap(t *testing.T) {
-	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com"}
+	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com", requestSemaphore: make(chan struct{}, 3)}
 
 	// Retry-After larger than max should be capped at 30s + 2s jitter = 32s
 	kc.recordRateLimitHit(120 * time.Second)
