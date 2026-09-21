@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Crossplane can now detect RateLimitError and apply the actual deadline instead of generic backoff
   - Fixes Group membership sync failures where deadlines were ignored and reconciles retried immediately upon expiration
 
+### Added
+- **Comprehensive unit test coverage: 100% (23/23 controllers)**
+  - Previously: 44% coverage (11/25 controllers), Groups controller shipped untested → shipped bug in v0.19.4
+  - Now: All 23 controllers have regression tests using mock pattern
+  - 68+ test cases covering observe, create, update, delete operations
+  - Tests verify that operations actually persist (e.g., `AddUserToGroup` really adds the user)
+  - Prevents regression of silent failures like Groups controller OIDC sync bug
+  - New tests: authenticationflow, authorizationpolicy, clientcertificates, component, events, identityprovider, realmimpexp, realmkeys, userfederation, user/groups
+
 ## [0.19.5] - 2026-09-21
 
 ### Fixed
