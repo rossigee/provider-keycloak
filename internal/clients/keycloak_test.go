@@ -33,6 +33,15 @@ const (
 	testClientName = "my-app"
 )
 
+func newTestKeycloakClient(httpClient *http.Client, baseURL, token string) *keycloakClient {
+	return &keycloakClient{
+		httpClient:       httpClient,
+		baseURL:          baseURL,
+		token:            token,
+		requestSemaphore: make(chan struct{}, 3),
+	}
+}
+
 func TestFetchOAuth2Token(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -253,7 +262,7 @@ func TestCreateClient(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		created, err := kc.CreateClient(context.Background(), "myrealm", &ClientRepresentation{ClientID: "new-app"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -272,7 +281,7 @@ func TestCreateClient(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		_, err := kc.CreateClient(context.Background(), "myrealm", &ClientRepresentation{ClientID: "dup"})
 		if err == nil {
 			t.Fatal("expected error")
@@ -291,7 +300,7 @@ func TestCreateClientLocation(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		created, err := kc.CreateClient(context.Background(), "myrealm", &ClientRepresentation{ClientID: "new-app"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -307,7 +316,7 @@ func TestCreateClientLocation(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		created, err := kc.CreateClient(context.Background(), "myrealm", &ClientRepresentation{ClientID: "new-app"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -325,7 +334,7 @@ func TestErrorBodyTruncation(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+	kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 	_, err := kc.GetClient(context.Background(), "myrealm", testClientName)
 	if err == nil {
 		t.Fatal("expected error")
@@ -352,7 +361,7 @@ func TestURLEncoding(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+	kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 
 	// Realm name containing a slash would break the path without encoding.
 	_, _ = kc.GetClient(context.Background(), "my/realm", "client&id=evil")
@@ -369,7 +378,7 @@ func TestDeleteClient(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		if err := kc.DeleteClient(context.Background(), "myrealm", "uuid-1"); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -381,7 +390,7 @@ func TestDeleteClient(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		err := kc.DeleteClient(context.Background(), "myrealm", "uuid-1")
 		if err == nil {
 			t.Fatal("expected error from 404")
@@ -413,7 +422,7 @@ func TestListClientScopes(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+	kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 	scopes, err := kc.ListClientScopes(context.Background(), "myrealm")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -441,7 +450,7 @@ func TestGetClientScopeByName(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		got, err := kc.GetClientScope(context.Background(), "myrealm", testScopeName)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -464,7 +473,7 @@ func TestGetClientScopeByName(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		got, err := kc.GetClientScope(context.Background(), "myrealm", "missing")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -480,7 +489,7 @@ func TestGetClientScopeByName(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		got, err := kc.GetClientScope(context.Background(), "myrealm", "anything")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -509,7 +518,7 @@ func TestUpdateClientScopeUsesUUID(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		scope := ClientScopeRepresentation{Name: testScopeName} // no ID
 		if err := kc.UpdateClientScope(context.Background(), "myrealm", scope); err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -532,7 +541,7 @@ func TestUpdateClientScopeUsesUUID(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		// Update with a name but no ID should resolve the name first.
 		err := kc.UpdateClientScope(context.Background(), "myrealm", ClientScopeRepresentation{Name: testScopeName})
 		if err == nil {
@@ -562,7 +571,7 @@ func TestDeleteClientScopeUsesUUID(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		if err := kc.DeleteClientScope(context.Background(), "myrealm", testScopeName); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -579,7 +588,7 @@ func TestDeleteClientScopeUsesUUID(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		if err := kc.DeleteClientScope(context.Background(), "myrealm", "missing"); err != nil {
 			t.Fatalf("expected nil error for missing scope, got %v", err)
 		}
@@ -600,7 +609,7 @@ func TestListClientDefaultScopesUsesUUIDEndpoint(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+	kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 	if _, err := kc.ListClientDefaultScopes(context.Background(), "myrealm", testClientUUID); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
