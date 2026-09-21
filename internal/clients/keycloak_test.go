@@ -640,37 +640,37 @@ func TestRateLimitBackoffTracking(t *testing.T) {
 	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com"}
 
 	// Initially no backoff
-	wait, err := kc.checkRateLimitBackoff()
+	err := kc.checkRateLimitBackoff()
 	if err != nil {
 		t.Fatalf("unexpected error checking initial backoff: %v", err)
-	}
-	if wait != 0 {
-		t.Errorf("expected no initial backoff, got %v", wait)
 	}
 
 	// Record a 429 with Retry-After header
 	kc.recordRateLimitHit(10 * time.Second)
 
 	// Should now report backoff
-	wait, err = kc.checkRateLimitBackoff()
+	err = kc.checkRateLimitBackoff()
 	if err == nil {
-		t.Fatal("expected ErrRateLimited when in backoff")
+		t.Fatal("expected RateLimitError when in backoff")
 	}
 	if !strings.Contains(err.Error(), "rate limited") {
 		t.Errorf("error should mention rate limiting, got: %v", err)
 	}
-	if wait < 9*time.Second || wait > 11*time.Second {
-		t.Errorf("expected ~10s backoff, got %v", wait)
+	rle, ok := err.(*RateLimitError)
+	if !ok {
+		t.Fatalf("expected RateLimitError, got %T", err)
+	}
+	wait := rle.RequeueAfter()
+	// Should be ~10s plus jitter (2s), so 11-12s
+	if wait < 9*time.Second || wait > 13*time.Second {
+		t.Errorf("expected ~11-12s backoff with jitter, got %v", wait)
 	}
 
 	// Clear backoff
 	kc.clearRateLimitBackoff()
-	wait, err = kc.checkRateLimitBackoff()
+	err = kc.checkRateLimitBackoff()
 	if err != nil {
 		t.Fatalf("unexpected error after clearing backoff: %v", err)
-	}
-	if wait != 0 {
-		t.Errorf("expected no backoff after clear, got %v", wait)
 	}
 }
 
@@ -678,56 +678,76 @@ func TestRateLimitExponentialBackoff(t *testing.T) {
 	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com"}
 
 	// Consecutive hits without Retry-After should use exponential backoff
-	// Hit 1: 1s * 2^(1-1) = 1s
+	// Hit 1: 1s * 2^(1-1) = 1s + 2s jitter = ~3s
 	kc.recordRateLimitHit(0)
-	wait, err := kc.checkRateLimitBackoff()
+	err := kc.checkRateLimitBackoff()
 	if err == nil {
 		t.Fatal("expected backoff after 1st hit")
 	}
-	if wait < 900*time.Millisecond || wait > 1100*time.Millisecond {
-		t.Errorf("expected ~1s after 1st hit, got %v", wait)
+	rle, ok := err.(*RateLimitError)
+	if !ok {
+		t.Fatalf("expected RateLimitError, got %T", err)
+	}
+	wait := rle.RequeueAfter()
+	if wait < 2900*time.Millisecond || wait > 3100*time.Millisecond {
+		t.Errorf("expected ~3s (1s + 2s jitter) after 1st hit, got %v", wait)
 	}
 
 	kc.clearRateLimitBackoff()
 
-	// Hit 2: 1s * 2^(2-1) = 2s
+	// Hit 2: 1s * 2^(2-1) = 2s + 2s jitter = ~4s
 	kc.recordRateLimitHit(0)
 	kc.recordRateLimitHit(0)
-	wait, err = kc.checkRateLimitBackoff()
+	err = kc.checkRateLimitBackoff()
 	if err == nil {
 		t.Fatal("expected backoff after 2nd hit")
 	}
-	if wait < 1900*time.Millisecond || wait > 2100*time.Millisecond {
-		t.Errorf("expected ~2s after 2nd hit, got %v", wait)
+	rle, ok = err.(*RateLimitError)
+	if !ok {
+		t.Fatalf("expected RateLimitError, got %T", err)
+	}
+	wait = rle.RequeueAfter()
+	if wait < 3900*time.Millisecond || wait > 4100*time.Millisecond {
+		t.Errorf("expected ~4s (2s + 2s jitter) after 2nd hit, got %v", wait)
 	}
 
 	kc.clearRateLimitBackoff()
 
-	// Hit 3: 1s * 2^(3-1) = 4s
+	// Hit 3: 1s * 2^(3-1) = 4s + 2s jitter = ~6s
 	for i := 0; i < 3; i++ {
 		kc.recordRateLimitHit(0)
 	}
-	wait, err = kc.checkRateLimitBackoff()
+	err = kc.checkRateLimitBackoff()
 	if err == nil {
 		t.Fatal("expected backoff after 3rd hit")
 	}
-	if wait < 3900*time.Millisecond || wait > 4100*time.Millisecond {
-		t.Errorf("expected ~4s after 3rd hit, got %v", wait)
+	rle, ok = err.(*RateLimitError)
+	if !ok {
+		t.Fatalf("expected RateLimitError, got %T", err)
+	}
+	wait = rle.RequeueAfter()
+	if wait < 5900*time.Millisecond || wait > 6100*time.Millisecond {
+		t.Errorf("expected ~6s (4s + 2s jitter) after 3rd hit, got %v", wait)
 	}
 }
 
 func TestRateLimitRetryAfterCap(t *testing.T) {
 	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com"}
 
-	// Retry-After larger than max should be capped at 30s
+	// Retry-After larger than max should be capped at 30s + 2s jitter = 32s
 	kc.recordRateLimitHit(120 * time.Second)
 
-	wait, err := kc.checkRateLimitBackoff()
+	err := kc.checkRateLimitBackoff()
 	if err == nil {
-		t.Fatal("expected ErrRateLimited")
+		t.Fatal("expected RateLimitError")
 	}
-	if wait > 31*time.Second {
-		t.Errorf("expected backoff capped at 30s, got %v", wait)
+	rle, ok := err.(*RateLimitError)
+	if !ok {
+		t.Fatalf("expected RateLimitError, got %T", err)
+	}
+	wait := rle.RequeueAfter()
+	if wait > 33*time.Second {
+		t.Errorf("expected backoff capped at 30s + 2s jitter = 32s max, got %v", wait)
 	}
 }
 
