@@ -38,17 +38,17 @@ import (
 )
 
 const (
-	errNotGroups           = "managed resource is not a Groups"
-	errResolveUser         = "cannot resolve referenced User"
-	errResolveGroup        = "cannot resolve referenced Group"
-	errMissingUserRef      = "userId or userIdRef must be set"
-	errMissingGroupRef     = "at least one of groupIds or groupIdsRefs must be set"
-	errGetUserGroups       = "cannot get Keycloak user's group memberships"
-	errAddUserToGroup      = "cannot add user to Keycloak group"
-	errRemoveUserGroup     = "cannot remove user from Keycloak group"
-	errGetResolvedUser     = "cannot get resolved user from Keycloak"
-	errGetResolvedGroup    = "cannot get resolved group from Keycloak"
-	errResolvedUserMissing = "referenced user not yet present in Keycloak"
+	errNotGroups            = "managed resource is not a Groups"
+	errResolveUser          = "cannot resolve referenced User"
+	errResolveGroup         = "cannot resolve referenced Group"
+	errMissingUserRef       = "userId or userIdRef must be set"
+	errMissingGroupRef      = "at least one of groupIds or groupIdsRefs must be set"
+	errGetUserGroups        = "cannot get Keycloak user's group memberships"
+	errAddUserToGroup       = "cannot add user to Keycloak group"
+	errRemoveUserGroup      = "cannot remove user from Keycloak group"
+	errGetResolvedUser      = "cannot get resolved user from Keycloak"
+	errGetResolvedGroup     = "cannot get resolved group from Keycloak"
+	errResolvedUserMissing  = "referenced user not yet present in Keycloak"
 	errResolvedGroupMissing = "referenced group not yet present in Keycloak"
 
 	groupsControllerName = "groups.user.keycloak.m.crossplane.io"

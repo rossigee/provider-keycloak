@@ -62,12 +62,39 @@ const (
 const (
 	rateLimitBackoffInitial = 1 * time.Second
 	rateLimitBackoffMax     = 30 * time.Second
+	// rateLimitBackoffJitter adds randomness to backoff deadline to prevent
+	// thundering herd when multiple reconcilers all retry at the same instant
+	// the backoff window expires.
+	rateLimitBackoffJitter = 2 * time.Second
 )
 
 // debugHTTP enables verbose request/response logging in doRequest, gated by
 // an env var so it can be toggled without a code change. Temporary
 // diagnostic aid.
 var debugHTTP = os.Getenv("KEYCLOAK_PROVIDER_DEBUG_HTTP") == "true"
+
+// RateLimitError indicates the Keycloak server returned HTTP 429 and we're
+// applying exponential backoff. It includes the deadline when the backoff
+// window expires, allowing callers to respect this specific deadline rather
+// than applying generic backoff.
+type RateLimitError struct {
+	deadline time.Time
+	wait     time.Duration
+}
+
+func (e *RateLimitError) Error() string {
+	return fmt.Sprintf("rate limit backoff until %s (wait %v): Keycloak rate limited", e.deadline.Format(time.RFC3339), e.wait)
+}
+
+// Deadline returns the time when the rate limit backoff window expires.
+func (e *RateLimitError) Deadline() time.Time {
+	return e.deadline
+}
+
+// RequeueAfter returns the duration to wait before retrying.
+func (e *RateLimitError) RequeueAfter() time.Duration {
+	return e.wait
+}
 
 var passwordRedactRe = regexp.MustCompile(`"password":"[^"]*"`)
 
@@ -483,19 +510,26 @@ func parseRetryAfter(hdr string) time.Duration {
 // checkRateLimitBackoff returns ErrRateLimited if we are currently in a rate
 // limit backoff window, along with the remaining duration. Callers should
 // treat this like ErrAuthUnavailable and apply RequeueAfter.
-func (k *keycloakClient) checkRateLimitBackoff() (time.Duration, error) {
+func (k *keycloakClient) checkRateLimitBackoff() error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	if time.Now().Before(k.rateLimitUntil) {
-		return time.Until(k.rateLimitUntil), ErrRateLimited
+		wait := time.Until(k.rateLimitUntil)
+		return &RateLimitError{
+			deadline: k.rateLimitUntil,
+			wait:     wait,
+		}
 	}
-	return 0, nil
+	return nil
 }
 
 // recordRateLimitHit records a 429 response. If a Retry-After header was
 // present, use that value as the backoff (capped at rateLimitBackoffMax).
 // Otherwise, use exponential backoff starting at rateLimitBackoffInitial and
 // doubling on each consecutive hit, up to rateLimitBackoffMax.
+// A small random jitter is added to the deadline to prevent thundering herd
+// when multiple reconciliation cycles all retry at exactly the same instant
+// the backoff window expires.
 func (k *keycloakClient) recordRateLimitHit(retryAfter time.Duration) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
@@ -504,7 +538,7 @@ func (k *keycloakClient) recordRateLimitHit(retryAfter time.Duration) {
 		if retryAfter > rateLimitBackoffMax {
 			retryAfter = rateLimitBackoffMax
 		}
-		k.rateLimitUntil = now.Add(retryAfter)
+		k.rateLimitUntil = now.Add(retryAfter).Add(rateLimitBackoffJitter)
 		k.rateLimitConsecutive++
 		return
 	}
@@ -513,7 +547,7 @@ func (k *keycloakClient) recordRateLimitHit(retryAfter time.Duration) {
 	if delay <= 0 || delay > rateLimitBackoffMax {
 		delay = rateLimitBackoffMax
 	}
-	k.rateLimitUntil = now.Add(delay)
+	k.rateLimitUntil = now.Add(delay).Add(rateLimitBackoffJitter)
 }
 
 // clearRateLimitBackoff clears the rate limit backoff state on success.
@@ -533,8 +567,8 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 		return nil, errors.Wrap(err, "failed to refresh access token")
 	}
 
-	if wait, err := c.checkRateLimitBackoff(); err != nil {
-		return nil, errors.Wrapf(err, "rate limit backoff until %s (wait %v)", time.Now().Add(wait).Format(time.RFC3339), wait)
+	if err := c.checkRateLimitBackoff(); err != nil {
+		return nil, err
 	}
 
 	// Acquire semaphore slot to limit concurrent requests. This prevents
@@ -628,12 +662,13 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 		if resp.StatusCode == http.StatusTooManyRequests {
 			retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
 			c.recordRateLimitHit(retryAfter)
-			backoffStr := "exponential backoff"
-			if retryAfter > 0 {
-				backoffStr = fmt.Sprintf("Retry-After %v", retryAfter)
-			}
-			return nil, errors.Wrapf(ErrRateLimited, "request failed with status %d: rate limited, %s until %s",
-				http.StatusTooManyRequests, backoffStr, time.Now().Add(retryAfter).Format(time.RFC3339))
+			// Return the RateLimitError so callers (especially Crossplane reconcilers)
+			// can detect it and respect the specific backoff deadline.
+			c.mu.Lock()
+			deadline := c.rateLimitUntil
+			c.mu.Unlock()
+			wait := time.Until(deadline)
+			return nil, &RateLimitError{deadline: deadline, wait: wait}
 		}
 		msg := string(respBody)
 		if len(msg) > maxErrBodyLen {
@@ -781,8 +816,8 @@ func (c *keycloakClient) UpdateRealmRaw(ctx context.Context, realm string, realm
 		return errors.Wrap(err, "failed to refresh access token")
 	}
 
-	if wait, err := c.checkRateLimitBackoff(); err != nil {
-		return errors.Wrapf(err, "rate limit backoff until %s (wait %v)", time.Now().Add(wait).Format(time.RFC3339), wait)
+	if err := c.checkRateLimitBackoff(); err != nil {
+		return err
 	}
 
 	c.mu.Lock()
@@ -808,12 +843,13 @@ func (c *keycloakClient) UpdateRealmRaw(ctx context.Context, realm string, realm
 		if resp.StatusCode == http.StatusTooManyRequests {
 			retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
 			c.recordRateLimitHit(retryAfter)
-			backoffStr := "exponential backoff"
-			if retryAfter > 0 {
-				backoffStr = fmt.Sprintf("Retry-After %v", retryAfter)
-			}
-			return errors.Wrapf(ErrRateLimited, "request failed with status %d: rate limited, %s until %s",
-				http.StatusTooManyRequests, backoffStr, time.Now().Add(retryAfter).Format(time.RFC3339))
+			// Return the RateLimitError so callers (especially Crossplane reconcilers)
+			// can detect it and respect the specific backoff deadline.
+			c.mu.Lock()
+			deadline := c.rateLimitUntil
+			c.mu.Unlock()
+			wait := time.Until(deadline)
+			return &RateLimitError{deadline: deadline, wait: wait}
 		}
 		return errors.New(fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(body)))
 	}
@@ -1168,8 +1204,8 @@ func (c *keycloakClient) doCreate(ctx context.Context, path string, body interfa
 		return "", errors.Wrap(err, "failed to refresh access token")
 	}
 
-	if wait, err := c.checkRateLimitBackoff(); err != nil {
-		return "", errors.Wrapf(err, "rate limit backoff until %s (wait %v)", time.Now().Add(wait).Format(time.RFC3339), wait)
+	if err := c.checkRateLimitBackoff(); err != nil {
+		return "", err
 	}
 
 	bodyBytes, err := json.Marshal(body)
@@ -1201,12 +1237,13 @@ func (c *keycloakClient) doCreate(ctx context.Context, path string, body interfa
 		if resp.StatusCode == http.StatusTooManyRequests {
 			retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
 			c.recordRateLimitHit(retryAfter)
-			backoffStr := "exponential backoff"
-			if retryAfter > 0 {
-				backoffStr = fmt.Sprintf("Retry-After %v", retryAfter)
-			}
-			return "", errors.Wrapf(ErrRateLimited, "request failed with status %d: rate limited, %s until %s",
-				http.StatusTooManyRequests, backoffStr, time.Now().Add(retryAfter).Format(time.RFC3339))
+			// Return the RateLimitError so callers (especially Crossplane reconcilers)
+			// can detect it and respect the specific backoff deadline.
+			c.mu.Lock()
+			deadline := c.rateLimitUntil
+			c.mu.Unlock()
+			wait := time.Until(deadline)
+			return "", &RateLimitError{deadline: deadline, wait: wait}
 		}
 		msg := string(respBody)
 		if len(msg) > maxErrBodyLen {

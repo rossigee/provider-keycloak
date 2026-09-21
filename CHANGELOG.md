@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.6] - 2026-09-22
+
+### Fixed
+- **Critical:** Rate limit backoff deadline was being ignored by Crossplane's managed.Reconciler because deadline info was embedded in error message text, not in a structured error type
+  - Created custom `RateLimitError` type with `Deadline()` and `RequeueAfter()` methods
+  - Added jitter to backoff deadline to prevent thundering herd after backoff window expires
+  - Crossplane can now detect RateLimitError and apply the actual deadline instead of generic backoff
+  - Fixes Group membership sync failures where deadlines were ignored and reconciles retried immediately upon expiration
+
 ## [0.19.5] - 2026-09-21
 
 ### Fixed
