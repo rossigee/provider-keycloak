@@ -11,8 +11,8 @@ type mockAuthzClient struct {
 	*testhelpers.BaseMockClient
 	getResourceFn    func(ctx context.Context, realm, clientID, resourceID string) (interface{}, error)
 	createResourceFn func(ctx context.Context, realm, clientID string, resource interface{}) (interface{}, error)
-	updateResourceFn func(ctx context.Context, realm, clientID string, resource interface{}) error
-	deleteResourceFn func(ctx context.Context, realm, clientID, resourceID string) error
+	updateResourceFn func(ctx context.Context, realm, clientID string, resource interface{}) error //nolint:unused
+	deleteResourceFn func(ctx context.Context, realm, clientID, resourceID string) error //nolint:unused
 }
 
 func (m *mockAuthzClient) GetResource(ctx context.Context, realm, clientID, resourceID string) (interface{}, error) {
