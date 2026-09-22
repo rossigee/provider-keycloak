@@ -11,7 +11,7 @@ type mockAuthzPolicyClient struct {
 	*testhelpers.BaseMockClient
 	getPolicyFn    func(ctx context.Context, realm, clientID, id string) (interface{}, error)
 	createPolicyFn func(ctx context.Context, realm, clientID string, policy interface{}) (interface{}, error)
-	deletePolicyFn func(ctx context.Context, realm, clientID, id string) error //nolint:unused
+	deletePolicyFn func(ctx context.Context, realm, clientID, id string) error
 }
 
 func (m *mockAuthzPolicyClient) GetPolicy(ctx context.Context, realm, clientID, id string) (interface{}, error) {

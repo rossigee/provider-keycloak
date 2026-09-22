@@ -9,7 +9,7 @@ import (
 
 type mockCertClient struct {
 	*testhelpers.BaseMockClient
-	getCertFn      func(ctx context.Context, realm, clientID string) (interface{}, error)
+	getCertFn    func(ctx context.Context, realm, clientID string) (interface{}, error)
 	generateCertFn func(ctx context.Context, realm, clientID string) (interface{}, error)
 }
 

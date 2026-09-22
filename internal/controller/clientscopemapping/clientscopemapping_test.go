@@ -9,9 +9,9 @@ import (
 
 type mockClientScopeMappingClient struct {
 	*testhelpers.BaseMockClient
-	addClientScopeToClientFn      func(ctx context.Context, realm, clientID, scopeID string) error
+	addClientScopeToClientFn    func(ctx context.Context, realm, clientID, scopeID string) error
 	removeClientScopeFromClientFn func(ctx context.Context, realm, clientID, scopeID string) error
-	getClientScopesMappingFn      func(ctx context.Context, realm, clientID string) (interface{}, error)
+	getClientScopesMappingFn    func(ctx context.Context, realm, clientID string) (interface{}, error)
 }
 
 func (m *mockClientScopeMappingClient) AddClientScopeToClient(ctx context.Context, realm, clientID, scopeID string) error {

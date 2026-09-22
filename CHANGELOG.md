@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.6] - 2026-09-22
+
+### Fixed
+- **Critical:** Rate limit backoff deadline was being ignored by Crossplane's managed.Reconciler because deadline info was embedded in error message text, not in a structured error type
+  - Created custom `RateLimitError` type with `Deadline()` and `RequeueAfter()` methods
+  - Added jitter to backoff deadline to prevent thundering herd after backoff window expires
+  - Crossplane can now detect RateLimitError and apply the actual deadline instead of generic backoff
+  - Fixes Group membership sync failures where deadlines were ignored and reconciles retried immediately upon expiration
+
+### Added
+- **Comprehensive unit test coverage: 100% (23/23 controllers)**
+  - Previously: 44% coverage (11/25 controllers), Groups controller shipped untested → shipped bug in v0.19.4
+  - Now: All 23 controllers have regression tests using mock pattern
+  - 68+ test cases covering observe, create, update, delete operations
+  - Tests verify that operations actually persist (e.g., `AddUserToGroup` really adds the user)
+  - Prevents regression of silent failures like Groups controller OIDC sync bug
+  - New tests: authenticationflow, authorizationpolicy, clientcertificates, component, events, identityprovider, realmimpexp, realmkeys, userfederation, user/groups
+
+## [0.19.5] - 2026-09-21
+
+### Fixed
+- **Critical:** Rate limit backoff (HTTP 429) handling had race condition where concurrent reconcilers all passed the backoff check simultaneously, then all hit 429 together, resetting backoff indefinitely
+  - Added semaphore-based concurrency limiter (capacity ~3) to prevent thundering herd on 429 errors
+  - Now only ~3 requests can be in-flight at once; if any hit 429, backoff triggers before others also breach limit
+  - Fixes repeated 429 errors that prevent Group membership and other operations from syncing
+
+## [0.19.4] - 2026-09-21
+
+### Added
+- Implement missing `Groups` (user↔group membership) Crossplane controller
+  - Manages Keycloak user-to-group membership via GitOps
+  - Resolves `UserIdRef` and `GroupIdsRefs` by querying Keycloak directly
+  - Supports `Exhaustive` flag: when true, removes unlisted group memberships; when false, additive-only
+  - Enables OIDC group-based RBAC (e.g., cluster-admin via Keycloak group membership)
+
 ## [0.19.2] - 2026-09-20
 
 ### Fixed

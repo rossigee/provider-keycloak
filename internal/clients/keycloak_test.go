@@ -33,6 +33,15 @@ const (
 	testClientName = "my-app"
 )
 
+func newTestKeycloakClient(httpClient *http.Client, baseURL, token string) *keycloakClient {
+	return &keycloakClient{
+		httpClient:       httpClient,
+		baseURL:          baseURL,
+		token:            token,
+		requestSemaphore: make(chan struct{}, 3),
+	}
+}
+
 func TestFetchOAuth2Token(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -218,7 +227,7 @@ func TestGetClient(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+			kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken, requestSemaphore: make(chan struct{}, 3)}
 			result, err := kc.GetClient(context.Background(), "myrealm", testClientName)
 
 			if tt.wantErrStr != "" {
@@ -253,7 +262,7 @@ func TestCreateClient(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		created, err := kc.CreateClient(context.Background(), "myrealm", &ClientRepresentation{ClientID: "new-app"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -272,7 +281,7 @@ func TestCreateClient(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		_, err := kc.CreateClient(context.Background(), "myrealm", &ClientRepresentation{ClientID: "dup"})
 		if err == nil {
 			t.Fatal("expected error")
@@ -291,7 +300,7 @@ func TestCreateClientLocation(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		created, err := kc.CreateClient(context.Background(), "myrealm", &ClientRepresentation{ClientID: "new-app"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -307,7 +316,7 @@ func TestCreateClientLocation(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		created, err := kc.CreateClient(context.Background(), "myrealm", &ClientRepresentation{ClientID: "new-app"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -325,7 +334,7 @@ func TestErrorBodyTruncation(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+	kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 	_, err := kc.GetClient(context.Background(), "myrealm", testClientName)
 	if err == nil {
 		t.Fatal("expected error")
@@ -352,7 +361,7 @@ func TestURLEncoding(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+	kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 
 	// Realm name containing a slash would break the path without encoding.
 	_, _ = kc.GetClient(context.Background(), "my/realm", "client&id=evil")
@@ -369,7 +378,7 @@ func TestDeleteClient(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		if err := kc.DeleteClient(context.Background(), "myrealm", "uuid-1"); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -381,7 +390,7 @@ func TestDeleteClient(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		err := kc.DeleteClient(context.Background(), "myrealm", "uuid-1")
 		if err == nil {
 			t.Fatal("expected error from 404")
@@ -413,7 +422,7 @@ func TestListClientScopes(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+	kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 	scopes, err := kc.ListClientScopes(context.Background(), "myrealm")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -441,7 +450,7 @@ func TestGetClientScopeByName(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		got, err := kc.GetClientScope(context.Background(), "myrealm", testScopeName)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -464,7 +473,7 @@ func TestGetClientScopeByName(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		got, err := kc.GetClientScope(context.Background(), "myrealm", "missing")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -480,7 +489,7 @@ func TestGetClientScopeByName(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		got, err := kc.GetClientScope(context.Background(), "myrealm", "anything")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -509,7 +518,7 @@ func TestUpdateClientScopeUsesUUID(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		scope := ClientScopeRepresentation{Name: testScopeName} // no ID
 		if err := kc.UpdateClientScope(context.Background(), "myrealm", scope); err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -532,7 +541,7 @@ func TestUpdateClientScopeUsesUUID(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		// Update with a name but no ID should resolve the name first.
 		err := kc.UpdateClientScope(context.Background(), "myrealm", ClientScopeRepresentation{Name: testScopeName})
 		if err == nil {
@@ -562,7 +571,7 @@ func TestDeleteClientScopeUsesUUID(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		if err := kc.DeleteClientScope(context.Background(), "myrealm", testScopeName); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -579,7 +588,7 @@ func TestDeleteClientScopeUsesUUID(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+		kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 		if err := kc.DeleteClientScope(context.Background(), "myrealm", "missing"); err != nil {
 			t.Fatalf("expected nil error for missing scope, got %v", err)
 		}
@@ -600,7 +609,7 @@ func TestListClientDefaultScopesUsesUUIDEndpoint(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	kc := &keycloakClient{httpClient: srv.Client(), baseURL: srv.URL, token: testToken}
+	kc := newTestKeycloakClient(srv.Client(), srv.URL, testToken)
 	if _, err := kc.ListClientDefaultScopes(context.Background(), "myrealm", testClientUUID); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -637,97 +646,117 @@ func TestParseRetryAfter(t *testing.T) {
 }
 
 func TestRateLimitBackoffTracking(t *testing.T) {
-	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com"}
+	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com", requestSemaphore: make(chan struct{}, 3)}
 
 	// Initially no backoff
-	wait, err := kc.checkRateLimitBackoff()
+	err := kc.checkRateLimitBackoff()
 	if err != nil {
 		t.Fatalf("unexpected error checking initial backoff: %v", err)
-	}
-	if wait != 0 {
-		t.Errorf("expected no initial backoff, got %v", wait)
 	}
 
 	// Record a 429 with Retry-After header
 	kc.recordRateLimitHit(10 * time.Second)
 
 	// Should now report backoff
-	wait, err = kc.checkRateLimitBackoff()
+	err = kc.checkRateLimitBackoff()
 	if err == nil {
-		t.Fatal("expected ErrRateLimited when in backoff")
+		t.Fatal("expected RateLimitError when in backoff")
 	}
 	if !strings.Contains(err.Error(), "rate limited") {
 		t.Errorf("error should mention rate limiting, got: %v", err)
 	}
-	if wait < 9*time.Second || wait > 11*time.Second {
-		t.Errorf("expected ~10s backoff, got %v", wait)
+	rle, ok := err.(*RateLimitError)
+	if !ok {
+		t.Fatalf("expected RateLimitError, got %T", err)
+	}
+	wait := rle.RequeueAfter()
+	// Should be ~10s plus jitter (2s), so 11-12s
+	if wait < 9*time.Second || wait > 13*time.Second {
+		t.Errorf("expected ~11-12s backoff with jitter, got %v", wait)
 	}
 
 	// Clear backoff
 	kc.clearRateLimitBackoff()
-	wait, err = kc.checkRateLimitBackoff()
+	err = kc.checkRateLimitBackoff()
 	if err != nil {
 		t.Fatalf("unexpected error after clearing backoff: %v", err)
-	}
-	if wait != 0 {
-		t.Errorf("expected no backoff after clear, got %v", wait)
 	}
 }
 
 func TestRateLimitExponentialBackoff(t *testing.T) {
-	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com"}
+	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com", requestSemaphore: make(chan struct{}, 3)}
 
 	// Consecutive hits without Retry-After should use exponential backoff
-	// Hit 1: 1s * 2^(1-1) = 1s
+	// Hit 1: 1s * 2^(1-1) = 1s + 2s jitter = ~3s
 	kc.recordRateLimitHit(0)
-	wait, err := kc.checkRateLimitBackoff()
+	err := kc.checkRateLimitBackoff()
 	if err == nil {
 		t.Fatal("expected backoff after 1st hit")
 	}
-	if wait < 900*time.Millisecond || wait > 1100*time.Millisecond {
-		t.Errorf("expected ~1s after 1st hit, got %v", wait)
+	rle, ok := err.(*RateLimitError)
+	if !ok {
+		t.Fatalf("expected RateLimitError, got %T", err)
+	}
+	wait := rle.RequeueAfter()
+	if wait < 2900*time.Millisecond || wait > 3100*time.Millisecond {
+		t.Errorf("expected ~3s (1s + 2s jitter) after 1st hit, got %v", wait)
 	}
 
 	kc.clearRateLimitBackoff()
 
-	// Hit 2: 1s * 2^(2-1) = 2s
+	// Hit 2: 1s * 2^(2-1) = 2s + 2s jitter = ~4s
 	kc.recordRateLimitHit(0)
 	kc.recordRateLimitHit(0)
-	wait, err = kc.checkRateLimitBackoff()
+	err = kc.checkRateLimitBackoff()
 	if err == nil {
 		t.Fatal("expected backoff after 2nd hit")
 	}
-	if wait < 1900*time.Millisecond || wait > 2100*time.Millisecond {
-		t.Errorf("expected ~2s after 2nd hit, got %v", wait)
+	rle, ok = err.(*RateLimitError)
+	if !ok {
+		t.Fatalf("expected RateLimitError, got %T", err)
+	}
+	wait = rle.RequeueAfter()
+	if wait < 3900*time.Millisecond || wait > 4100*time.Millisecond {
+		t.Errorf("expected ~4s (2s + 2s jitter) after 2nd hit, got %v", wait)
 	}
 
 	kc.clearRateLimitBackoff()
 
-	// Hit 3: 1s * 2^(3-1) = 4s
+	// Hit 3: 1s * 2^(3-1) = 4s + 2s jitter = ~6s
 	for i := 0; i < 3; i++ {
 		kc.recordRateLimitHit(0)
 	}
-	wait, err = kc.checkRateLimitBackoff()
+	err = kc.checkRateLimitBackoff()
 	if err == nil {
 		t.Fatal("expected backoff after 3rd hit")
 	}
-	if wait < 3900*time.Millisecond || wait > 4100*time.Millisecond {
-		t.Errorf("expected ~4s after 3rd hit, got %v", wait)
+	rle, ok = err.(*RateLimitError)
+	if !ok {
+		t.Fatalf("expected RateLimitError, got %T", err)
+	}
+	wait = rle.RequeueAfter()
+	if wait < 5900*time.Millisecond || wait > 6100*time.Millisecond {
+		t.Errorf("expected ~6s (4s + 2s jitter) after 3rd hit, got %v", wait)
 	}
 }
 
 func TestRateLimitRetryAfterCap(t *testing.T) {
-	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com"}
+	kc := &keycloakClient{token: testToken, baseURL: "https://test.example.com", requestSemaphore: make(chan struct{}, 3)}
 
-	// Retry-After larger than max should be capped at 30s
+	// Retry-After larger than max should be capped at 30s + 2s jitter = 32s
 	kc.recordRateLimitHit(120 * time.Second)
 
-	wait, err := kc.checkRateLimitBackoff()
+	err := kc.checkRateLimitBackoff()
 	if err == nil {
-		t.Fatal("expected ErrRateLimited")
+		t.Fatal("expected RateLimitError")
 	}
-	if wait > 31*time.Second {
-		t.Errorf("expected backoff capped at 30s, got %v", wait)
+	rle, ok := err.(*RateLimitError)
+	if !ok {
+		t.Fatalf("expected RateLimitError, got %T", err)
+	}
+	wait := rle.RequeueAfter()
+	if wait > 33*time.Second {
+		t.Errorf("expected backoff capped at 30s + 2s jitter = 32s max, got %v", wait)
 	}
 }
 
@@ -792,7 +821,8 @@ func TestDoRequestHandles429(t *testing.T) {
 	}
 
 	// Wait for backoff to clear and try again
-	time.Sleep(1100 * time.Millisecond)
+	// Backoff is 1s (Retry-After) + 2s (jitter), so wait 3.5s to be safe
+	time.Sleep(3500 * time.Millisecond)
 	_, err = kc.doRequest(context.Background(), http.MethodGet, "/admin/realms/test", nil)
 	if err != nil {
 		t.Fatalf("expected success after backoff cleared, got: %v", err)
@@ -855,7 +885,8 @@ func TestDoCreateHandles429(t *testing.T) {
 	}
 
 	// Wait for backoff and retry
-	time.Sleep(1100 * time.Millisecond)
+	// Backoff is 1s (Retry-After) + 2s (jitter), so wait 3.5s to be safe
+	time.Sleep(3500 * time.Millisecond)
 	id, err := kc.doCreate(context.Background(), "/admin/realms/test/clients", map[string]string{"clientId": "test"})
 	if err != nil {
 		t.Fatalf("expected success after backoff cleared, got: %v", err)

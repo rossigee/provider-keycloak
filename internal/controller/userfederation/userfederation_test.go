@@ -11,7 +11,7 @@ type mockUserFedClient struct {
 	*testhelpers.BaseMockClient
 	getUserFedFn    func(ctx context.Context, realm, id string) (interface{}, error)
 	createUserFedFn func(ctx context.Context, realm string, config interface{}) (interface{}, error)
-	deleteUserFedFn func(ctx context.Context, realm, id string) error //nolint:unused
+	deleteUserFedFn func(ctx context.Context, realm, id string) error
 }
 
 func (m *mockUserFedClient) GetUserFed(ctx context.Context, realm, id string) (interface{}, error) {

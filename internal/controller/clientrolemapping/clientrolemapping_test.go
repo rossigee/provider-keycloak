@@ -9,9 +9,9 @@ import (
 
 type mockClientRoleMappingClient struct {
 	*testhelpers.BaseMockClient
-	addClientRoleToUserFn      func(ctx context.Context, realm, userID, clientID, roleID string) error
+	addClientRoleToUserFn    func(ctx context.Context, realm, userID, clientID, roleID string) error
 	removeClientRoleFromUserFn func(ctx context.Context, realm, userID, clientID, roleID string) error
-	getUserClientRolesFn       func(ctx context.Context, realm, userID, clientID string) (interface{}, error)
+	getUserClientRolesFn     func(ctx context.Context, realm, userID, clientID string) (interface{}, error)
 }
 
 func (m *mockClientRoleMappingClient) AddClientRoleToUser(ctx context.Context, realm, userID, clientID, roleID string) error {
