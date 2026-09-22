@@ -65,6 +65,13 @@ publish.artifacts:
 	fi
 	$(foreach r,$(XPKG_REG_ORGS), $(foreach x,$(XPKGS),@$(MAKE) xpkg.release.publish.$(r).$(x)))
 	$(foreach r,$(REGISTRY_ORGS), $(foreach i,$(IMAGES),@$(MAKE) img.release.publish.$(r).$(i)))
+xpkg.release.publish.ghcr.io/rossigee.provider-keycloak:
+	@$(foreach p,$(XPKG_LINUX_PLATFORMS),$(MAKE) xpkg.build.provider-keycloak PLATFORM=$(p) || exit 1;)
+	@$(CROSSPLANE_CLI) xpkg push \
+		$(foreach p,$(XPKG_LINUX_PLATFORMS),--package-files $(XPKG_OUTPUT_DIR)/$(p)/provider-keycloak-$(VERSION).xpkg ) \
+		ghcr.io/rossigee/provider-keycloak:$(VERSION)
+	@$(OK) Pushed package ghcr.io/rossigee/provider-keycloak:$(VERSION)
+
 
 fallthrough: submodules
 	@echo Initial setup complete. Running make again . . .
@@ -180,3 +187,12 @@ crossplane.help:
 help-special: crossplane.help
 
 .PHONY: crossplane.help help-special
+
+# Neutralize the plain runtime image push. imagelight.mk injects
+# img.release.publish.<reg>.<img> as a publish.artifacts prerequisite on
+# release branches, and cluster/images img.publish would fail because the
+# runtime image is never built/tagged locally. The runtime binary is already
+# embedded in the xpkg, so publishing this image would only overwrite the
+# xpkg's package.yaml.
+img.release.publish.ghcr.io/rossigee.provider-keycloak:
+	@:

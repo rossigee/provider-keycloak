@@ -1,5 +1,5 @@
 # Standardized CI/CD Template for Crossplane Providers
-# Version: 2026-08-20 - Updated for Go 1.27.1 + golangci-lint v2 + full security scanning
+# Version: 2026-09-08 - Updated for Go 1.27.1 + golangci-lint v2.13.2 + full security scanning
 #
 # This template implements CI builds and validates ONLY
 # - CI: Build validation only (no publishing to avoid tag conflicts)
@@ -22,8 +22,9 @@ on:
 
 permissions:
   contents: read
-  packages: write
-  actions: read
+  packages: write  # Needed for security scanning uploads
+  id-token: write  # Needed for OIDC
+  actions: read    # Needed for detecting duplicate actions
 
 env:
   GO_VERSION: '1.27.1'
@@ -53,6 +54,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          token: ${{ github.token }}
           submodules: true
 
       - name: Setup Go
@@ -74,6 +76,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          token: ${{ github.token }}
           submodules: true
 
       - name: Setup Go
@@ -97,6 +100,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          token: ${{ github.token }}
           submodules: true
           fetch-depth: 0
 
@@ -115,7 +119,7 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.out
+          file: ./coverage.out
           verbose: true
 
   security-scan:
@@ -129,6 +133,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          token: ${{ github.token }}
           submodules: true
 
       - name: Setup Go
@@ -161,7 +166,7 @@ jobs:
           GOWORK_DIR=$(dirname $GOWORK); rm -f $GOWORK 2>/dev/null; rmdir $GOWORK_DIR 2>/dev/null
 
       - name: Run Gosec Security Scanner
-        uses: securego/gosec@v2.29.0
+        uses: securego/gosec@master
         with:
           args: '-no-fail -fmt sarif -out gosec-results.sarif ./...'
         continue-on-error: true
@@ -210,11 +215,18 @@ jobs:
           echo "Repository: ${{ github.repository }}"
           echo "Repository owner: ${{ github.repository_owner }}"
           
-          # make build already builds the binary, Docker image, and
-          # Crossplane xpkg package in one pass (crossplane build submodule).
+          # Build binary
           make build
-          echo "✅ Build successful (binary, Docker image, Crossplane package)"
-
+          echo "✅ Binary build successful"
+          
+          # Build Docker image locally (without push)
+          make docker.build
+          echo "✅ Docker image build successful"
+          
+          # Build Crossplane package locally (without push)
+          make xpkg.build
+          echo "✅ Crossplane package build successful"
+          
           # Verify build artifacts exist
           ls -la _output/bin/linux_amd64/provider 2>/dev/null && echo "✅ Provider binary exists" || echo "❌ Provider binary missing"
           ls -la _output/xpkg/linux_amd64/*.xpkg 2>/dev/null && echo "✅ Crossplane package exists" || echo "❌ Crossplane package missing"
@@ -223,3 +235,35 @@ jobs:
           echo "🎯 Build validation completed successfully"
           echo "📦 All artifacts can be built successfully"
           echo "🏷️  Publishing will occur only on release tag creation"
+
+# Key Principles for this Template:
+# 
+# 1. CI BUILDS, RELEASE PUBLISHES
+#    - CI workflow: Only validates builds (no registry pushes)
+#    - Release workflow: Handles all publishing
+#    - Eliminates tag conflicts between workflows
+# 
+# 2. SINGLE PRIMARY REGISTRY
+#    - Primary: ghcr.io/rossigee (consistent across all providers)
+#    - Optional: Environment-controlled additional registries
+# 
+# 3. PARALLEL VALIDATION
+#    - All validation jobs run in parallel after noop detection
+#    - Build validation only runs on master branch
+# 
+# 4. COMPREHENSIVE SECURITY
+#    - govulncheck: Go vulnerability scanning
+#    - gosec: Static security analysis
+#    - CodeQL integration for SARIF uploads
+# 
+# 5. STANDARDIZED BUILD SYSTEM
+#    - Uses rossigee/build submodule (working fork)
+#    - Consistent make targets across all providers
+#    - Go 1.25.3 with proper version handling
+# 
+# To apply this template:
+# 1. Copy this structure to .github/workflows/ci.yml
+# 2. Update provider-specific names/paths
+# 3. Ensure release.yml handles all publishing
+# 4. Test with a commit to master (should only validate)
+# 5. Test with a version tag (should publish properly)
