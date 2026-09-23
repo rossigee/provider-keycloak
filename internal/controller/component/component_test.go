@@ -11,7 +11,7 @@ type mockComponentClient struct {
 	*testhelpers.BaseMockClient
 	getComponentFn    func(ctx context.Context, realm, id string) (interface{}, error)
 	createComponentFn func(ctx context.Context, realm string, component interface{}) (interface{}, error)
-	deleteComponentFn func(ctx context.Context, realm, id string) error
+	deleteComponentFn func(ctx context.Context, realm, id string) error //nolint:unused
 }
 
 func (m *mockComponentClient) GetComponent(ctx context.Context, realm, id string) (interface{}, error) {
