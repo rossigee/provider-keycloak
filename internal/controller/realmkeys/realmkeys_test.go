@@ -9,7 +9,7 @@ import (
 
 type mockRealmKeysClient struct {
 	*testhelpers.BaseMockClient
-	getKeysFn    func(ctx context.Context, realm string) (interface{}, error)
+	getKeysFn     func(ctx context.Context, realm string) (interface{}, error)
 	generateKeyFn func(ctx context.Context, realm, algorithm string) (interface{}, error)
 }
 

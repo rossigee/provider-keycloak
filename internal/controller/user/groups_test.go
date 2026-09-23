@@ -26,10 +26,10 @@ import (
 
 type mockGroupsClient struct {
 	*testhelpers.BaseMockClient
-	getUserFn       func(ctx context.Context, realm, username string) (*clients.UserRepresentation, error)
-	searchGroupsFn  func(ctx context.Context, realm, name string) ([]clients.GroupRepresentation, error)
-	getUserGroupsFn func(ctx context.Context, realm, userID string) ([]clients.GroupRepresentation, error)
-	addUserToGroupFn    func(ctx context.Context, realm, userID, groupID string) error
+	getUserFn             func(ctx context.Context, realm, username string) (*clients.UserRepresentation, error)
+	searchGroupsFn        func(ctx context.Context, realm, name string) ([]clients.GroupRepresentation, error)
+	getUserGroupsFn       func(ctx context.Context, realm, userID string) ([]clients.GroupRepresentation, error)
+	addUserToGroupFn      func(ctx context.Context, realm, userID, groupID string) error
 	removeUserFromGroupFn func(ctx context.Context, realm, userID, groupID string) error
 }
 

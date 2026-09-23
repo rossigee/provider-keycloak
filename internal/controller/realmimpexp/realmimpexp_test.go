@@ -9,7 +9,7 @@ import (
 
 type mockRealmImpExpClient struct {
 	*testhelpers.BaseMockClient
-	getImportFn    func(ctx context.Context, realm, id string) (interface{}, error)
+	getImportFn     func(ctx context.Context, realm, id string) (interface{}, error)
 	executeImportFn func(ctx context.Context, realm string, data interface{}) (interface{}, error)
 }
 
