@@ -2,6 +2,7 @@
 # Setup Project
 PROJECT_NAME := provider-keycloak
 PROJECT_REPO := github.com/rossigee/$(PROJECT_NAME)
+export CROSSPLANE_VERSION ?= 2.5.0
 
 PLATFORMS ?= linux_amd64 linux_arm64
 -include build/makelib/common.mk
