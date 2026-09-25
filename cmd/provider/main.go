@@ -51,6 +51,7 @@ import (
 	controller "github.com/rossigee/provider-keycloak/internal/controller"
 	"github.com/rossigee/provider-keycloak/internal/features"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
+	"github.com/rossigee/provider-keycloak/internal/version"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -88,6 +89,7 @@ func main() {
 
 	log.Info("Provider starting up",
 		"provider", "provider-keycloak",
+		"version", version.Version,
 		"go-version", runtime.Version(),
 		"platform", runtime.GOOS+"/"+runtime.GOARCH,
 		"sync-interval", syncInterval.String(),

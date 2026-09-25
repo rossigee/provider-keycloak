@@ -110,7 +110,7 @@ func setupRBAC(c k8sclient.Client, l logging.Logger) error {
 		{APIGroups: []string{"user.keycloak.m.crossplane.io"}, Resources: []string{"groups", "groups/status", "users", "users/status"}, Verbs: []string{"get", "list", "watch", "update", "patch", "create"}},
 		{APIGroups: []string{"identityprovider.keycloak.m.crossplane.io"}, Resources: []string{"identityproviders", "identityproviders/status"}, Verbs: []string{"get", "list", "watch", "update", "patch", "create"}},
 		{APIGroups: []string{"client.keycloak.m.crossplane.io"}, Resources: []string{"protocolmappers", "protocolmappers/status"}, Verbs: []string{"get", "list", "watch", "update", "patch", "create"}},
-		{APIGroups: []string{"keycloak.crossplane.io"}, Resources: []string{"providerconfigs", "providerconfigs/status", "providerconfigusages", "providerconfigusages/status"}, Verbs: []string{"get", "list", "watch", "update", "patch", "create"}},
+		{APIGroups: []string{"keycloak.m.crossplane.io"}, Resources: []string{"providerconfigs", "providerconfigs/status", "providerconfigusages", "providerconfigusages/status"}, Verbs: []string{"get", "list", "watch", "update", "patch", "create"}},
 		{APIGroups: []string{"events.keycloak.m.crossplane.io"}, Resources: []string{"realmeventsconfigs", "realmeventsconfigs/status"}, Verbs: []string{"get", "list", "watch", "update", "patch", "create"}},
 		{APIGroups: []string{"realmimpexp.keycloak.m.crossplane.io"}, Resources: []string{"realmimports", "realmimports/status"}, Verbs: []string{"get", "list", "watch", "update", "patch", "create"}},
 		{APIGroups: []string{"keys.keycloak.m.crossplane.io"}, Resources: []string{"realmkeys", "realmkeys/status"}, Verbs: []string{"get", "list", "watch", "update", "patch", "create"}},
@@ -119,11 +119,12 @@ func setupRBAC(c k8sclient.Client, l logging.Logger) error {
 		{APIGroups: []string{"userfederation.keycloak.m.crossplane.io"}, Resources: []string{"userfederationproviders", "userfederationproviders/status"}, Verbs: []string{"get", "list", "watch", "update", "patch", "create"}},
 		{APIGroups: []string{"users.user.keycloak.m.crossplane.io"}, Resources: []string{"groups", "groups/status"}, Verbs: []string{"get", "list", "watch", "update", "patch", "create"}},
 		{
-			APIGroups: []string{"authenticationflow.keycloak.m.crossplane.io", "authorizationpolicy.keycloak.m.crossplane.io", "authz.keycloak.m.crossplane.io", "clientcertificates.keycloak.m.crossplane.io", "openidclient.keycloak.m.crossplane.io", "clientinitialaccess.keycloak.m.crossplane.io", "rolemappings.keycloak.m.crossplane.io", "scopes.keycloak.m.crossplane.io", "component.keycloak.m.crossplane.io", "group.keycloak.m.crossplane.io", "user.keycloak.m.crossplane.io", "identityprovider.keycloak.m.crossplane.io", "client.keycloak.m.crossplane.io", "keycloak.crossplane.io", "events.keycloak.m.crossplane.io", "realmimpexp.keycloak.m.crossplane.io", "keys.keycloak.m.crossplane.io", "realm.keycloak.m.crossplane.io", "role.keycloak.m.crossplane.io", "userfederation.keycloak.m.crossplane.io", "users.user.keycloak.m.crossplane.io"},
+			APIGroups: []string{"authenticationflow.keycloak.m.crossplane.io", "authorizationpolicy.keycloak.m.crossplane.io", "authz.keycloak.m.crossplane.io", "clientcertificates.keycloak.m.crossplane.io", "openidclient.keycloak.m.crossplane.io", "clientinitialaccess.keycloak.m.crossplane.io", "rolemappings.keycloak.m.crossplane.io", "scopes.keycloak.m.crossplane.io", "component.keycloak.m.crossplane.io", "group.keycloak.m.crossplane.io", "user.keycloak.m.crossplane.io", "identityprovider.keycloak.m.crossplane.io", "client.keycloak.m.crossplane.io", "keycloak.m.crossplane.io", "events.keycloak.m.crossplane.io", "realmimpexp.keycloak.m.crossplane.io", "keys.keycloak.m.crossplane.io", "realm.keycloak.m.crossplane.io", "role.keycloak.m.crossplane.io", "userfederation.keycloak.m.crossplane.io", "users.user.keycloak.m.crossplane.io"},
 			Resources: []string{"*/finalizers"},
 			Verbs:     []string{"update"},
 		},
 		{APIGroups: []string{"", "coordination.k8s.io"}, Resources: []string{"secrets", "configmaps", "events", "leases"}, Verbs: []string{"*"}},
+		{APIGroups: []string{"events.k8s.io"}, Resources: []string{"events"}, Verbs: []string{"create", "patch", "update"}},
 	}
 
 	system := &rbacv1.ClusterRole{

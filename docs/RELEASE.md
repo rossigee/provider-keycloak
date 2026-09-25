@@ -1,133 +1,61 @@
-# v0.1.0 Release Preparation
+# Release Process
 
-**Status:** Ready for testing validation  
-**Test Image:** `ghcr.io/rossigee/provider-keycloak:test` (commit f400b34)  
-**Release Date:** 2026-06-06
+## Current Release
 
-## What's Included in v0.1.0
+`v0.19.7`
 
-### 🔧 Critical Fix
-- **Bug #1: CRD Group Registration**
-  - Root cause: CRD manifests had empty API groups preventing Crossplane RBAC initialization
-  - Impact: Provider failed to start when CRDs were deleted/recreated
-  - Solution: Added `+groupName` declarations to all API types, regenerated CRDs
-  - Status: Fixed and included in test image
+## Preparation
 
-### ✨ New Features
-- **20+ new Client configuration fields:**
-  - URLs: `homeUrl`, `adminUrl`, `frontchannelLogoutUrl`, `backchannelLogoutUrl`
-  - Logout: `backchannelLogoutSessionRequired`, `backchannelLogoutRevokeOfflineSessions`
-  - Timeouts: `clientSessionIdleTimeout`, `clientSessionMaxLifespan`, offline variants
-  - Flags: `publicClient`, `bearerOnly`, `consentRequired`, `fullScopeAllowed`, `alwaysDisplayInConsole`
-  - Advanced: `authorizationServicesEnabled`, `oauth2DeviceAuthorizationGrantEnabled`, `standardTokenExchangeEnabled`, `useRefreshTokens`
-  - Protocol: `protocol`, `pkceCodeChallengeMethod`, `accessTokenLifespan`
+1. Create `release/v0.19.7` from the latest `origin/master`.
+2. Update `VERSION`, `internal/version/version.go`, `package/crossplane.yaml`, and current installation references.
+3. Add the release entry to `CHANGELOG.md`.
+4. Run:
 
-### 📚 Documentation
-- ../CHANGELOG.md: Comprehensive change documentation
-- ../examples/client-advanced.yaml: 4 example client configurations
-- resource-analysis.md: Analysis of all resources and expansion opportunities
-- ../README.md: Updated API group documentation
-
-### 🎯 Code Quality
-- All linting passes (0 issues)
-- Refactored comparison functions for maintainability
-- Comprehensive field sync logic
-- Proper error handling
-
-## Release Checklist
-
-### ✅ Completed
-- [x] Code changes implemented
-- [x] All linting passes (golangci-lint, go vet, go fmt)
-- [x] Commit eafcd59: Bug fix + feature additions
-- [x] Commit f400b34: Documentation + examples
-- [x] Test image built: `ghcr.io/rossigee/provider-keycloak:test`
-- [x] Project memory updated
-- [x] CHANGELOG created
-- [x] Examples created
-- [x] Resource analysis documented
-
-### ⏳ Pending
-- [ ] User validation: Test image passes through separate test suite
-- [ ] **If tests pass:**
-  - [ ] Tag release: `git tag v0.1.0`
-  - [ ] Push tags: `git push origin v0.1.0`
-  - [ ] Push commits: `git push origin master`
-  - [ ] Create GitHub release
-  - [ ] Build production images
-  - [ ] Publish to container registries
-
-### ❌ Not Required (Out of Scope)
-- Integration tests (user's test suite will validate)
-- Full test coverage (adequate for critical paths)
-- Other resource field expansion (future versions)
-
-## Pre-Release Testing Instructions
-
-The user should validate the test image (`ghcr.io/rossigee/provider-keycloak:test`) with their test suite by:
-
-1. **Deploy the test image**
    ```bash
-   docker pull ghcr.io/rossigee/provider-keycloak:test
-   # Or use in a Kubernetes deployment
+   make reviewable
+   make build
+   make build.all build.artifacts VERSION=v0.19.7 PLATFORMS="linux_amd64 linux_arm64"
+   for platform in linux_amd64 linux_arm64; do
+     make xpkg.build VERSION=v0.19.7 PLATFORMS="linux_amd64 linux_arm64" PLATFORM="$platform"
+   done
    ```
 
-2. **Verify the RBAC fix** (Bug #1)
-   - Deploy provider with test image
-   - Delete a CRD (e.g., clients.openidclient.keycloak.m.crossplane.io)
-   - Recreate the same CRD
-   - Provider should continue operating (no RBAC initialization failure)
+5. Open a pull request targeting `master` and wait for review, CI, and security checks.
 
-3. **Test new Client fields**
-   - Apply example manifests from `examples/client-advanced.yaml`
-   - Verify all configuration fields sync properly
-   - Check that field changes are detected and applied
+## Tagging
 
-4. **Validate all resource types**
-   - Test existing Realm, User, Role, Group, ProtocolMapper resources
-   - Ensure no regressions from CRD changes
-
-## Post-Release Tasks
-
-After user validates and approves:
+After the pull request is merged and `master` is green:
 
 ```bash
-# Tag the release
-git tag -a v0.1.0 -m "Release v0.1.0: CRD group registration fix + client feature expansion"
-
-# Push to remote
-git push origin master
-git push origin v0.1.0
-
-# Build production images (if needed for multi-platform)
-make -j4 build
-docker build -t ghcr.io/rossigee/provider-keycloak:v0.1.0 -f cluster/images/provider-keycloak/Dockerfile .
-docker push ghcr.io/rossigee/provider-keycloak:v0.1.0
+set -euo pipefail
+VERSION=v0.19.7
+git fetch origin master
+test -z "$(git status --porcelain)"
+test "$(git rev-parse HEAD)" = "$(git rev-parse origin/master)"
+test "$(<VERSION)" = "$VERSION"
+test -z "$(git show-ref --tags "$VERSION")"
+test -z "$(git ls-remote --tags origin "refs/tags/$VERSION")"
+git tag -a "$VERSION" -m "Release $VERSION" HEAD
+git push origin "refs/tags/$VERSION"
 ```
 
-## Known Issues & Limitations
+Published tags are immutable. Never force-move or delete a release tag.
 
-- None blocking release
-- Resource analysis identified expansion opportunities for User/Realm resources (deferred to v0.2.0)
+## Workflow
 
-## Version Notes
+The tag-only workflow builds `linux_amd64` and `linux_arm64` xpkg files, publishes the version and `latest` references to GHCR, verifies equal digests and both platforms, and creates the GitHub Release.
 
-This is v0.1.0 - the first production-ready release with:
-- Complete Keycloak resource type coverage
-- CRD group registration fix
-- Comprehensive client configuration support
-- Full controller implementations for all resource types
-- Proper OAuth2 token refresh mechanism
-- Kubernetes secret integration for client credentials
+## Verification
 
-## Support & Next Steps
+```bash
+gh run list --workflow Release --limit 1
+gh release view v0.19.7
+docker buildx imagetools inspect \
+  ghcr.io/rossigee/provider-keycloak:v0.19.7 \
+  --format '{{.Manifest.Digest}}'
+docker buildx imagetools inspect \
+  ghcr.io/rossigee/provider-keycloak:latest \
+  --format '{{.Manifest.Digest}}'
+```
 
-After v0.1.0 is validated:
-
-**v0.2.0 Planning (Based on user feedback)**
-- User resource field expansion (if requested)
-- Realm configuration expansion (if requested)
-- Additional test coverage
-- Performance optimization
-
-**Contact:** Ross Golder (ross@golder.org)
+The two digests must match, and both OCI indexes must contain `linux/amd64` and `linux/arm64`.

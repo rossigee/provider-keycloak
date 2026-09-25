@@ -5,15 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.19.7] - 2026-10-03
 
 ### Fixed
+- **Critical:** ProviderConfig RBAC was granted on the wrong API group
+  - `setupRBAC` requested ProviderConfig and ProviderConfigUsage permissions on `keycloak.crossplane.io`, but the CRDs are generated under `keycloak.m.crossplane.io` (see `apis/v1beta1/groupversion_info.go` and `package/crds/keycloak.m.crossplane.io_providerconfigs.yaml`). The provider's own ClusterRole therefore never matched its own ProviderConfig CRDs.
+  - The same mismatch in the `*/finalizers` rule is corrected.
+- **Critical:** Missing `events.k8s.io` grant in the runtime ClusterRole
+  - `setupRBAC` omitted `create`/`patch`/`update` on `events.k8s.io`, even though `package/crossplane.yaml` already declared it. The two are now consistent.
 - **Groups controller: two resources no longer fight over one user's group membership**
   - `Exhaustive` defaults to `true`, which makes a `Groups` resource authoritative for the *complete* set of a user's memberships — `sync` removes every group not listed. Two `Groups` resources for the same user therefore deleted each other's memberships on every reconcile, while both kept reporting `Synced=True` and `Ready=True`. The user's membership oscillated and the conflict was invisible from either resource.
   - `Observe` now lists sibling `Groups` resources in the namespace and, when another *exhaustive* resource resolves to the same Keycloak user in the same realm, refuses to sync: it marks the resource `Ready=False`, emits a `Warning` event with reason `MembershipConflict` naming the conflicting resources, and returns an error so the reconciler stops before `Update` performs any membership changes.
   - Additive siblings (`exhaustive: false`), siblings in another realm, siblings resolving to a different user, and siblings being deleted are not treated as conflicts.
 - **Groups controller: `Ready` now reflects convergence**
   - `Observe` set `Available()` unconditionally, reporting `Ready=True` even when the observed membership differed from what the resource declares and `Update` was about to rewrite it. It now sets `Available()` only when the membership matches, and `Ready=False` with an explanatory message otherwise.
+
+### Added
+- `VERSION` file and an `internal/version` package, so the resolved release version is logged once at provider startup instead of being implicit.
+- `spec.crossplane.version: ">=v2.5.0"` in `package/crossplane.yaml`, and `CROSSPLANE_VERSION ?= 2.5.0` in the Makefile.
+
+### Changed
+- **Release publishing** is now tag-driven and restricted to exact SemVer tags pointing at the current `origin/master`. It builds and publishes `linux_amd64` and `linux_arm64` xpkg files, aliases `latest`, verifies equal digests and both architectures, and authenticates to ghcr.io with a GitHub token instead of OIDC claims.
+- `scripts/release.sh` hardened: validates the SemVer format, requires a clean worktree, requires `HEAD` to equal `origin/master`, requires `VERSION` to match the requested version, and refuses to proceed if the tag already exists locally or remotely.
+- README install instructions use `kubectl crossplane install provider` against the pinned version, replacing a placeholder Helm repository.
 
 ## [0.19.6] - 2026-09-22
 
