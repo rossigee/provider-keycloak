@@ -16,6 +16,11 @@ on:
       - opened
       - synchronize
       - labeled
+      # A PR opened as a draft is skipped by the `if` condition's policy checks
+      # and never reconsidered. Promoting it to ready for review changes nothing
+      # about the PR's risk, so without this event it sits unmerged until a
+      # human merges it by hand.
+      - ready_for_review
 
 permissions:
   contents: read
@@ -23,7 +28,10 @@ permissions:
 
 jobs:
   auto-merge:
-    if: github.actor == 'dependabot[bot]'
+    # Keyed on the PR author, not github.actor. On opened and synchronize the
+    # actor is dependabot, but on ready_for_review it is whoever promoted the
+    # draft - so an actor check would skip exactly the event this was added for.
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-24.04
     steps:
       - name: Determine Merge Strategy
