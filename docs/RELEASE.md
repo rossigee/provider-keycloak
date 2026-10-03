@@ -2,11 +2,11 @@
 
 ## Current Release
 
-`v0.19.9`
+`v0.20.0`
 
 ## Preparation
 
-1. Create `release/v0.19.9` from the latest `origin/master`.
+1. Create `release/v0.20.0` from the latest `origin/master`.
 2. Update `VERSION`, `internal/version/version.go`, `package/crossplane.yaml`, and current installation references.
 3. Add the release entry to `CHANGELOG.md`.
 4. Run:
@@ -14,9 +14,9 @@
    ```bash
    make reviewable
    make build
-   make build.all build.artifacts VERSION=v0.19.9 PLATFORMS="linux_amd64 linux_arm64"
+   make build.all build.artifacts VERSION=v0.20.0 PLATFORMS="linux_amd64 linux_arm64"
    for platform in linux_amd64 linux_arm64; do
-     make xpkg.build VERSION=v0.19.9 PLATFORMS="linux_amd64 linux_arm64" PLATFORM="$platform"
+     make xpkg.build VERSION=v0.20.0 PLATFORMS="linux_amd64 linux_arm64" PLATFORM="$platform"
    done
    ```
 
@@ -28,7 +28,7 @@ After the pull request is merged and `master` is green:
 
 ```bash
 set -euo pipefail
-VERSION=v0.19.9
+VERSION=v0.20.0
 git fetch origin master
 test -z "$(git status --porcelain)"
 test "$(git rev-parse HEAD)" = "$(git rev-parse origin/master)"
@@ -49,9 +49,9 @@ The tag-only workflow builds `linux_amd64` and `linux_arm64` xpkg files, publish
 
 ```bash
 gh run list --workflow Release --limit 1
-gh release view v0.19.9
+gh release view v0.20.0
 docker buildx imagetools inspect \
-  ghcr.io/rossigee/provider-keycloak:v0.19.9 \
+  ghcr.io/rossigee/provider-keycloak:v0.20.0 \
   --format '{{.Manifest.Digest}}'
 docker buildx imagetools inspect \
   ghcr.io/rossigee/provider-keycloak:latest \
