@@ -5,13 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.19.9] - 2026-10-03
 
 ### Added
 - **`internal/controller/deletecomplete`**: shared helper recording that a controller has finished releasing its external resource, so the reconciler can reach `RemoveFinalizer`. `Groups` moves onto it, unchanged in behaviour.
 - **Structural regression test across every controller's `Observe`**, failing if any can only ever report `ResourceExists: true` — the shape that prevents a managed resource from ever terminating. It follows same-package delegation, so a controller whose `Observe` delegates to a shared helper is judged on the helper's body.
 
 ### Fixed
+- **Groups controller: deleting a resource no longer wedges it forever on its finalizer**
+  - The reconciler removes a managed resource's finalizer only once `Observe` reports the external resource gone, and while `Observe` keeps reporting it present it re-runs `Delete` on every pass. `Observe` hardcoded `ResourceExists: true`, so that verification never succeeded: every `Groups` delete re-entered the delete branch indefinitely. The object never terminated, the condition pair stayed at `Ready=False/Deleting` + `Synced=True/ReconcileSuccess`, nothing was logged (that path logs at debug), and each pass re-applied the membership removals — so a user's group membership oscillated against any surviving resource still declaring it. Observed during a realm migration, where two terminating resources stripped `admin` and `backups` every few seconds while their replacement re-added them.
+  - `Delete` now records completion in a `keycloak.m.crossplane.io/delete-completed` annotation, patched explicitly because the reconciler only writes back status. `Observe` reports `ResourceExists: false` once it is present, so the reconciler reaches `RemoveFinalizer`. `Delete` also short-circuits on that annotation, so it cannot release memberships another resource has since declared.
+  - The two paths with nothing left to release — user unresolvable, group refs unresolvable — previously returned without recording anything and would have hung identically; both now record completion.
+  - A failed release is not recorded as complete, so the finalizer is not dropped while the membership is still in Keycloak. The existing tolerance of a `404` from Keycloak is unchanged.
+
 - **Delete never completed for nine further controllers, not just `Groups`**
   - Auditing every `Observe` for a path that reports the external resource as absent found nine more with none. All wedged on their finalizer when deleted, and where `Delete` has side effects those repeated on every reconcile pass.
   - `authenticationflow`, `authorizationpolicy`, `identityprovider`, `clientrolemapping` and `clientscopemapping` now record completion via `deletecomplete`, report `ResourceExists: false` once recorded, and short-circuit `Delete` so a repeat call cannot release state a sibling resource has since declared.
@@ -20,15 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known issues
 - **`ClientRoleMapping` and `ClientScopeMapping` own the complete set, undocumented.** `rolesMatch`/`scopesMatch` require `len(desired) == len(current)`, so each resource is exhaustive over its parent rather than additive, and `Delete` removes the entire set. Two resources for the same parent would fight as `Groups` did, and deleting one removes its siblings' entries. Left unchanged here — this is a semantics decision (make them additive, or document and guard the exhaustive behaviour), not a mechanical fix.
-
-## [0.19.8] - 2026-10-03
-
-### Fixed
-- **Groups controller: deleting a resource no longer wedges it forever on its finalizer**
-  - The reconciler removes a managed resource's finalizer only once `Observe` reports the external resource gone, and while `Observe` keeps reporting it present it re-runs `Delete` on every pass. `Observe` hardcoded `ResourceExists: true`, so that verification never succeeded: every `Groups` delete re-entered the delete branch indefinitely. The object never terminated, the condition pair stayed at `Ready=False/Deleting` + `Synced=True/ReconcileSuccess`, nothing was logged (that path logs at debug), and each pass re-applied the membership removals — so a user's group membership oscillated against any surviving resource still declaring it. Observed during a realm migration, where two terminating resources stripped `admin` and `backups` every few seconds while their replacement re-added them.
-  - `Delete` now records completion in a `groups.user.keycloak.m.crossplane.io/delete-completed` annotation, patched explicitly because the reconciler only writes back status. `Observe` reports `ResourceExists: false` once it is present, so the reconciler reaches `RemoveFinalizer`. `Delete` also short-circuits on that annotation, so it cannot release memberships another resource has since declared.
-  - The two paths with nothing left to release — user unresolvable, group refs unresolvable — previously returned without recording anything and would have hung identically; both now record completion.
-  - A failed release is not recorded as complete, so the finalizer is not dropped while the membership is still in Keycloak. The existing tolerance of a `404` from Keycloak is unchanged.
 
 ## [0.19.7] - 2026-10-03
 
