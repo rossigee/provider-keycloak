@@ -36,3 +36,5 @@ spec:
     verbs:
     - "*"
   controller: {}
+  crossplane:
+    version: ">=v2.5.0"
