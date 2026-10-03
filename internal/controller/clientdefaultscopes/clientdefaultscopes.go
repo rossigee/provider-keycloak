@@ -37,6 +37,10 @@ import (
 	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
+// errClientNotFound marks a parent client that no longer exists in Keycloak,
+// which is distinct from a failure to reach Keycloak.
+var errClientNotFound = errors.New("client not found")
+
 const (
 	errNotClientDefaultScopes = "managed resource is not a ClientDefaultScopes"
 	errGetProviderConfig      = "cannot get ProviderConfig"
@@ -53,7 +57,7 @@ func resolveClientUUID(ctx context.Context, kc clients.Client, realm, clientID s
 		return "", errors.Wrap(err, errResolveClient)
 	}
 	if c == nil {
-		return "", errors.Errorf("client %q not found in realm %q", clientID, realm)
+		return "", errors.Wrapf(errClientNotFound, "client %q not found in realm %q", clientID, realm)
 	}
 	return c.ID, nil
 }
@@ -165,6 +169,14 @@ func ObserveClientDefaultScopes(ctx context.Context, kc clients.Client, cr *open
 
 	clientUUID, err := resolveClientUUID(ctx, kc, deref(cr.Spec.ForProvider.RealmId), deref(cr.Spec.ForProvider.ClientId))
 	if err != nil {
+		// The scope assignment lives on the client, so a client Keycloak does
+		// not have means there is nothing left for this resource to manage.
+		// Erroring aborted every reconcile before RemoveFinalizer, so the
+		// finalizer was held forever.
+		if errors.Is(err, errClientNotFound) {
+			return managed.ExternalObservation{ResourceExists: false}, nil
+		}
+
 		return managed.ExternalObservation{}, err
 	}
 	current, err := kc.ListClientDefaultScopes(ctx, deref(cr.Spec.ForProvider.RealmId), clientUUID)

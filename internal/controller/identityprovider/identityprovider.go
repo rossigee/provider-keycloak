@@ -113,6 +113,13 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	}
 	idp, err := e.client.GetIdentityProvider(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.Alias)
 	if err != nil {
+		// Keycloak has no such identity provider. Returning an error aborts the
+		// reconcile before Create, and the first Observe of any new resource
+		// always 404s - so an IdentityProvider could never be created at all.
+		if errors.Is(err, clients.ErrNotFound) {
+			return managed.ExternalObservation{ResourceExists: false}, nil
+		}
+
 		return managed.ExternalObservation{}, err
 	}
 	cr.Status.SetConditions(xpv1.Available())

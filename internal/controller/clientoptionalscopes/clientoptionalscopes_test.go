@@ -43,6 +43,7 @@ type optsStub struct {
 	scopeByName     map[string]*clients.ClientScopeRepresentation
 	currentOptional []clients.ClientScopeRepresentation
 	listErr         error
+	clientLookupErr error
 }
 
 func newOptsStub() *optsStub {
@@ -57,6 +58,9 @@ func newOptsStub() *optsStub {
 }
 
 func (s *optsStub) GetClient(_ context.Context, _, clientID string) (*clients.ClientRepresentation, error) {
+	if s.clientLookupErr != nil {
+		return nil, s.clientLookupErr
+	}
 	if clientID != s.clientByName {
 		return nil, nil
 	}
@@ -168,6 +172,41 @@ func TestDeleteClientOptionalScopes(t *testing.T) {
 		s.listErr = errors.New("boom")
 		if _, err := DeleteClientOptionalScopes(context.Background(), s, newOptCR([]string{"groups"})); err == nil {
 			t.Fatal("expected error")
+		}
+	})
+}
+
+// TestObserveAbsentClientReportsGone covers the delete-direction wedge for the
+// scope controllers.
+//
+// The scope assignment lives on the client, so a client Keycloak no longer has
+// means this resource has nothing left to manage. Returning an error aborted
+// every reconcile before RemoveFinalizer, so a resource left behind by a
+// decommissioned client held its finalizer forever and re-issued the lookup on
+// every poll - adding load against an API that was already rate limiting.
+//
+// Found live: rossgolderltd-k8s-bankrut-master-default-scopes, terminating with
+// `client "k8s-bankrut-master" not found in realm "ROSSGolderLt"`.
+func TestObserveAbsentClientReportsGone(t *testing.T) {
+	t.Run("client absent", func(t *testing.T) {
+		s := newOptsStub()
+		s.clientByName = "" // nothing matches -> GetClient returns nil, nil
+
+		obs, err := ObserveClientOptionalScopes(context.Background(), s, newOptCR([]string{"groups"}))
+		if err != nil {
+			t.Fatalf("a missing parent client must not abort Observe: %v", err)
+		}
+		if obs.ResourceExists {
+			t.Error("expected ResourceExists=false when the parent client is absent")
+		}
+	})
+
+	t.Run("lookup failure still errors", func(t *testing.T) {
+		s := newOptsStub()
+		s.clientLookupErr = errors.New("connection refused")
+
+		if _, err := ObserveClientOptionalScopes(context.Background(), s, newOptCR([]string{"groups"})); err == nil {
+			t.Fatal("a transport failure must still surface as an error")
 		}
 	})
 }
