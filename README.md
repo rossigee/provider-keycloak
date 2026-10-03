@@ -11,7 +11,7 @@ A native [Crossplane](https://crossplane.io/) provider for [Keycloak](https://ww
 
 ## Container Registry
 
-- **Primary**: `ghcr.io/rossigee/provider-keycloak:v0.20.0`
+- **Primary**: `ghcr.io/rossigee/provider-keycloak:v0.20.1`
 
 ## Requirements
 
@@ -326,7 +326,7 @@ Provider-keycloak maintains feature parity with [crossplane-contrib/provider-key
 
 1. **Install provider**:
    ```bash
-   kubectl crossplane install provider ghcr.io/rossigee/provider-keycloak:v0.20.0
+   kubectl crossplane install provider ghcr.io/rossigee/provider-keycloak:v0.20.1
    ```
 
 2. **Create ProviderConfig**:

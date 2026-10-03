@@ -5,15 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.20.1] - 2026-10-03
 
 ### Fixed
+- **Critical:** `ClientInitialAccess` minted a new token on every reconcile, and could never revoke one
+  - `setAccessID` recorded an issued token's ID in an annotation, but `getAccessID` looked for a status condition of type `AccessID` and returned its message. Nothing ever set such a condition, so `getAccessID` always returned empty.
+  - `Observe` therefore reported the token absent immediately after `Create`, so the reconciler ran `Create` again on every pass and minted a fresh initial-access token each time, without bound.
+  - `Delete` saw an empty ID, skipped the API entirely and released the finalizer anyway, so the token was never revoked in Keycloak.
+  - `getAccessID` now reads the annotation `setAccessID` writes, matching every other controller here. Affected every released version up to and including v0.20.0.
+  - Found while closing a test-coverage gap: this controller was one of ten whose tests exercised a mock rather than the controller, so it sat at 0% and neither CI nor `make reviewable` could see the defect.
+
 - **Critical:** Debug HTTP logging wrote credentials to the pod log
   - Setting `KEYCLOAK_PROVIDER_DEBUG_HTTP=true` leaked the bearer token and any credential in a request or response body.
   - Password redaction existed but was applied at only one of the three logging sites. The admin wire dump re-marshalled the raw body and cloned the headers verbatim, so both the `Authorization` header and the payload's password reached stdout — the redaction was bypassed entirely. That dump runs on realm creation (`POST /admin/realms`).
   - The response dump printed the full body and the full header set, so a `clientSecret` in a response, or a `Set-Cookie`, was logged as-is.
   - Redaction now covers every logging site. Sensitive headers (`Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, `X-Authorization`) are replaced in a clone, leaving the real request untouched. Credential-bearing JSON fields are replaced across both camelCase and snake_case spellings — the previous pattern matched only `"password":"..."` and missed `clientSecret`, `privateKey`, `access_token` and others.
   - `fetchOAuth2Token` was already outside this path and remains unlogged.
+  - A log-injection vector in the same block is also closed: newlines and carriage returns are stripped from the request URL before it is logged, so a crafted path cannot forge log entries.
 
 ### Added
 - **Tests covering the debug log output itself.** The redaction helpers had no coverage, which is why the bypass went unnoticed; worse, tests written against the helpers alone pass even when the logging sites stop calling them. These drive `doRequest` against a test server with debug enabled and assert on what it actually writes.
@@ -108,7 +116,7 @@ This release contains a breaking change to `ClientRoleMapping` and `ClientScopeM
   - Fixes Group membership sync failures where deadlines were ignored and reconciles retried immediately upon expiration
 
 ### Added
-- **Comprehensive unit test coverage: 100% (23/23 controllers)**
+- **Test suite added for all 23 controllers.** *(Corrected 2026-10-03: this originally read "100% coverage". The tests exercised each package's mock rather than the controller, so ten controllers were left at 0% statement coverage despite having test files. Real coverage was measured at 21.9% in 2026-10. See 0.20.1.)*
   - Previously: 44% coverage (11/25 controllers), Groups controller shipped untested → shipped bug in v0.19.4
   - Now: All 23 controllers have regression tests using mock pattern
   - 68+ test cases covering observe, create, update, delete operations
