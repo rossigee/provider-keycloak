@@ -24,13 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `realmkeys`, `events` and `realmimpexp` have a no-op `Delete` — nothing in Keycloak to release — so their `Observe` reports `ResourceExists: false` as soon as deletion is requested. Their `Delete` bodies did nothing at all and returned `nil`, yet the finalizer still could not be removed.
   - `clientdefaultscopes`, `clientoptionalscopes` and `clientscope` were re-checked after the structural test flagged them: each delegates to a shared `ObserveX` helper that does report absence, so they are not affected.
 
+- **`IdentityProvider` could never be created; the scope controllers could not be deleted once their client was gone**
+  - The create-direction twin of the `ProtocolMapper` fix above. `GetIdentityProvider` propagated Keycloak's 404 as a plain error, and the first `Observe` of any new resource always 404s — so the reconciler aborted before `Create` and an `IdentityProvider` could not be created at all. Both live resources were 18 days old and had never been created, while looking correct in gitops.
+  - `ClientDefaultScopes` and `ClientOptionalScopes` now report `ResourceExists: false` when the client is absent, so a resource left behind by a decommissioned client releases its finalizer. Found live: `rossgolderltd-k8s-bankrut-master-default-scopes`, terminating since 2026-10-01.
+  - `internal/clients` gains `ErrNotFound`, wrapped by a `notFoundError` that keeps the previous message shape — several callers still match on the `"404"` substring — so `errors.Is` can be used without breaking them.
+  - A failure to *reach* Keycloak still returns an error in every case, so a live resource is never mistaken for a missing one. Each controller has a test pinning that, because getting it wrong would send the reconciler to `Create` on every poll.
+  - Updates one pre-existing test that asserted the old behaviour — that a missing client is an error — to assert the new contract.
+
 - **`ProtocolMapper`: a mapper left behind by a decommissioned client could never be deleted**
   - A second, distinct reason a managed resource never terminates. The reconciler aborts a reconcile when `Observe` returns an error, so it never reaches `RemoveFinalizer`. `resolveClientUUID` failed permanently once a parent client was removed from Keycloak, so any mapper left behind held its finalizer forever and re-issued the lookup on every poll — adding load against an API that was already rate limiting.
   - `Observe` now distinguishes *the client is absent* from *Keycloak could not be reached*, and reports `ResourceExists: false` for the former. A mapper cannot outlive its client, so there is nothing left to release and the reconciler can finalise. Transport and auth failures still surface as errors, so a live mapper is never mistaken for a missing one.
   - Found in `ROSSGolderLtd`: three mappers terminating since 2026-10-01 with `client "k8s-bankrut-master" not found`, a client no longer declared in gitops.
 
 ### Known issues
-- **A parent object that cannot be resolved still blocks deletion generally.** `ClientDefaultScopes` and `ClientOptionalScopes` resolve a client the same way and would wedge the same way if their parent client were removed. Not fixed here — `ProtocolMapper` was fixed because it was demonstrably broken in a live cluster, and the same treatment should be reviewed for the two scope controllers.
 - **`ClientRoleMapping` and `ClientScopeMapping` own the complete set, undocumented.** `rolesMatch`/`scopesMatch` require `len(desired) == len(current)`, so each resource is exhaustive over its parent rather than additive, and `Delete` removes the entire set. Two resources for the same parent would fight as `Groups` did, and deleting one removes its siblings' entries. Left unchanged here — this is a semantics decision (make them additive, or document and guard the exhaustive behaviour), not a mechanical fix.
 
 ## [0.19.7] - 2026-10-03

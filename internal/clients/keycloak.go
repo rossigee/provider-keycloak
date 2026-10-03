@@ -123,6 +123,27 @@ var ErrAuthUnavailable = errors.New("Keycloak authentication unavailable")
 // message rather than immediately retrying.
 var ErrRateLimited = errors.New("Keycloak rate limited")
 
+// ErrNotFound indicates Keycloak returned HTTP 404 for the requested resource.
+//
+// Callers must distinguish this from a transport failure. A managed reconciler
+// aborts when Observe returns an error, so treating "absent" as an error stops
+// it ever creating a missing resource, or releasing a finalizer for one whose
+// parent has been deleted.
+var ErrNotFound = errors.New("Keycloak resource not found")
+
+// notFoundError preserves the historical message shape - several callers still
+// match on the "404" substring - while allowing errors.Is(err, ErrNotFound).
+type notFoundError struct {
+	status int
+	body   string
+}
+
+func (e *notFoundError) Error() string {
+	return fmt.Sprintf("request failed with status %d: %s", e.status, e.body)
+}
+
+func (e *notFoundError) Unwrap() error { return ErrNotFound }
+
 // realmPath returns the safely encoded admin API path for a realm.
 func realmPath(realm string) string {
 	return adminPath + "/" + url.PathEscape(realm)
@@ -673,6 +694,9 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 		msg := string(respBody)
 		if len(msg) > maxErrBodyLen {
 			msg = msg[:maxErrBodyLen] + "..."
+		}
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, &notFoundError{status: resp.StatusCode, body: msg}
 		}
 		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, msg)
 	}

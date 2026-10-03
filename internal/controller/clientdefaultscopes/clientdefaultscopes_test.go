@@ -150,12 +150,21 @@ func TestObserveClientDefaultScopes(t *testing.T) {
 		}
 	})
 
-	t.Run("error when client lookup returns nil", func(t *testing.T) {
+	t.Run("absent client reports the resource as gone", func(t *testing.T) {
+		// Behaviour change: this used to be an error. A scope assignment lives on
+		// the client, so a client Keycloak does not have means there is nothing
+		// left to manage. Erroring aborted every reconcile before
+		// RemoveFinalizer, so a resource left behind by a decommissioned client
+		// held its finalizer forever.
 		s := newDefsStub()
 		s.clientByName = "different"
-		_, err := ObserveClientDefaultScopes(context.Background(), s, newDefScopesCR([]string{"groups"}))
-		if err == nil {
-			t.Fatal("expected error when client not found")
+
+		obs, err := ObserveClientDefaultScopes(context.Background(), s, newDefScopesCR([]string{"groups"}))
+		if err != nil {
+			t.Fatalf("a missing parent client must not abort Observe: %v", err)
+		}
+		if obs.ResourceExists {
+			t.Error("expected ResourceExists=false when the parent client is absent")
 		}
 	})
 }
@@ -226,3 +235,38 @@ func TestDeleteClientDefaultScopes(t *testing.T) {
 
 // satisfy unused-import warnings if any.
 var _ = struct{}{}
+
+// TestObserveAbsentClientReportsGone covers the delete-direction wedge for the
+// scope controllers.
+//
+// The scope assignment lives on the client, so a client Keycloak no longer has
+// means this resource has nothing left to manage. Returning an error aborted
+// every reconcile before RemoveFinalizer, so a resource left behind by a
+// decommissioned client held its finalizer forever and re-issued the lookup on
+// every poll - adding load against an API that was already rate limiting.
+//
+// Found live: rossgolderltd-k8s-bankrut-master-default-scopes, terminating with
+// `client "k8s-bankrut-master" not found in realm "ROSSGolderLt"`.
+func TestObserveAbsentClientReportsGone(t *testing.T) {
+	t.Run("client absent", func(t *testing.T) {
+		s := newDefsStub()
+		s.clientByName = "" // nothing matches -> GetClient returns nil, nil
+
+		obs, err := ObserveClientDefaultScopes(context.Background(), s, newDefScopesCR([]string{"groups"}))
+		if err != nil {
+			t.Fatalf("a missing parent client must not abort Observe: %v", err)
+		}
+		if obs.ResourceExists {
+			t.Error("expected ResourceExists=false when the parent client is absent")
+		}
+	})
+
+	t.Run("lookup failure still errors", func(t *testing.T) {
+		s := newDefsStub()
+		s.clientLookupErr = errors.New("connection refused")
+
+		if _, err := ObserveClientDefaultScopes(context.Background(), s, newDefScopesCR([]string{"groups"})); err == nil {
+			t.Fatal("a transport failure must still surface as an error")
+		}
+	})
+}
