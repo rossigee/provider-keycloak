@@ -15,6 +15,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `getAccessID` now reads the annotation `setAccessID` writes, matching every other controller here. Affected every released version up to and including v0.20.0.
   - Found while closing a test-coverage gap: this controller was one of ten whose tests exercised a mock rather than the controller, so it sat at 0% and neither CI nor `make reviewable` could see the defect.
 
+  #### Action required if you ran v0.20.0 or earlier
+
+  Upgrading stops the bleeding but does not clear the backlog. The fix stops new tokens being minted and lets `Delete` revoke the one it knows about; it cannot recover the IDs of tokens already minted, because `setAccessID` overwrote the annotation on each pass and only the most recent ID survives. Those tokens remain valid in Keycloak until their own expiry, and are not revocable through this provider.
+
+  1. **Upgrade to v0.20.1 or later first.** On an older version the provider is still minting on every reconcile, so cleaning up before upgrading is pointless.
+  2. **Revoke the accumulated tokens.** Either revoke every one of them, or revoke all but the single ID named in the resource's `keycloak.crossplane.io/access-id` annotation if you want that one to keep working:
+
+     ```
+     GET    /admin/realms/{realm}/clients-initial-access
+     DELETE /admin/realms/{realm}/clients-initial-access/{id}
+     ```
+
+     Each entry returns `id`, `timestamp`, `expiration`, `count` and `remainingCount`. Judge each one by its own `expiration` rather than assuming — the provider passes `spec.forProvider.expiration` through to Keycloak verbatim as seconds, so lifetime is whatever each resource declared, and entries minted during the affected window cluster in `timestamp`. Keycloak also only ever returns the token *value* at creation time, so the accumulated ones cannot be recovered even in principle.
+
+  3. **Revoking everything is the simplest option and is self-healing.** If you delete every entry, including the annotated one, the next reconcile finds no matching token, `Observe` reports `ResourceExists: false`, and `Create` mints one fresh token and rewrites the annotation. The new token's value appears in `status.token` on the resource. You do not need to recreate the `ClientInitialAccess` resource.
+
+  These tokens authorise client registration in the realm — they are not user session tokens, and they cannot be used to authenticate as an existing user. The exposure is that anyone holding one can register a client in the realm until it expires or is revoked.
+
 - **Critical:** Debug HTTP logging wrote credentials to the pod log
   - Setting `KEYCLOAK_PROVIDER_DEBUG_HTTP=true` leaked the bearer token and any credential in a request or response body.
   - Password redaction existed but was applied at only one of the three logging sites. The admin wire dump re-marshalled the raw body and cloned the headers verbatim, so both the `Authorization` header and the payload's password reached stdout — the redaction was bypassed entirely. That dump runs on realm creation (`POST /admin/realms`).
