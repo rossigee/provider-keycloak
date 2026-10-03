@@ -168,20 +168,26 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, nil
 }
 
+// accessIDAnnotation records the initial-access token ID Keycloak assigned.
+const accessIDAnnotation = "keycloak.crossplane.io/access-id"
+
+// getAccessID reads the ID setAccessID recorded.
+//
+// It must read the annotation, not a status condition: setAccessID writes an
+// annotation, so a condition lookup never matched anything and always returned
+// empty. That made Observe report the token absent immediately after Create,
+// so the reconciler created a fresh token on every pass, and made Delete a
+// no-op that released the finalizer without ever revoking the token.
 func getAccessID(cr *ciav1beta1.ClientInitialAccess) string {
-	if cr.Status.Conditions != nil {
-		for _, c := range cr.Status.Conditions {
-			if c.Type == "AccessID" {
-				return c.Message
-			}
-		}
+	if cr.Annotations == nil {
+		return ""
 	}
-	return ""
+	return cr.Annotations[accessIDAnnotation]
 }
 
 func setAccessID(cr *ciav1beta1.ClientInitialAccess, id string) {
 	if cr.Annotations == nil {
 		cr.Annotations = make(map[string]string)
 	}
-	cr.Annotations["keycloak.crossplane.io/access-id"] = id
+	cr.Annotations[accessIDAnnotation] = id
 }
