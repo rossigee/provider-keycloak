@@ -36,6 +36,10 @@ import (
 	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
+// errClientNotFound marks a parent client that no longer exists in Keycloak,
+// which is distinct from a failure to reach Keycloak.
+var errClientNotFound = errors.New("client not found")
+
 const (
 	errNotMapper         = "managed resource is not a ProtocolMapper"
 	errGetProviderConfig = "cannot get ProviderConfig"
@@ -110,7 +114,7 @@ func (e *external) resolveClientUUID(ctx context.Context, realm, clientID string
 		return "", errors.Wrap(err, errResolveClient)
 	}
 	if c == nil {
-		return "", errors.Errorf("client %q not found in realm %q", clientID, realm)
+		return "", errors.Wrapf(errClientNotFound, "client %q not found in realm %q", clientID, realm)
 	}
 	return c.ID, nil
 }
@@ -130,6 +134,15 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	}
 	clientUUID, err := e.resolveClientUUID(ctx, realmId, clientID)
 	if err != nil {
+		// A mapper cannot outlive the client it belongs to. Reporting an error
+		// here would abort the reconcile before the reconciler ever reaches
+		// RemoveFinalizer, so a resource whose client has been decommissioned
+		// would hold its finalizer forever and re-issue this lookup on every
+		// poll. Report the external resource as gone instead.
+		if errors.Is(err, errClientNotFound) {
+			return managed.ExternalObservation{ResourceExists: false}, nil
+		}
+
 		return managed.ExternalObservation{}, err
 	}
 	mappers, err := e.kc.ListClientProtocolMappers(ctx, realmId, clientUUID)
