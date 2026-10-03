@@ -11,4 +11,8 @@ rules:
   comments:
     min-spaces-from-content: 1
   indentation:
-    ignore: [package.yaml, package/crds/]
+    # package/crds/ is controller-gen output. package/crossplane.yaml uses the
+    # upstream Crossplane package-metadata style, where a sequence is not
+    # indented under its key. The exclusion previously named package.yaml,
+    # which this repo has never had, so the rule fired on our own metadata.
+    ignore: [package/crossplane.yaml, package/crds/]
