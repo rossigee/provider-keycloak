@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Groups controller: two resources no longer fight over one user's group membership**
+  - `Exhaustive` defaults to `true`, which makes a `Groups` resource authoritative for the *complete* set of a user's memberships — `sync` removes every group not listed. Two `Groups` resources for the same user therefore deleted each other's memberships on every reconcile, while both kept reporting `Synced=True` and `Ready=True`. The user's membership oscillated and the conflict was invisible from either resource.
+  - `Observe` now lists sibling `Groups` resources in the namespace and, when another *exhaustive* resource resolves to the same Keycloak user in the same realm, refuses to sync: it marks the resource `Ready=False`, emits a `Warning` event with reason `MembershipConflict` naming the conflicting resources, and returns an error so the reconciler stops before `Update` performs any membership changes.
+  - Additive siblings (`exhaustive: false`), siblings in another realm, siblings resolving to a different user, and siblings being deleted are not treated as conflicts.
+- **Groups controller: `Ready` now reflects convergence**
+  - `Observe` set `Available()` unconditionally, reporting `Ready=True` even when the observed membership differed from what the resource declares and `Update` was about to rewrite it. It now sets `Available()` only when the membership matches, and `Ready=False` with an explanatory message otherwise.
+
 ## [0.19.6] - 2026-09-22
 
 ### Fixed

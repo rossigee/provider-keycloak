@@ -18,6 +18,7 @@ package user
 
 import (
 	"context"
+	"sort"
 	"strings"
 
 	xpcontroller "github.com/crossplane/crossplane-runtime/v2/pkg/controller"
@@ -38,28 +39,36 @@ import (
 )
 
 const (
-	errNotGroups            = "managed resource is not a Groups"
-	errResolveUser          = "cannot resolve referenced User"
-	errResolveGroup         = "cannot resolve referenced Group"
-	errMissingUserRef       = "userId or userIdRef must be set"
-	errMissingGroupRef      = "at least one of groupIds or groupIdsRefs must be set"
-	errGetUserGroups        = "cannot get Keycloak user's group memberships"
-	errAddUserToGroup       = "cannot add user to Keycloak group"
-	errRemoveUserGroup      = "cannot remove user from Keycloak group"
-	errGetResolvedUser      = "cannot get resolved user from Keycloak"
-	errGetResolvedGroup     = "cannot get resolved group from Keycloak"
-	errResolvedUserMissing  = "referenced user not yet present in Keycloak"
-	errResolvedGroupMissing = "referenced group not yet present in Keycloak"
+	errNotGroups              = "managed resource is not a Groups"
+	errResolveUser            = "cannot resolve referenced User"
+	errResolveGroup           = "cannot resolve referenced Group"
+	errMissingUserRef         = "userId or userIdRef must be set"
+	errMissingGroupRef        = "at least one of groupIds or groupIdsRefs must be set"
+	errGetUserGroups          = "cannot get Keycloak user's group memberships"
+	errAddUserToGroup         = "cannot add user to Keycloak group"
+	errRemoveUserGroup        = "cannot remove user from Keycloak group"
+	errGetResolvedUser        = "cannot get resolved user from Keycloak"
+	errGetResolvedGroup       = "cannot get resolved group from Keycloak"
+	errResolvedUserMissing    = "referenced user not yet present in Keycloak"
+	errResolvedGroupMissing   = "referenced group not yet present in Keycloak"
+	errListGroups             = "cannot list Groups resources to look for a conflicting membership owner"
+	errMembershipConflict     = "Groups resource(s) %s also manage the complete group membership for this user: Exhaustive defaults to true, so each resource deletes the memberships the others declare. Merge them into a single resource, or set exhaustive: false on all but one"
+	msgMembershipNotConverged = "Keycloak group membership does not yet match the desired state"
+
+	// reasonMembershipConflict is reported when another Groups resource also
+	// claims exhaustive ownership of the same user's group membership.
+	reasonMembershipConflict = event.Reason("MembershipConflict")
 
 	groupsControllerName = "groups.user.keycloak.m.crossplane.io"
 )
 
 // SetupGroups registers the Groups (user↔group membership) controller.
 func SetupGroups(mgr ctrl.Manager, o xpcontroller.Options) error {
+	recorder := event.NewAPIRecorder(mgr.GetEventRecorder(groupsControllerName))
 	opts := []managed.ReconcilerOption{
-		managed.WithExternalConnector(&groupsConnector{kube: mgr.GetClient()}),
+		managed.WithExternalConnector(&groupsConnector{kube: mgr.GetClient(), recorder: recorder}),
 		managed.WithLogger(o.Logger.WithValues("controller", "Groups")),
-		managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorder(groupsControllerName))),
+		managed.WithRecorder(recorder),
 	}
 	if o.Features.Enabled(features.EnableAlphaManagementPolicies) {
 		opts = append(opts, managed.WithManagementPolicies())
@@ -76,10 +85,15 @@ func SetupGroups(mgr ctrl.Manager, o xpcontroller.Options) error {
 		Complete(r)
 }
 
-type groupsConnector struct{ kube client.Client }
+type groupsConnector struct {
+	kube     client.Client
+	recorder event.Recorder
+}
+
 type groupsExternal struct {
-	client clients.Client
-	kube   client.Client
+	client   clients.Client
+	kube     client.Client
+	recorder event.Recorder
 }
 
 func (c *groupsConnector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
@@ -103,7 +117,7 @@ func (c *groupsConnector) Connect(ctx context.Context, mg resource.Managed) (man
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot connect to Keycloak")
 	}
-	return &groupsExternal{client: kc, kube: c.kube}, nil
+	return &groupsExternal{client: kc, kube: c.kube, recorder: c.recorder}, nil
 }
 
 func (e *groupsExternal) Disconnect(_ context.Context) error { return nil }
@@ -173,6 +187,57 @@ func (e *groupsExternal) resolveGroupIDs(ctx context.Context, realmID string, p 
 	return ids, nil
 }
 
+// conflictingMembershipOwners returns the names of the other Groups resources
+// in the same namespace that also claim exhaustive ownership of the same
+// Keycloak user's group membership.
+//
+// Exhaustive defaults to true, which makes a Groups resource authoritative for
+// the complete set of a user's memberships: sync removes every group not
+// listed. Two exhaustive resources for one user therefore delete each other's
+// memberships on every reconcile. That failure is invisible from either
+// resource - both keep reporting Synced and Ready - while the user's
+// membership oscillates, so detect it here instead of letting them fight.
+func (e *groupsExternal) conflictingMembershipOwners(ctx context.Context, cr *userv1beta1.Groups, realmID, userUUID string) ([]string, error) {
+	l := &userv1beta1.GroupsList{}
+	if err := e.kube.List(ctx, l, client.InNamespace(cr.GetNamespace())); err != nil {
+		return nil, errors.Wrap(err, errListGroups)
+	}
+
+	var conflicts []string
+	for i := range l.Items {
+		other := &l.Items[i]
+
+		switch {
+		case other.GetName() == cr.GetName(),
+			other.GetDeletionTimestamp() != nil,
+			!boolValue(other.Spec.ForProvider.Exhaustive):
+			continue
+		}
+
+		otherRealm, err := groupsRealmID(other)
+		if err != nil || otherRealm != realmID {
+			continue
+		}
+
+		// A sibling whose user cannot be resolved yet is not evidence of a
+		// conflict, so don't report it as one.
+		otherUUID, err := e.resolveUserID(ctx, realmID, &other.Spec.ForProvider, other.GetNamespace())
+		if err != nil {
+			continue
+		}
+
+		if otherUUID == userUUID {
+			conflicts = append(conflicts, other.GetName())
+		}
+	}
+
+	// Sorted so the reported message is stable and the resulting Kubernetes
+	// event aggregates instead of producing a new one on every reconcile.
+	sort.Strings(conflicts)
+
+	return conflicts, nil
+}
+
 func (e *groupsExternal) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
 	_, span := tracing.StartSpan(ctx, "groups.observe",
 		tracing.SpanAttrs("Groups", mg.GetName(), "observe")...)
@@ -190,6 +255,22 @@ func (e *groupsExternal) Observe(ctx context.Context, mg resource.Managed) (mana
 
 	userUUID, err := e.resolveUserID(ctx, realmID, &cr.Spec.ForProvider, cr.GetNamespace())
 	if err != nil {
+		return managed.ExternalObservation{}, err
+	}
+
+	conflicts, err := e.conflictingMembershipOwners(ctx, cr, realmID, userUUID)
+	if err != nil {
+		return managed.ExternalObservation{}, err
+	}
+	if len(conflicts) > 0 {
+		// Returning an error stops the reconciler before Update, so this
+		// resource performs no membership changes while the configuration is
+		// ambiguous.
+		err := errors.Errorf(errMembershipConflict, strings.Join(conflicts, ", "))
+		cr.Status.SetConditions(xpv1.Unavailable().WithMessage(err.Error()))
+		if e.recorder != nil {
+			e.recorder.Event(cr, event.Warning(reasonMembershipConflict, err))
+		}
 		return managed.ExternalObservation{}, err
 	}
 
@@ -211,7 +292,15 @@ func (e *groupsExternal) Observe(ctx context.Context, mg resource.Managed) (mana
 		upToDate = desiredSet.equals(actualSet)
 	}
 
-	cr.Status.SetConditions(xpv1.Available())
+	// Only claim Available once the observed membership matches what this
+	// resource declares. Reporting Available while sync is about to rewrite the
+	// membership hides the exact state an operator needs to see.
+	if upToDate {
+		cr.Status.SetConditions(xpv1.Available())
+	} else {
+		cr.Status.SetConditions(xpv1.Unavailable().WithMessage(msgMembershipNotConverged))
+	}
+
 	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
 
