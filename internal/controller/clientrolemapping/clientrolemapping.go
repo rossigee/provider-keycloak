@@ -34,6 +34,7 @@ import (
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/controller/deletecomplete"
+	"github.com/rossigee/provider-keycloak/internal/controller/mappingreconcile"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
@@ -118,9 +119,27 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		return managed.ExternalObservation{}, err
 	}
 	cr.Status.SetConditions(xpv1.Available())
-	upToDate := rolesMatch(cr.Spec.ForProvider.Roles, current)
-	cr.Status.AppliedRoles = toRoleMappings(current)
-	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
+
+	// This set is additive: the resource owns the roles it declares and no
+	// others, so several resources may share one user and client. Entries in
+	// current that this resource does not own - a sibling's, or added in
+	// Keycloak directly - neither make it out of date nor get removed.
+	declared := declaredEntries(cr.Spec.ForProvider.Roles)
+	owned := mappingreconcile.Prune(ownedEntries(cr.Status.AppliedRoles), currentEntries(current))
+	cr.Status.AppliedRoles = fromEntries(owned)
+
+	// Out of date when a declared role is missing, and equally when a role this
+	// resource owns is no longer declared. Checking only the first would mean a
+	// role dropped from the spec is never taken off the user: the resource would
+	// report itself settled while still holding the role, because Update is
+	// never reached.
+	_, stale := mappingreconcile.Plan(declared, owned, currentEntries(current))
+
+	return managed.ExternalObservation{
+		ResourceExists: true,
+		ResourceUpToDate: mappingreconcile.UpToDate(declared, currentEntries(current)) &&
+			len(stale) == 0,
+	}, nil
 }
 
 func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
@@ -132,11 +151,15 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotClientRoleMapping)
 	}
-	roles := toRoleRepresentations(cr.Spec.ForProvider.Roles)
+	roles := toRoleRepresentations(declaredEntries(cr.Spec.ForProvider.Roles))
 	if err := e.client.AddUserClientRoleMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.UserId, cr.Spec.ForProvider.ClientId, roles); err != nil {
 		return managed.ExternalCreation{}, err
 	}
 	cr.Status.SetConditions(xpv1.Creating())
+
+	// Record ownership as soon as the write lands, so a later pass can tell
+	// these roles from a sibling's and a Delete can remove exactly them.
+	cr.Status.AppliedRoles = cr.Spec.ForProvider.Roles
 	return managed.ExternalCreation{}, nil
 }
 
@@ -153,19 +176,27 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	if err != nil {
 		return managed.ExternalUpdate{}, err
 	}
-	desired := toRoleRepresentations(cr.Spec.ForProvider.Roles)
-	toAdd := roleDiff(desired, current)
-	toRemove := roleDiff(current, desired)
-	if len(toAdd) > 0 {
-		if err := e.client.AddUserClientRoleMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.UserId, cr.Spec.ForProvider.ClientId, toAdd); err != nil {
+	declared := declaredEntries(cr.Spec.ForProvider.Roles)
+	owned := ownedEntries(cr.Status.AppliedRoles)
+
+	// Additions are declared roles the user is missing. Removals are roles this
+	// resource applied that the spec no longer declares - and only those. A role
+	// belonging to a sibling resource is absent from owned, so it is never taken.
+	add, remove := mappingreconcile.Plan(declared, owned, currentEntries(current))
+	if len(add) > 0 {
+		if err := e.client.AddUserClientRoleMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.UserId, cr.Spec.ForProvider.ClientId, toRoleRepresentations(add)); err != nil {
 			return managed.ExternalUpdate{}, err
 		}
 	}
-	if len(toRemove) > 0 {
-		if err := e.client.RemoveUserClientRoleMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.UserId, cr.Spec.ForProvider.ClientId, toRemove); err != nil {
+	if len(remove) > 0 {
+		if err := e.client.RemoveUserClientRoleMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.UserId, cr.Spec.ForProvider.ClientId, toRoleRepresentations(remove)); err != nil {
 			return managed.ExternalUpdate{}, err
 		}
 	}
+
+	// Ownership is the declared set from here, pruned against what the user
+	// actually has, so a failed write is not recorded as applied.
+	cr.Status.AppliedRoles = fromEntries(mappingreconcile.Adopt(declared, append(currentEntries(current), add...)))
 	return managed.ExternalUpdate{}, nil
 }
 
@@ -188,8 +219,13 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	if err != nil && !strings.Contains(err.Error(), "404") {
 		return managed.ExternalDelete{}, err
 	}
-	if len(current) > 0 {
-		if err := e.client.RemoveUserClientRoleMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.UserId, cr.Spec.ForProvider.ClientId, current); err != nil {
+
+	// Remove only the roles this resource owns and that are still present.
+	// Removing every role on the user would strip a sibling resource's entries
+	// as well, which is the failure additive ownership exists to prevent.
+	release := mappingreconcile.Release(ownedEntries(cr.Status.AppliedRoles), currentEntries(current))
+	if len(release) > 0 {
+		if err := e.client.RemoveUserClientRoleMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.UserId, cr.Spec.ForProvider.ClientId, toRoleRepresentations(release)); err != nil {
 			return managed.ExternalDelete{}, err
 		}
 	}
@@ -197,54 +233,39 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, deletecomplete.Mark(ctx, e.kube, cr)
 }
 
-func rolesMatch(desired []crv1beta1.RoleMapping, current []clients.RoleRepresentation) bool {
-	if len(desired) != len(current) {
-		return false
-	}
-	for _, d := range desired {
-		found := false
-		for _, c := range current {
-			if (d.Id != "" && d.Id == c.ID) || (d.Name != "" && d.Name == c.Name) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
+// declaredEntries projects the spec's roles into the shared reconciliation type.
+func declaredEntries(roles []crv1beta1.RoleMapping) []mappingreconcile.Entry {
+	return mappingreconcile.Convert(roles, func(r crv1beta1.RoleMapping) mappingreconcile.Entry {
+		return mappingreconcile.Entry{ID: r.Id, Name: r.Name}
+	})
 }
 
-func roleDiff(desired, current []clients.RoleRepresentation) []clients.RoleRepresentation {
-	var diff []clients.RoleRepresentation
-	for _, d := range desired {
-		found := false
-		for _, c := range current {
-			if (d.ID != "" && d.ID == c.ID) || (d.Name != "" && d.Name == c.Name) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			diff = append(diff, d)
-		}
-	}
-	return diff
+// ownedEntries projects the roles this resource last applied.
+func ownedEntries(applied []crv1beta1.RoleMapping) []mappingreconcile.Entry {
+	return mappingreconcile.Convert(applied, func(r crv1beta1.RoleMapping) mappingreconcile.Entry {
+		return mappingreconcile.Entry{ID: r.Id, Name: r.Name}
+	})
 }
 
-func toRoleRepresentations(roles []crv1beta1.RoleMapping) []clients.RoleRepresentation {
-	result := make([]clients.RoleRepresentation, len(roles))
-	for i, r := range roles {
-		result[i] = clients.RoleRepresentation{ID: r.Id, Name: r.Name}
-	}
-	return result
+// currentEntries projects the roles Keycloak currently has on the user.
+func currentEntries(current []clients.RoleRepresentation) []mappingreconcile.Entry {
+	return mappingreconcile.Convert(current, func(r clients.RoleRepresentation) mappingreconcile.Entry {
+		return mappingreconcile.Entry{ID: r.ID, Name: r.Name}
+	})
 }
 
-func toRoleMappings(roles []clients.RoleRepresentation) []crv1beta1.RoleMapping {
-	result := make([]crv1beta1.RoleMapping, len(roles))
-	for i, r := range roles {
-		result[i] = crv1beta1.RoleMapping{Id: r.ID, Name: r.Name}
+func fromEntries(entries []mappingreconcile.Entry) []crv1beta1.RoleMapping {
+	out := make([]crv1beta1.RoleMapping, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, crv1beta1.RoleMapping{Id: e.ID, Name: e.Name})
+	}
+	return out
+}
+
+func toRoleRepresentations(entries []mappingreconcile.Entry) []clients.RoleRepresentation {
+	result := make([]clients.RoleRepresentation, len(entries))
+	for i, r := range entries {
+		result[i] = clients.RoleRepresentation{ID: r.ID, Name: r.Name}
 	}
 	return result
 }

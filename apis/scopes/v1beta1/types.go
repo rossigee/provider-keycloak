@@ -34,6 +34,12 @@ type ClientScopeMappingParameters struct {
 	ClientId string `json:"clientId"`
 
 	// Scopes is the list of scopes to assign.
+	//
+	// The set is additive: this resource owns the scopes it lists and no others,
+	// so several ClientScopeMapping resources may share one realm and client.
+	// Removing a scope from this list removes that scope from the client; it
+	// does not affect scopes owned by another resource. Scopes added to the
+	// client outside this resource are left alone.
 	// +optional
 	Scopes []ScopeMapping `json:"scopes,omitempty"`
 }
@@ -59,7 +65,12 @@ type ClientScopeMappingSpec struct {
 type ClientScopeMappingStatus struct {
 	xpv1.ManagedResourceStatus `json:",inline"`
 
-	// AppliedScopes is the list of scopes currently assigned.
+	// AppliedScopes is the set of scopes this resource has applied to the client.
+	//
+	// It records ownership, not the client's whole scope set, and is how the
+	// resource distinguishes its own scopes from those of another resource
+	// sharing the same client. Only scopes listed here are removed when the
+	// resource is deleted.
 	// +optional
 	AppliedScopes []ScopeMapping `json:"appliedScopes,omitempty"`
 }

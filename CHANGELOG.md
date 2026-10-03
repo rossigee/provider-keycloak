@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Breaking:** `ClientRoleMapping` and `ClientScopeMapping` sets are now additive
+  - Each resource now owns only the roles or scopes it declares, so several resources may share one parent. Previously each was authoritative over the *complete* set: `rolesMatch`/`scopesMatch` required `len(desired) == len(current)`, so a sibling's entry made a resource permanently out of date and drove an endless update loop, and deleting one resource stripped every remaining entry.
+  - `Update` removes only entries the resource applied that the spec no longer declares. An entry added to the parent outside the resource — by a sibling, or directly in Keycloak — is left alone. It is no longer removed on sight as it was before.
+  - `Delete` removes only the entries the resource owns, instead of every entry on the parent.
+  - Ownership is carried on `status.appliedRoles`/`status.appliedScopes`, which previously recorded the parent's whole set and now records what this resource applied. That field's meaning has changed.
+  - Drift correction is unchanged: a declared entry removed in Keycloak is restored, because ownership survives its removal from the parent.
+  - **No migration required.** For a resource that is up to date at upgrade time the recorded set equals the declared set, so behaviour is identical. A role or scope dropped from the spec afterwards is still removed exactly once. Resources that were previously fighting over a shared parent converge instead of deleting each other's entries.
+
+### Added
+- **`internal/controller/mappingreconcile`**: the shared additive reconciliation used by both mapping controllers, covering ownership tracking, up-to-date checks, and add/remove planning.
+- **Regression tests driving both controllers' `Observe`, `Update` and `Delete`** against a recording client, covering a sibling's entries on a shared parent, removal restricted to owned entries, `Delete` leaving siblings intact, drift restoration, a failed add not being recorded as applied, and the upgrade path from the previous exhaustive ownership. Each was confirmed to fail against the previous behaviour.
+
 ## [0.19.9] - 2026-10-03
 
 ### Added
