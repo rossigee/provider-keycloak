@@ -214,7 +214,7 @@ type Client interface {
 
 	// Client secret operations
 	GetClientSecret(ctx context.Context, realm, clientUUID string) (string, error)
-	ResetClientSecret(ctx context.Context, realm, clientUUID, secretValue string) error
+	ResetClientSecret(ctx context.Context, realm, clientUUID string) error
 
 	// Group operations
 	GetGroup(ctx context.Context, realm, groupID string) (*GroupRepresentation, error)
@@ -1538,10 +1538,6 @@ type clientSecretResponse struct {
 	Value string `json:"value"`
 }
 
-type clientSecretRequest struct {
-	Value string `json:"value"`
-}
-
 func (c *keycloakClient) GetClientSecret(ctx context.Context, realm, clientUUID string) (string, error) {
 	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/client-secret"
 	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
@@ -1555,13 +1551,15 @@ func (c *keycloakClient) GetClientSecret(ctx context.Context, realm, clientUUID 
 	return s.Value, nil
 }
 
-func (c *keycloakClient) ResetClientSecret(ctx context.Context, realm, clientUUID, secretValue string) error {
+// ResetClientSecret regenerates the client's secret.
+//
+// The Admin API exposes this as POST /clients/{uuid}/client-secret, taking no
+// request body and returning the generated CredentialRepresentation. There is
+// no PUT on that path, and no way to supply a specific value - the old
+// implementation sent PUT with a body, which Keycloak rejects with 405.
+func (c *keycloakClient) ResetClientSecret(ctx context.Context, realm, clientUUID string) error {
 	path := realmPath(realm) + "/clients/" + url.PathEscape(clientUUID) + "/client-secret"
-	body, err := json.Marshal(clientSecretRequest{Value: secretValue})
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal client secret request")
-	}
-	_, err = c.doRequest(ctx, http.MethodPut, path, body)
+	_, err := c.doRequest(ctx, http.MethodPost, path, nil)
 	return err
 }
 

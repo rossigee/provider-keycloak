@@ -37,7 +37,7 @@ type mockRoleClient struct {
 	createRealmRoleFn   func(ctx context.Context, realm string, r *clients.RoleRepresentation) error
 	updateRealmRoleFn   func(ctx context.Context, realm, name string, r *clients.RoleRepresentation) error
 	deleteRealmRoleFn   func(ctx context.Context, realm, name string) error
-	resetClientSecretFn func(ctx context.Context, realm, clientID, secretValue string) error
+	resetClientSecretFn func(ctx context.Context, realm, clientID string) error
 }
 
 func (m *mockRoleClient) GetRealmRole(ctx context.Context, realm, name string) (*clients.RoleRepresentation, error) {
@@ -106,9 +106,9 @@ func (m *mockRoleClient) SearchGroups(ctx context.Context, realm, name string) (
 func (m *mockRoleClient) GetClientSecret(ctx context.Context, realm, clientID string) (string, error) {
 	return "", nil
 }
-func (m *mockRoleClient) ResetClientSecret(ctx context.Context, realm, clientID, secretValue string) error {
+func (m *mockRoleClient) ResetClientSecret(ctx context.Context, realm, clientID string) error {
 	if m.resetClientSecretFn != nil {
-		return m.resetClientSecretFn(ctx, realm, clientID, secretValue)
+		return m.resetClientSecretFn(ctx, realm, clientID)
 	}
 	return nil
 }

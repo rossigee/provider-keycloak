@@ -110,7 +110,7 @@ func (m *BaseMockClient) ListClients(context.Context, string) ([]clients.ClientR
 func (m *BaseMockClient) GetClientSecret(context.Context, string, string) (string, error) {
 	return "", nil
 }
-func (m *BaseMockClient) ResetClientSecret(context.Context, string, string, string) error {
+func (m *BaseMockClient) ResetClientSecret(context.Context, string, string) error {
 	return nil
 }
 

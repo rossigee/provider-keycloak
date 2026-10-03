@@ -38,7 +38,7 @@ type mockMapperClient struct {
 	createMapperFn      func(ctx context.Context, realm, clientUUID string, p *clients.ProtocolMapperRepresentation) (string, error)
 	updateMapperFn      func(ctx context.Context, realm, clientUUID string, p *clients.ProtocolMapperRepresentation) error
 	deleteMapperFn      func(ctx context.Context, realm, clientUUID, mapperID string) error
-	resetClientSecretFn func(ctx context.Context, realm, clientID, secretValue string) error
+	resetClientSecretFn func(ctx context.Context, realm, clientID string) error
 }
 
 func (m *mockMapperClient) GetClient(ctx context.Context, realm, clientID string) (*clients.ClientRepresentation, error) {
@@ -109,9 +109,9 @@ func (m *mockMapperClient) SearchGroups(ctx context.Context, realm, name string)
 func (m *mockMapperClient) GetClientSecret(ctx context.Context, realm, clientID string) (string, error) {
 	return "", nil
 }
-func (m *mockMapperClient) ResetClientSecret(ctx context.Context, realm, clientID, secretValue string) error {
+func (m *mockMapperClient) ResetClientSecret(ctx context.Context, realm, clientID string) error {
 	if m.resetClientSecretFn != nil {
-		return m.resetClientSecretFn(ctx, realm, clientID, secretValue)
+		return m.resetClientSecretFn(ctx, realm, clientID)
 	}
 	return nil
 }

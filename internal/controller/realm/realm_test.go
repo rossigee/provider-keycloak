@@ -37,7 +37,7 @@ type mockRealmClient struct {
 	createRealmFn       func(ctx context.Context, r *clients.Realm) (*clients.Realm, error)
 	updateRealmFn       func(ctx context.Context, r *clients.Realm) error
 	deleteRealmFn       func(ctx context.Context, realm string) error
-	resetClientSecretFn func(ctx context.Context, realm, clientID, secretValue string) error
+	resetClientSecretFn func(ctx context.Context, realm, clientID string) error
 }
 
 func (m *mockRealmClient) GetRealm(ctx context.Context, realm string) (*clients.Realm, error) {
@@ -98,9 +98,9 @@ func (m *mockRealmClient) SearchGroups(ctx context.Context, realm, name string) 
 func (m *mockRealmClient) GetClientSecret(ctx context.Context, realm, clientID string) (string, error) {
 	return "", nil
 }
-func (m *mockRealmClient) ResetClientSecret(ctx context.Context, realm, clientID, secretValue string) error {
+func (m *mockRealmClient) ResetClientSecret(ctx context.Context, realm, clientID string) error {
 	if m.resetClientSecretFn != nil {
-		return m.resetClientSecretFn(ctx, realm, clientID, secretValue)
+		return m.resetClientSecretFn(ctx, realm, clientID)
 	}
 	return nil
 }

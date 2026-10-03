@@ -48,7 +48,7 @@ type mockClient struct {
 	updateClientFn      func(ctx context.Context, realm string, c *clients.ClientRepresentation) error
 	deleteClientFn      func(ctx context.Context, realm, clientID string) error
 	getClientSecretFn   func(ctx context.Context, realm, clientID string) (string, error)
-	resetClientSecretFn func(ctx context.Context, realm, clientID, secretValue string) error
+	resetClientSecretFn func(ctx context.Context, realm, clientID string) error
 }
 
 func (m *mockClient) GetClient(ctx context.Context, realm, clientID string) (*clients.ClientRepresentation, error) {
@@ -70,9 +70,9 @@ func (m *mockClient) GetClientSecret(ctx context.Context, realm, clientID string
 	return "", nil
 }
 
-func (m *mockClient) ResetClientSecret(ctx context.Context, realm, clientID, secretValue string) error {
+func (m *mockClient) ResetClientSecret(ctx context.Context, realm, clientID string) error {
 	if m.resetClientSecretFn != nil {
-		return m.resetClientSecretFn(ctx, realm, clientID, secretValue)
+		return m.resetClientSecretFn(ctx, realm, clientID)
 	}
 	return nil
 }
