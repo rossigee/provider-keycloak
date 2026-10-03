@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Critical:** Debug HTTP logging wrote credentials to the pod log
+  - Setting `KEYCLOAK_PROVIDER_DEBUG_HTTP=true` leaked the bearer token and any credential in a request or response body.
+  - Password redaction existed but was applied at only one of the three logging sites. The admin wire dump re-marshalled the raw body and cloned the headers verbatim, so both the `Authorization` header and the payload's password reached stdout — the redaction was bypassed entirely. That dump runs on realm creation (`POST /admin/realms`).
+  - The response dump printed the full body and the full header set, so a `clientSecret` in a response, or a `Set-Cookie`, was logged as-is.
+  - Redaction now covers every logging site. Sensitive headers (`Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, `X-Authorization`) are replaced in a clone, leaving the real request untouched. Credential-bearing JSON fields are replaced across both camelCase and snake_case spellings — the previous pattern matched only `"password":"..."` and missed `clientSecret`, `privateKey`, `access_token` and others.
+  - `fetchOAuth2Token` was already outside this path and remains unlogged.
+
+### Added
+- **Tests covering the debug log output itself.** The redaction helpers had no coverage, which is why the bypass went unnoticed; worse, tests written against the helpers alone pass even when the logging sites stop calling them. These drive `doRequest` against a test server with debug enabled and assert on what it actually writes.
+
 ## [0.20.0] - 2026-10-03
 
 This release contains a breaking change to `ClientRoleMapping` and `ClientScopeMapping` semantics. No migration is required; see the note under Changed.

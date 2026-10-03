@@ -96,7 +96,48 @@ func (e *RateLimitError) RequeueAfter() time.Duration {
 	return e.wait
 }
 
-var passwordRedactRe = regexp.MustCompile(`"password":"[^"]*"`)
+// sensitiveJSONFieldRe matches credential-bearing string fields in a JSON body.
+// Keycloak's admin API is camelCase, but the underscore forms are included so a
+// snake_case field cannot slip past by being spelled differently.
+//
+// The list is deliberately limited to fields whose value *is* the secret. A
+// catch-all such as "value" would redact ordinary data and leave the dump
+// useless, so a nested Keycloak credentials array ({"type":"password",
+// "value":...}) is out of scope: this provider's request types have no
+// Credentials field, so it never emits one.
+var sensitiveJSONFieldRe = regexp.MustCompile(`(?i)"(password|secret|client_?secret|private_?key|temporary_?password|access_?token|refresh_?token|id_?token|token)"\s*:\s*"[^"]*"`)
+
+// redactSensitiveJSON replaces the value of every credential-bearing field with
+// REDACTED, keeping the field name so the shape of the payload stays visible.
+func redactSensitiveJSON(b []byte) []byte {
+	return sensitiveJSONFieldRe.ReplaceAll(b, []byte(`"$1":"REDACTED"`))
+}
+
+// sensitiveHeaders are the headers that carry a credential and must never reach
+// a log. Keycloak's own bearer token is the important one; the rest are included
+// because the same request path would leak them if they were ever set.
+var sensitiveHeaders = []string{
+	"Authorization",
+	"Proxy-Authorization",
+	"Cookie",
+	"Set-Cookie",
+	"X-Authorization",
+}
+
+// redactHeaders returns a copy of h with every credential-bearing value
+// replaced. The input is not modified, so the caller's request is untouched.
+func redactHeaders(h http.Header) http.Header {
+	if h == nil {
+		return nil
+	}
+	out := h.Clone()
+	for _, name := range sensitiveHeaders {
+		if out.Get(name) != "" {
+			out.Set(name, "REDACTED")
+		}
+	}
+	return out
+}
 
 // countingReader wraps a reader and tracks how many bytes have been Read,
 // to check whether the HTTP transport actually consumes the full body.
@@ -609,7 +650,7 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 			return nil, errors.Wrap(err, "failed to marshal request body")
 		}
 		if debugHTTP && method == http.MethodPost && path == adminPath {
-			redacted := passwordRedactRe.ReplaceAllString(string(bodyBytes), `"password":"REDACTED"`)
+			redacted := redactSensitiveJSON(bodyBytes)
 			fmt.Printf("DEBUGHTTP body (len=%d, sha256=%x, valid-json=%v): %s\n",
 				len(bodyBytes), sha256.Sum256(bodyBytes), json.Valid(bodyBytes), redacted)
 			counted := &countingReader{r: bytes.NewReader(bodyBytes)}
@@ -649,10 +690,16 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 			// request sharing the same method/URL/headers/body so the real
 			// req and its body reader (possibly the instrumented
 			// countingReader above) are never touched by this dump.
+			//
+			// The dump carries credentials, so both halves are redacted: the
+			// body is marshalled and scrubbed rather than reused raw, and the
+			// headers have their Authorization replaced. Dumping either
+			// verbatim would write the bearer token and any password in the
+			// payload to the pod log.
 			bodyBytes, _ := json.Marshal(body)
-			dumpReq, dErr := http.NewRequest(method, c.baseURL+path, bytes.NewReader(bodyBytes))
+			dumpReq, dErr := http.NewRequest(method, c.baseURL+path, bytes.NewReader(redactSensitiveJSON(bodyBytes)))
 			if dErr == nil {
-				dumpReq.Header = req.Header.Clone()
+				dumpReq.Header = redactHeaders(req.Header)
 				dump, dumpErr := httputil.DumpRequestOut(dumpReq, true)
 				if dumpErr != nil {
 					fmt.Printf("DEBUGHTTP dump failed: %v\n", dumpErr)
@@ -675,8 +722,13 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 	}
 
 	if debugHTTP {
+		// Redacted for the same reason as the request dump: the response is a
+		// full realm, user or client representation, and printing it verbatim
+		// puts whatever credentials it carries into the pod log. The header
+		// copy matters as well - a response can echo a Set-Cookie.
 		fmt.Printf("DEBUGHTTP response: status=%d proto=%s content-length=%d transfer-encoding=%v headers=%v body=%q\n",
-			resp.StatusCode, resp.Proto, resp.ContentLength, resp.TransferEncoding, resp.Header, string(respBody))
+			resp.StatusCode, resp.Proto, resp.ContentLength, resp.TransferEncoding,
+			redactHeaders(resp.Header), string(redactSensitiveJSON(respBody)))
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
