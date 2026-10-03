@@ -34,6 +34,7 @@ import (
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
 	"github.com/rossigee/provider-keycloak/internal/controller/deletecomplete"
+	"github.com/rossigee/provider-keycloak/internal/controller/mappingreconcile"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
@@ -118,9 +119,27 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		return managed.ExternalObservation{}, err
 	}
 	cr.Status.SetConditions(xpv1.Available())
-	upToDate := scopesMatch(cr.Spec.ForProvider.Scopes, current)
-	cr.Status.AppliedScopes = toScopeMappings(current)
-	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
+
+	// This set is additive: the resource owns the scopes it declares and no
+	// others, so several resources may share one client. Entries in current that
+	// this resource does not own - a sibling's, or added in Keycloak directly -
+	// neither make it out of date nor get removed.
+	declared := declaredEntries(cr.Spec.ForProvider.Scopes)
+	owned := mappingreconcile.Prune(ownedEntries(cr.Status.AppliedScopes), currentEntries(current))
+	cr.Status.AppliedScopes = fromEntries(owned)
+
+	// Out of date when a declared scope is missing, and equally when a scope this
+	// resource owns is no longer declared. Checking only the first would mean a
+	// scope dropped from the spec is never taken off the client: the resource
+	// would report itself settled while still holding the scope, because Update
+	// is never reached.
+	_, stale := mappingreconcile.Plan(declared, owned, currentEntries(current))
+
+	return managed.ExternalObservation{
+		ResourceExists: true,
+		ResourceUpToDate: mappingreconcile.UpToDate(declared, currentEntries(current)) &&
+			len(stale) == 0,
+	}, nil
 }
 
 func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
@@ -132,11 +151,15 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	if !ok {
 		return managed.ExternalCreation{}, errors.New(errNotClientScopeMapping)
 	}
-	scopes := toRoleRepresentations(cr.Spec.ForProvider.Scopes)
+	scopes := toRoleRepresentations(declaredEntries(cr.Spec.ForProvider.Scopes))
 	if err := e.client.AddClientScopeMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, scopes); err != nil {
 		return managed.ExternalCreation{}, err
 	}
 	cr.Status.SetConditions(xpv1.Creating())
+
+	// Record ownership as soon as the write lands, so a later pass can tell
+	// these scopes from a sibling's and a Delete can remove exactly them.
+	cr.Status.AppliedScopes = cr.Spec.ForProvider.Scopes
 	return managed.ExternalCreation{}, nil
 }
 
@@ -153,19 +176,28 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 	if err != nil {
 		return managed.ExternalUpdate{}, err
 	}
-	desired := toRoleRepresentations(cr.Spec.ForProvider.Scopes)
-	toAdd := scopeDiff(desired, current)
-	toRemove := scopeDiff(current, desired)
-	if len(toAdd) > 0 {
-		if err := e.client.AddClientScopeMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, toAdd); err != nil {
+	declared := declaredEntries(cr.Spec.ForProvider.Scopes)
+	owned := ownedEntries(cr.Status.AppliedScopes)
+
+	// Additions are declared scopes the client is missing. Removals are scopes
+	// this resource applied that the spec no longer declares - and only those. A
+	// scope belonging to a sibling resource is absent from owned, so it is never
+	// taken.
+	add, remove := mappingreconcile.Plan(declared, owned, currentEntries(current))
+	if len(add) > 0 {
+		if err := e.client.AddClientScopeMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, toRoleRepresentations(add)); err != nil {
 			return managed.ExternalUpdate{}, err
 		}
 	}
-	if len(toRemove) > 0 {
-		if err := e.client.RemoveClientScopeMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, toRemove); err != nil {
+	if len(remove) > 0 {
+		if err := e.client.RemoveClientScopeMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, toRoleRepresentations(remove)); err != nil {
 			return managed.ExternalUpdate{}, err
 		}
 	}
+
+	// Ownership is the declared set from here, pruned against what the client
+	// actually has, so a failed write is not recorded as applied.
+	cr.Status.AppliedScopes = fromEntries(mappingreconcile.Adopt(declared, append(currentEntries(current), add...)))
 	return managed.ExternalUpdate{}, nil
 }
 
@@ -188,8 +220,12 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	if err != nil && !strings.Contains(err.Error(), "404") {
 		return managed.ExternalDelete{}, err
 	}
-	if len(current) > 0 {
-		if err := e.client.RemoveClientScopeMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, current); err != nil {
+	// Remove only the scopes this resource owns and that are still present.
+	// Removing every scope on the client would strip a sibling resource's
+	// entries as well, which is the failure additive ownership exists to prevent.
+	release := mappingreconcile.Release(ownedEntries(cr.Status.AppliedScopes), currentEntries(current))
+	if len(release) > 0 {
+		if err := e.client.RemoveClientScopeMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, toRoleRepresentations(release)); err != nil {
 			return managed.ExternalDelete{}, err
 		}
 	}
@@ -197,54 +233,39 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalDelete{}, deletecomplete.Mark(ctx, e.kube, cr)
 }
 
-func scopesMatch(desired []csv1beta1.ScopeMapping, current []clients.RoleRepresentation) bool {
-	if len(desired) != len(current) {
-		return false
-	}
-	for _, d := range desired {
-		found := false
-		for _, c := range current {
-			if (d.Id != "" && d.Id == c.ID) || (d.Name != "" && d.Name == c.Name) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
+// declaredEntries projects the spec's scopes into the shared reconciliation type.
+func declaredEntries(scopes []csv1beta1.ScopeMapping) []mappingreconcile.Entry {
+	return mappingreconcile.Convert(scopes, func(s csv1beta1.ScopeMapping) mappingreconcile.Entry {
+		return mappingreconcile.Entry{ID: s.Id, Name: s.Name}
+	})
 }
 
-func scopeDiff(desired, current []clients.RoleRepresentation) []clients.RoleRepresentation {
-	var diff []clients.RoleRepresentation
-	for _, d := range desired {
-		found := false
-		for _, c := range current {
-			if (d.ID != "" && d.ID == c.ID) || (d.Name != "" && d.Name == c.Name) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			diff = append(diff, d)
-		}
-	}
-	return diff
+// ownedEntries projects the scopes this resource last applied.
+func ownedEntries(applied []csv1beta1.ScopeMapping) []mappingreconcile.Entry {
+	return mappingreconcile.Convert(applied, func(s csv1beta1.ScopeMapping) mappingreconcile.Entry {
+		return mappingreconcile.Entry{ID: s.Id, Name: s.Name}
+	})
 }
 
-func toRoleRepresentations(scopes []csv1beta1.ScopeMapping) []clients.RoleRepresentation {
-	result := make([]clients.RoleRepresentation, len(scopes))
-	for i, s := range scopes {
-		result[i] = clients.RoleRepresentation{ID: s.Id, Name: s.Name}
-	}
-	return result
+// currentEntries projects the scopes Keycloak currently has on the client.
+func currentEntries(current []clients.RoleRepresentation) []mappingreconcile.Entry {
+	return mappingreconcile.Convert(current, func(r clients.RoleRepresentation) mappingreconcile.Entry {
+		return mappingreconcile.Entry{ID: r.ID, Name: r.Name}
+	})
 }
 
-func toScopeMappings(roles []clients.RoleRepresentation) []csv1beta1.ScopeMapping {
-	result := make([]csv1beta1.ScopeMapping, len(roles))
-	for i, r := range roles {
-		result[i] = csv1beta1.ScopeMapping{Id: r.ID, Name: r.Name}
+func fromEntries(entries []mappingreconcile.Entry) []csv1beta1.ScopeMapping {
+	out := make([]csv1beta1.ScopeMapping, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, csv1beta1.ScopeMapping{Id: e.ID, Name: e.Name})
+	}
+	return out
+}
+
+func toRoleRepresentations(entries []mappingreconcile.Entry) []clients.RoleRepresentation {
+	result := make([]clients.RoleRepresentation, len(entries))
+	for i, r := range entries {
+		result[i] = clients.RoleRepresentation{ID: r.ID, Name: r.Name}
 	}
 	return result
 }

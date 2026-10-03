@@ -38,6 +38,12 @@ type ClientRoleMappingParameters struct {
 	ClientId string `json:"clientId"`
 
 	// Roles is the list of roles to assign.
+	//
+	// The set is additive: this resource owns the roles it lists and no others,
+	// so several ClientRoleMapping resources may share one realm, user and
+	// client. Removing a role from this list removes that role from the user;
+	// it does not affect roles owned by another resource. Roles added to the
+	// user outside this resource are left alone.
 	// +optional
 	Roles []RoleMapping `json:"roles,omitempty"`
 }
@@ -63,7 +69,12 @@ type ClientRoleMappingSpec struct {
 type ClientRoleMappingStatus struct {
 	xpv1.ManagedResourceStatus `json:",inline"`
 
-	// AppliedRoles is the list of roles currently assigned.
+	// AppliedRoles is the set of roles this resource has applied to the user.
+	//
+	// It records ownership, not the user's whole role set, and is how the
+	// resource distinguishes its own roles from those of another resource
+	// sharing the same user and client. Only roles listed here are removed when
+	// the resource is deleted.
 	// +optional
 	AppliedRoles []RoleMapping `json:"appliedRoles,omitempty"`
 }
