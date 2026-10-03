@@ -82,58 +82,14 @@ func (m *mockGroupsClient) RemoveUserFromGroup(ctx context.Context, realm, userI
 	return nil
 }
 
-// TestGroupsSyncAddsUserToDesiredGroup verifies that sync() adds the user to desired groups
-func TestGroupsSyncAddsUserToDesiredGroup(t *testing.T) {
-	userID := "user-123"
-	groupID := "admin-group-456"
-	realmID := "test-realm"
-	addCalled := false
+// TestGroupsSyncAddsUserToDesiredGroup and
+// TestGroupsSyncRemovesUnwantedGroupWhenExhaustive used to live here. Despite
+// their names they called mockClient.AddUserToGroup / RemoveUserFromGroup
+// directly and asserted the flag the mock's own function field had just set, so
+// sync() never ran - they would have passed with sync() deleted. Real coverage
+// of that behaviour, including the Exhaustive default, now lives in
+// groups_sync_test.go.
 
-	mockClient := &mockGroupsClient{
-		BaseMockClient: &testhelpers.BaseMockClient{},
-		getUserGroupsFn: func(ctx context.Context, realm, id string) ([]clients.GroupRepresentation, error) {
-			return []clients.GroupRepresentation{}, nil
-		},
-		addUserToGroupFn: func(ctx context.Context, realm, userID, groupID string) error {
-			addCalled = true
-			return nil
-		},
-	}
-
-	err := mockClient.AddUserToGroup(context.Background(), realmID, userID, groupID)
-	if err != nil {
-		t.Fatalf("AddUserToGroup failed: %v", err)
-	}
-	if !addCalled {
-		t.Fatal("AddUserToGroup was not called")
-	}
-}
-
-// TestGroupsSyncRemovesUnwantedGroupWhenExhaustive verifies exhaustive mode removes groups not in desired set
-func TestGroupsSyncRemovesUnwantedGroupWhenExhaustive(t *testing.T) {
-	userID := "user-123"
-	unwantedGroupID := "removed-group-789"
-	realmID := "test-realm"
-	removeCalled := false
-
-	mockClient := &mockGroupsClient{
-		BaseMockClient: &testhelpers.BaseMockClient{},
-		removeUserFromGroupFn: func(ctx context.Context, realm, userID, groupID string) error {
-			removeCalled = true
-			return nil
-		},
-	}
-
-	err := mockClient.RemoveUserFromGroup(context.Background(), realmID, userID, unwantedGroupID)
-	if err != nil {
-		t.Fatalf("RemoveUserFromGroup failed: %v", err)
-	}
-	if !removeCalled {
-		t.Fatal("RemoveUserFromGroup was not called")
-	}
-}
-
-// TestGroupsObserveDetectsDesiredGroupsMissing verifies Observe detects when user lacks desired groups
 func TestGroupsObserveDetectsDesiredGroupsMissing(t *testing.T) {
 	userID := "user-123"
 	desiredGroupID := "admin-group-456"
