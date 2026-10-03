@@ -18,6 +18,7 @@ package clients
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -341,33 +342,44 @@ func TestWriteWrapperMethodsAndPaths(t *testing.T) {
 	_ = noop
 }
 
-// TestResetClientSecretMethodIsUnverified records a discrepancy found while
-// writing the table above, rather than quietly asserting either behaviour.
+// TestResetClientSecretUsesTheDocumentedEndpoint pins the corrected behaviour:
+// Keycloak regenerates a client secret via POST on /client-secret, with no
+// request body, and returns the generated CredentialRepresentation.
 //
-// ResetClientSecret sends PUT to /admin/realms/{realm}/clients/{uuid}/client-secret.
-// The Keycloak Admin REST API documents only GET (read the secret) and POST
-// (regenerate it) on that path - there is no PUT handler, so this would be
-// rejected as 405 against a real Keycloak.
-//
-// It has no production callers, so nothing is broken today; this is dead code
-// with a latent defect. The test pins the current behaviour so that changing it
-// is a deliberate act, and the open question is whether to fix the method,
-// delete the method, or leave it.
-func TestResetClientSecretMethodIsUnverified(t *testing.T) {
-	var gotMethod string
+// The previous implementation sent PUT with a marshalled body, which is wrong
+// twice over - there is no PUT handler on that path, and the endpoint accepts no
+// body. It also handed doRequest an already-marshalled []byte, which doRequest
+// marshals again, so the body went out base64-encoded as a JSON string.
+func TestResetClientSecretUsesTheDocumentedEndpoint(t *testing.T) {
+	var (
+		gotMethod string
+		gotPath   string
+		gotBody   []byte
+	)
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotMethod = r.Method
-		w.WriteHeader(http.StatusOK)
+		gotPath = r.URL.Path
+		gotBody, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"type":"secret","value":"generated"}`))
 	}))
 	defer srv.Close()
 
 	kc := newTestKeycloakClient(srv.Client(), srv.URL, "tok")
-	if err := kc.ResetClientSecret(context.Background(), "master", "cid-1", "s3cr3t"); err != nil {
+	if err := kc.ResetClientSecret(context.Background(), "master", "cid-1"); err != nil {
 		t.Fatalf("ResetClientSecret failed: %v", err)
 	}
 
-	if gotMethod != http.MethodPut {
-		t.Errorf("method = %s; Keycloak documents POST for regenerating a secret, "+
-			"so either this has been corrected deliberately or the expectation in this test is stale", gotMethod)
+	if gotMethod != http.MethodPost {
+		t.Errorf("method = %s, want POST: Keycloak documents only GET and POST on /client-secret, "+
+			"and a PUT there is rejected with 405", gotMethod)
+	}
+	if want := "/admin/realms/master/clients/cid-1/client-secret"; gotPath != want {
+		t.Errorf("path = %s, want %s", gotPath, want)
+	}
+	if len(gotBody) != 0 {
+		t.Errorf("body = %q, want empty: the endpoint takes no request body and "+
+			"generates the secret itself", gotBody)
 	}
 }
