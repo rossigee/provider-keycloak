@@ -641,8 +641,10 @@ func (c *keycloakClient) doRequest(ctx context.Context, method, path string, bod
 	req.Header.Set("Content-Type", "application/json")
 
 	if debugHTTP {
+		safeURL := strings.ReplaceAll(req.URL.String(), "\n", "")
+		safeURL = strings.ReplaceAll(safeURL, "\r", "")
 		fmt.Printf("DEBUGHTTP request: method=%s url=%s content-length=%d transfer-encoding=%v proto=%s host=%s\n",
-			req.Method, req.URL.String(), req.ContentLength, req.TransferEncoding, req.Proto, req.Host)
+			req.Method, safeURL, req.ContentLength, req.TransferEncoding, req.Proto, req.Host)
 		if method == http.MethodPost && path == adminPath {
 			// Dump the exact wire bytes net/http would send, including any
 			// headers the Transport itself adds. Built from a throwaway
