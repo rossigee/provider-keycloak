@@ -34,6 +34,7 @@ import (
 
 	userv1beta1 "github.com/rossigee/provider-keycloak/apis/user/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
+	"github.com/rossigee/provider-keycloak/internal/controller/deletecomplete"
 	"github.com/rossigee/provider-keycloak/internal/controller/testhelpers"
 )
 
@@ -588,7 +589,7 @@ func TestGroupsDeleteCompletesAndReleasesFinalizer(t *testing.T) {
 	if err := e.kube.Get(context.Background(), client.ObjectKey{Name: "doomed", Namespace: conflictTestNamespace}, stored); err != nil {
 		t.Fatalf("cannot read back resource: %v", err)
 	}
-	if got := stored.GetAnnotations()[annotationDeleteCompleted]; got != annotationDeleteCompletedValue {
+	if got := stored.GetAnnotations()[deletecomplete.Annotation]; got != deletecomplete.AnnotationValue {
 		t.Fatalf("expected the delete-completed annotation to be persisted, got %q", got)
 	}
 
@@ -651,7 +652,7 @@ func TestGroupsDeleteRecordsCompletionWhenNothingToRelease(t *testing.T) {
 			if err := e.kube.Get(context.Background(), client.ObjectKey{Name: "doomed", Namespace: conflictTestNamespace}, stored); err != nil {
 				t.Fatalf("cannot read back resource: %v", err)
 			}
-			if got := stored.GetAnnotations()[annotationDeleteCompleted]; got != annotationDeleteCompletedValue {
+			if got := stored.GetAnnotations()[deletecomplete.Annotation]; got != deletecomplete.AnnotationValue {
 				t.Errorf("completion must still be recorded, got %q", got)
 			}
 		})
@@ -680,7 +681,7 @@ func TestGroupsDeleteFailureIsNotRecordedAsComplete(t *testing.T) {
 	if err := e.kube.Get(context.Background(), client.ObjectKey{Name: "doomed", Namespace: conflictTestNamespace}, stored); err != nil {
 		t.Fatalf("cannot read back resource: %v", err)
 	}
-	if _, done := stored.GetAnnotations()[annotationDeleteCompleted]; done {
+	if _, done := stored.GetAnnotations()[deletecomplete.Annotation]; done {
 		t.Error("a failed release must not be recorded as complete")
 	}
 }
@@ -707,7 +708,7 @@ func TestGroupsDeleteTreatsMissingMembershipAsDone(t *testing.T) {
 	if err := e.kube.Get(context.Background(), client.ObjectKey{Name: "doomed", Namespace: conflictTestNamespace}, stored); err != nil {
 		t.Fatalf("cannot read back resource: %v", err)
 	}
-	if got := stored.GetAnnotations()[annotationDeleteCompleted]; got != annotationDeleteCompletedValue {
+	if got := stored.GetAnnotations()[deletecomplete.Annotation]; got != deletecomplete.AnnotationValue {
 		t.Errorf("expected completion to be recorded, got %q", got)
 	}
 }

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **`internal/controller/deletecomplete`**: shared helper recording that a controller has finished releasing its external resource, so the reconciler can reach `RemoveFinalizer`. `Groups` moves onto it, unchanged in behaviour.
+- **Structural regression test across every controller's `Observe`**, failing if any can only ever report `ResourceExists: true` — the shape that prevents a managed resource from ever terminating. It follows same-package delegation, so a controller whose `Observe` delegates to a shared helper is judged on the helper's body.
+
+### Fixed
+- **Delete never completed for nine further controllers, not just `Groups`**
+  - Auditing every `Observe` for a path that reports the external resource as absent found nine more with none. All wedged on their finalizer when deleted, and where `Delete` has side effects those repeated on every reconcile pass.
+  - `authenticationflow`, `authorizationpolicy`, `identityprovider`, `clientrolemapping` and `clientscopemapping` now record completion via `deletecomplete`, report `ResourceExists: false` once recorded, and short-circuit `Delete` so a repeat call cannot release state a sibling resource has since declared.
+  - `realmkeys`, `events` and `realmimpexp` have a no-op `Delete` — nothing in Keycloak to release — so their `Observe` reports `ResourceExists: false` as soon as deletion is requested. Their `Delete` bodies did nothing at all and returned `nil`, yet the finalizer still could not be removed.
+  - `clientdefaultscopes`, `clientoptionalscopes` and `clientscope` were re-checked after the structural test flagged them: each delegates to a shared `ObserveX` helper that does report absence, so they are not affected.
+
+### Known issues
+- **`ClientRoleMapping` and `ClientScopeMapping` own the complete set, undocumented.** `rolesMatch`/`scopesMatch` require `len(desired) == len(current)`, so each resource is exhaustive over its parent rather than additive, and `Delete` removes the entire set. Two resources for the same parent would fight as `Groups` did, and deleting one removes its siblings' entries. Left unchanged here — this is a semantics decision (make them additive, or document and guard the exhaustive behaviour), not a mechanical fix.
+
 ## [0.19.8] - 2026-10-03
 
 ### Fixed
