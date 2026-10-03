@@ -32,6 +32,7 @@ import (
 	authorizationpolicyv1beta1 "github.com/rossigee/provider-keycloak/apis/authorizationpolicy/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
+	"github.com/rossigee/provider-keycloak/internal/controller/deletecomplete"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
@@ -64,7 +65,10 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 }
 
 type connector struct{ kube client.Client }
-type external struct{ client clients.Client }
+type external struct {
+	client clients.Client
+	kube   client.Client
+}
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
 	cr, ok := mg.(*authorizationpolicyv1beta1.AuthorizationPolicy)
@@ -87,7 +91,7 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot connect to Keycloak")
 	}
-	return &external{client: kc}, nil
+	return &external{client: kc, kube: c.kube}, nil
 }
 
 func (e *external) Disconnect(_ context.Context) error { return nil }
@@ -100,6 +104,12 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	cr, ok := mg.(*authorizationpolicyv1beta1.AuthorizationPolicy)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotAuthorizationPolicy)
+	}
+
+	// Delete has already released this object. Report it gone so the
+	// reconciler reaches RemoveFinalizer instead of re-running Delete.
+	if deletecomplete.Done(cr) {
+		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
 	policy, err := e.client.GetAuthorizationPolicy(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, cr.GetAnnotations()["crossplane.io/external-name"])
 	if err != nil {
@@ -163,11 +173,17 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotAuthorizationPolicy)
 	}
+
+	// Already released. Deleting again would be a second external call for no
+	// reason, and Delete must be safe to call on its own.
+	if deletecomplete.Done(cr) {
+		return managed.ExternalDelete{}, nil
+	}
 	if err := e.client.DeleteAuthorizationPolicy(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId, cr.GetAnnotations()["crossplane.io/external-name"]); err != nil {
 		return managed.ExternalDelete{}, err
 	}
 	cr.Status.SetConditions(xpv1.Deleting())
-	return managed.ExternalDelete{}, nil
+	return managed.ExternalDelete{}, deletecomplete.Mark(ctx, e.kube, cr)
 }
 
 func isAuthorizationPolicyUpToDate(desired *authorizationpolicyv1beta1.AuthorizationPolicyParameters, current *clients.AuthorizationPolicyRepresentation) bool {

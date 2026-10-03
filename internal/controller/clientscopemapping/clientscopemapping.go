@@ -33,6 +33,7 @@ import (
 	csv1beta1 "github.com/rossigee/provider-keycloak/apis/scopes/v1beta1"
 	"github.com/rossigee/provider-keycloak/apis/v1beta1"
 	"github.com/rossigee/provider-keycloak/internal/clients"
+	"github.com/rossigee/provider-keycloak/internal/controller/deletecomplete"
 	"github.com/rossigee/provider-keycloak/internal/tracing"
 )
 
@@ -65,7 +66,10 @@ func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
 }
 
 type connector struct{ kube client.Client }
-type external struct{ client clients.Client }
+type external struct {
+	client clients.Client
+	kube   client.Client
+}
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
 	cr, ok := mg.(*csv1beta1.ClientScopeMapping)
@@ -88,7 +92,7 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot connect to Keycloak")
 	}
-	return &external{client: kc}, nil
+	return &external{client: kc, kube: c.kube}, nil
 }
 
 func (e *external) Disconnect(_ context.Context) error { return nil }
@@ -101,6 +105,13 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	cr, ok := mg.(*csv1beta1.ClientScopeMapping)
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotClientScopeMapping)
+	}
+
+	// Delete has already released the mappings this resource owns. Report them
+	// gone so the reconciler reaches RemoveFinalizer instead of re-running
+	// Delete, which would otherwise re-apply the removals on every pass.
+	if deletecomplete.Done(cr) {
+		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
 	current, err := e.client.ListClientScopeMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId)
 	if err != nil {
@@ -167,6 +178,12 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 	if !ok {
 		return managed.ExternalDelete{}, errors.New(errNotClientScopeMapping)
 	}
+
+	// Already released. Removing again would strip mappings a sibling resource
+	// may have since declared, so Delete must be safe to call on its own.
+	if deletecomplete.Done(cr) {
+		return managed.ExternalDelete{}, nil
+	}
 	current, err := e.client.ListClientScopeMappings(ctx, cr.Spec.ForProvider.RealmId, cr.Spec.ForProvider.ClientId)
 	if err != nil && !strings.Contains(err.Error(), "404") {
 		return managed.ExternalDelete{}, err
@@ -177,7 +194,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		}
 	}
 	cr.Status.SetConditions(xpv1.Deleting())
-	return managed.ExternalDelete{}, nil
+	return managed.ExternalDelete{}, deletecomplete.Mark(ctx, e.kube, cr)
 }
 
 func scopesMatch(desired []csv1beta1.ScopeMapping, current []clients.RoleRepresentation) bool {

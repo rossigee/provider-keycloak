@@ -93,6 +93,14 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		return managed.ExternalObservation{}, errors.New(errNotRealmEventsConfig)
 	}
 
+	// Delete is a no-op here: there is nothing in Keycloak to release, so once
+	// deletion is requested the external resource is gone by definition.
+	// Reporting it present would keep the reconciler re-running Delete forever
+	// and the finalizer would never be removed.
+	if !cr.GetDeletionTimestamp().IsZero() {
+		return managed.ExternalObservation{ResourceExists: false}, nil
+	}
+
 	config, err := e.client.GetRealmEventsConfig(ctx, cr.Spec.ForProvider.RealmId)
 	if err != nil {
 		return managed.ExternalObservation{}, errors.Wrap(err, errGetRealmEventsConfig)
