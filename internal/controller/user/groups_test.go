@@ -543,3 +543,171 @@ func TestGroupsObserveWithoutRecorder(t *testing.T) {
 		t.Fatal("expected the conflict to be reported even without a recorder")
 	}
 }
+
+// TestGroupsDeleteCompletesAndReleasesFinalizer is the regression test for the
+// wedged finalizer. The reconciler removes a managed resource's finalizer only
+// once Observe reports the external resource gone, and it re-runs Delete on
+// every pass while Observe still reports it present. Because Observe hardcoded
+// ResourceExists: true, Delete ran forever: the object never terminated and each
+// pass re-applied the membership removals.
+func TestGroupsDeleteCompletesAndReleasesFinalizer(t *testing.T) {
+	removed := 0
+
+	mc := &mockGroupsClient{
+		BaseMockClient: &testhelpers.BaseMockClient{},
+		removeUserFromGroupFn: func(_ context.Context, _, _, _ string) error {
+			removed++
+			return nil
+		},
+	}
+
+	mine := newGroupsResource("doomed", conflictTestRealm, conflictTestUserID, []string{"admin-id"}, nil)
+
+	e, _ := newGroupsExternal(t, mc, mine)
+
+	// Before Delete: the resource still reports as existing.
+	obs, err := e.Observe(context.Background(), mine)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !obs.ResourceExists {
+		t.Fatal("a live resource must report ResourceExists=true")
+	}
+
+	if _, err := e.Delete(context.Background(), mine); err != nil {
+		t.Fatalf("Delete failed: %v", err)
+	}
+
+	if removed != 1 {
+		t.Errorf("expected the owned membership to be released once, got %d", removed)
+	}
+
+	// The marker must be persisted, not just set in memory, because the
+	// reconciler only writes back status.
+	stored := &userv1beta1.Groups{}
+	if err := e.kube.Get(context.Background(), client.ObjectKey{Name: "doomed", Namespace: conflictTestNamespace}, stored); err != nil {
+		t.Fatalf("cannot read back resource: %v", err)
+	}
+	if got := stored.GetAnnotations()[annotationDeleteCompleted]; got != annotationDeleteCompletedValue {
+		t.Fatalf("expected the delete-completed annotation to be persisted, got %q", got)
+	}
+
+	// After Delete: Observe must report the external resource gone, which is
+	// what lets the reconciler reach RemoveFinalizer.
+	obs, err = e.Observe(context.Background(), stored)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if obs.ResourceExists {
+		t.Error("after Delete, Observe must report ResourceExists=false so the finalizer can be removed")
+	}
+
+	// And Delete must not run again.
+	if _, err := e.Delete(context.Background(), stored); err != nil {
+		t.Fatalf("Delete failed: %v", err)
+	}
+	if removed != 1 {
+		t.Errorf("Delete must not re-release memberships once complete, released %d times", removed)
+	}
+}
+
+// TestGroupsDeleteRecordsCompletionWhenNothingToRelease covers the two paths
+// where there is no membership left to remove. Both previously returned without
+// recording anything, so those resources would have hung on their finalizer
+// forever just like the normal path.
+func TestGroupsDeleteRecordsCompletionWhenNothingToRelease(t *testing.T) {
+	cases := map[string]struct {
+		mutate  func(*userv1beta1.Groups)
+		mc      *mockGroupsClient
+		wantErr bool
+	}{
+		"user cannot be resolved": {
+			// No UserId and no UserIdRef, so resolveUserID fails.
+			mutate: func(cr *userv1beta1.Groups) { cr.Spec.ForProvider.UserId = nil },
+			mc:     &mockGroupsClient{BaseMockClient: &testhelpers.BaseMockClient{}},
+		},
+		"groups cannot be resolved": {
+			// A ref to a Group CR that does not exist.
+			mutate: func(cr *userv1beta1.Groups) {
+				cr.Spec.ForProvider.GroupIds = nil
+				cr.Spec.ForProvider.GroupIdsRefs = []xpv1.Reference{{Name: "missing-group"}}
+			},
+			mc: &mockGroupsClient{BaseMockClient: &testhelpers.BaseMockClient{}},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			cr := newGroupsResource("doomed", conflictTestRealm, conflictTestUserID, []string{"admin-id"}, nil)
+			tc.mutate(cr)
+
+			e, _ := newGroupsExternal(t, tc.mc, cr)
+
+			if _, err := e.Delete(context.Background(), cr); err != nil {
+				t.Fatalf("Delete should succeed with nothing to release: %v", err)
+			}
+
+			stored := &userv1beta1.Groups{}
+			if err := e.kube.Get(context.Background(), client.ObjectKey{Name: "doomed", Namespace: conflictTestNamespace}, stored); err != nil {
+				t.Fatalf("cannot read back resource: %v", err)
+			}
+			if got := stored.GetAnnotations()[annotationDeleteCompleted]; got != annotationDeleteCompletedValue {
+				t.Errorf("completion must still be recorded, got %q", got)
+			}
+		})
+	}
+}
+
+// TestGroupsDeleteFailureIsNotRecordedAsComplete checks a failed release is not
+// mistaken for success, which would drop the finalizer while the membership is
+// still in Keycloak.
+func TestGroupsDeleteFailureIsNotRecordedAsComplete(t *testing.T) {
+	mc := &mockGroupsClient{
+		BaseMockClient: &testhelpers.BaseMockClient{},
+		removeUserFromGroupFn: func(_ context.Context, _, _, _ string) error {
+			return errors.New("keycloak said no")
+		},
+	}
+
+	cr := newGroupsResource("doomed", conflictTestRealm, conflictTestUserID, []string{"admin-id"}, nil)
+	e, _ := newGroupsExternal(t, mc, cr)
+
+	if _, err := e.Delete(context.Background(), cr); err == nil {
+		t.Fatal("expected the release failure to surface")
+	}
+
+	stored := &userv1beta1.Groups{}
+	if err := e.kube.Get(context.Background(), client.ObjectKey{Name: "doomed", Namespace: conflictTestNamespace}, stored); err != nil {
+		t.Fatalf("cannot read back resource: %v", err)
+	}
+	if _, done := stored.GetAnnotations()[annotationDeleteCompleted]; done {
+		t.Error("a failed release must not be recorded as complete")
+	}
+}
+
+// TestGroupsDeleteTreatsMissingMembershipAsDone covers the 404 tolerance the
+// delete path already had: a membership Keycloak has already dropped is not a
+// failure.
+func TestGroupsDeleteTreatsMissingMembershipAsDone(t *testing.T) {
+	mc := &mockGroupsClient{
+		BaseMockClient: &testhelpers.BaseMockClient{},
+		removeUserFromGroupFn: func(_ context.Context, _, _, _ string) error {
+			return errors.New("404 not found")
+		},
+	}
+
+	cr := newGroupsResource("doomed", conflictTestRealm, conflictTestUserID, []string{"admin-id"}, nil)
+	e, _ := newGroupsExternal(t, mc, cr)
+
+	if _, err := e.Delete(context.Background(), cr); err != nil {
+		t.Fatalf("a 404 must be tolerated: %v", err)
+	}
+
+	stored := &userv1beta1.Groups{}
+	if err := e.kube.Get(context.Background(), client.ObjectKey{Name: "doomed", Namespace: conflictTestNamespace}, stored); err != nil {
+		t.Fatalf("cannot read back resource: %v", err)
+	}
+	if got := stored.GetAnnotations()[annotationDeleteCompleted]; got != annotationDeleteCompletedValue {
+		t.Errorf("expected completion to be recorded, got %q", got)
+	}
+}

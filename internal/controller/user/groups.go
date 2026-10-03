@@ -59,6 +59,23 @@ const (
 	// claims exhaustive ownership of the same user's group membership.
 	reasonMembershipConflict = event.Reason("MembershipConflict")
 
+	// annotationDeleteCompleted records that Delete has released the memberships
+	// this resource owns.
+	//
+	// The reconciler removes our finalizer only once Observe reports the
+	// external resource as gone, and while Observe keeps reporting it present
+	// it re-runs Delete on every pass. Delete has no channel to report
+	// completion through, so without a durable marker the resource re-enters
+	// the delete branch forever: the finalizer is never removed, and each pass
+	// re-applies the membership removals, so the user's membership oscillates
+	// against any other resource that still declares it.
+	annotationDeleteCompleted = "groups.user.keycloak.m.crossplane.io/delete-completed"
+
+	// annotationDeleteCompletedValue is the only value that counts as done.
+	annotationDeleteCompletedValue = "true"
+
+	errMarkDeleteCompleted = "cannot record that group memberships were released"
+
 	groupsControllerName = "groups.user.keycloak.m.crossplane.io"
 )
 
@@ -248,6 +265,13 @@ func (e *groupsExternal) Observe(ctx context.Context, mg resource.Managed) (mana
 		return managed.ExternalObservation{}, errors.New(errNotGroups)
 	}
 
+	// Delete already released the memberships this resource owned. Report the
+	// external resource as gone so the reconciler stops re-running Delete and
+	// proceeds to remove our finalizer.
+	if cr.GetAnnotations()[annotationDeleteCompleted] == annotationDeleteCompletedValue {
+		return managed.ExternalObservation{ResourceExists: false}, nil
+	}
+
 	realmID, err := groupsRealmID(cr)
 	if err != nil {
 		return managed.ExternalObservation{}, err
@@ -393,6 +417,14 @@ func (e *groupsExternal) Delete(ctx context.Context, mg resource.Managed) (manag
 		return managed.ExternalDelete{}, errors.New(errNotGroups)
 	}
 
+	// Already released. Releasing again would remove memberships that another
+	// resource may have since declared, which is exactly the oscillation this
+	// guard exists to prevent. Observe normally stops the reconciler getting
+	// here, but Delete must be safe to call on its own.
+	if cr.GetAnnotations()[annotationDeleteCompleted] == annotationDeleteCompletedValue {
+		return managed.ExternalDelete{}, nil
+	}
+
 	realmID, err := groupsRealmID(cr)
 	if err != nil {
 		return managed.ExternalDelete{}, err
@@ -401,13 +433,16 @@ func (e *groupsExternal) Delete(ctx context.Context, mg resource.Managed) (manag
 	userUUID, err := e.resolveUserID(ctx, realmID, &cr.Spec.ForProvider, cr.GetNamespace())
 	if err != nil {
 		// User already gone from Keycloak (or ref no longer resolvable) —
-		// nothing to clean up membership-side.
-		return managed.ExternalDelete{}, nil
+		// nothing to clean up membership-side. Record completion anyway, or the
+		// finalizer is never removed and the resource never terminates.
+		return managed.ExternalDelete{}, e.markDeleteCompleted(ctx, cr)
 	}
 
 	desiredGroupIDs, err := e.resolveGroupIDs(ctx, realmID, &cr.Spec.ForProvider, cr.GetNamespace())
 	if err != nil {
-		return managed.ExternalDelete{}, nil
+		// The groups this resource owned can no longer be identified, so there
+		// is nothing to release. Record completion for the same reason.
+		return managed.ExternalDelete{}, e.markDeleteCompleted(ctx, cr)
 	}
 
 	cr.Status.SetConditions(xpv1.Deleting())
@@ -421,7 +456,25 @@ func (e *groupsExternal) Delete(ctx context.Context, mg resource.Managed) (manag
 		}
 	}
 
-	return managed.ExternalDelete{}, nil
+	return managed.ExternalDelete{}, e.markDeleteCompleted(ctx, cr)
+}
+
+// markDeleteCompleted records on the resource that its memberships have been
+// released. It is persisted with an explicit patch because the reconciler only
+// writes back status, so a change made to metadata here would otherwise be
+// lost with the reconcile.
+func (e *groupsExternal) markDeleteCompleted(ctx context.Context, cr *userv1beta1.Groups) error {
+	patch := client.MergeFrom(cr.DeepCopy())
+
+	annotations := cr.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	annotations[annotationDeleteCompleted] = annotationDeleteCompletedValue
+	cr.SetAnnotations(annotations)
+
+	return errors.Wrap(e.kube.Patch(ctx, cr, patch), errMarkDeleteCompleted)
 }
 
 func groupsRealmID(cr *userv1beta1.Groups) (string, error) {
