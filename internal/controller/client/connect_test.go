@@ -71,27 +71,23 @@ func TestConnectRejectsUnusableInput(t *testing.T) {
 		}
 	})
 
-	// This connector deliberately differs from the other 22, which gate on
-	// ProviderConfig readiness. It goes straight from the lookup to the token
-	// exchange, so a ProviderConfig that exists but is not Ready still yields a
-	// client here; the failure surfaces later as an auth error from the
-	// connector, with backoff, rather than an immediate "not ready".
-	//
-	// Pinned so the difference reads as a deliberate fact about this connector
-	// rather than a mistake in the test. Whether the gate belongs here is a
-	// behaviour question, so it is raised rather than changed.
-	t.Run("providerConfig not ready is not gated on", func(t *testing.T) {
+	// This connector previously skipped the readiness gate the other 22 have.
+	// It now rejects a not-Ready ProviderConfig before reaching Keycloak, which
+	// the token-request assertion below pins - without it, the gate could move
+	// after the connector call and still pass.
+	t.Run("providerConfig not ready", func(t *testing.T) {
 		testhelpers.NotReadyProviderConfig(ctx, t, f.Client, testhelpers.ProviderConfigName)
 		t.Cleanup(func() {
 			testhelpers.MarkProviderConfigReady(ctx, t, f.Client, testhelpers.ProviderConfigName)
 		})
 
-		got, err := c.Connect(ctx, connectorCR(testhelpers.ProviderConfigName))
-		if err != nil {
-			t.Fatalf("Connect failed for a not-ready ProviderConfig: %v", err)
+		if _, err := c.Connect(ctx, connectorCR(testhelpers.ProviderConfigName)); err == nil {
+			t.Error("Connect accepted a ProviderConfig that is not Ready")
 		}
-		if got == nil {
-			t.Fatal("Connect returned a nil external client")
+		if f.TokenRequests != 0 {
+			t.Errorf("Connect called the Keycloak token endpoint %d time(s) for a "+
+				"not-ready ProviderConfig; the readiness gate should short-circuit first",
+				f.TokenRequests)
 		}
 	})
 }
