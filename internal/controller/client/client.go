@@ -98,6 +98,14 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	if err := c.kube.Get(ctx, client.ObjectKey{Name: pcRef.Name}, pc); err != nil {
 		return nil, errors.Wrap(err, errGetProviderConfig)
 	}
+	// The other 22 connectors all gate here, and errProviderNotReady was
+	// already declared for it but never reached. Without the check a Client
+	// reconciles against a ProviderConfig that has not been applied yet: the
+	// token fetch fails inside the connector, which retries under backoff with
+	// an auth error rather than reporting that the ProviderConfig is not ready.
+	if pc.Status.GetCondition(xpv1.TypeReady).Status != "True" {
+		return nil, errors.New(errProviderNotReady)
+	}
 	shared := clients.GetConnector(c.kube)
 	kc, err := shared.Connect(ctx, pcRef.Name)
 	if err != nil {
