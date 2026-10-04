@@ -108,3 +108,10 @@ func connectorCR(pcName string) *realmv1beta1.Realm {
 		Spec:       realmv1beta1.RealmSpec{ProviderConfigReference: &xpv1.ProviderConfigReference{Name: pcName}},
 	}
 }
+
+func TestDisconnectSucceeds(t *testing.T) {
+	e := &external{}
+	if err := e.Disconnect(context.Background()); err != nil {
+		t.Errorf("Disconnect returned %v, want nil", err)
+	}
+}

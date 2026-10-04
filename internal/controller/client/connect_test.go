@@ -121,3 +121,10 @@ func connectorCR(pcName string) *openidclientv1beta1.Client {
 		Spec:       openidclientv1beta1.ClientSpec{ProviderConfigReference: &xpv1.ProviderConfigReference{Name: pcName}},
 	}
 }
+
+func TestDisconnectSucceeds(t *testing.T) {
+	e := &external{}
+	if err := e.Disconnect(context.Background()); err != nil {
+		t.Errorf("Disconnect returned %v, want nil", err)
+	}
+}

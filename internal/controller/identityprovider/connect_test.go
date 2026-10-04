@@ -108,3 +108,10 @@ func connectorCR(pcName string) *identityproviderv1beta1.IdentityProvider {
 		Spec:       identityproviderv1beta1.IdentityProviderSpec{ProviderConfigReference: &xpv1.ProviderConfigReference{Name: pcName}},
 	}
 }
+
+func TestDisconnectSucceeds(t *testing.T) {
+	e := &external{}
+	if err := e.Disconnect(context.Background()); err != nil {
+		t.Errorf("Disconnect returned %v, want nil", err)
+	}
+}
