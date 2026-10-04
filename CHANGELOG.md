@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2026-10-04
+
+A minor release, not a patch. Two behaviour changes that can alter how existing
+resources reconcile:
+
+- **`Client` now requires a Ready `ProviderConfig`.** It was the only one of 23
+  connectors that skipped the check — `errProviderNotReady` was declared in the
+  file and never reached, so the gate had been dropped rather than deliberately
+  omitted. A `Client` whose `ProviderConfig` has not been applied yet now fails
+  its reconcile with `provider is not ready` instead of proceeding to the token
+  exchange. Previously that surfaced as an authentication error retried under
+  backoff, which points an operator at their credentials when the real problem is
+  an unapplied configuration.
+- **The effective cache-sync timeout default moves from 10 minutes to 5.** See
+  the `--cache-init-timeout` fix below.
+
+Beyond those, this release is almost entirely a test-coverage push. The coverage
+work is what found the defects: every one was invisible to CI, either because a
+controller's tests exercised a mock instead of the controller, or because nothing
+tested the code path at all.
+
+### Fixed
+- **`Client` reconciled against an unready `ProviderConfig`**
+  - As described above. All 22 other connectors already gated here.
+- **`--cache-init-timeout` did nothing**
+  - The flag was parsed and logged, but `Controller.CacheSyncTimeout` was hardcoded to 10 minutes. The flag's own help text tells operators to raise it when the provider fails to start on a slow Kubernetes API server, which is exactly the case it could not affect.
+  - It now sets `CacheSyncTimeout`. Anyone relying on 10 minutes of cache-sync tolerance now gets the documented 5 unless they pass `--cache-init-timeout=10m`.
+- **`ResetClientSecret` could not have worked**
+  - It sent `PUT` to `/admin/realms/{realm}/clients/{uuid}/client-secret`. The Admin API exposes only `GET` and `POST` on that path, so a `PUT` is rejected with 405.
+  - It also sent a request body, which the endpoint does not accept, and handed `doRequest` an already-marshalled `[]byte` — which `doRequest` marshals again, so the body went out base64-encoded as a JSON string.
+  - It is now `POST` with no body. The endpoint generates the secret and returns it; there is no way to supply a chosen value through it, so the `secretValue` parameter was removed from the signature.
+  - No production callers existed, so nothing was broken at runtime. This was dead code that would have failed on first use.
+
+### Added
+- **Operator remediation for the `ClientInitialAccess` token backlog.** See the action-required block under [0.20.1](#0201---2026-10-03) — upgrading stops new tokens being minted but does not revoke the ones already issued.
+- **`realmUpToDate` is now verified by reflection.** It compares roughly thirty realm fields, and the failure that matters is a *missing* comparison rather than a wrong one: a field added to the representation and never compared would be sent to Keycloak and then reported as up to date forever. The tests enumerate `RealmParameters`, so adding a field without a comparison fails the suite.
+- **The poll-state metric recorders are asserted as a set.** A dropped entry is invisible — the controller keeps working, the resource just stops reporting state.
+- **Every `Connect` and `Disconnect` across all 23 connectors is covered**, including the success path, which previously could not be reached at all without a Keycloak token endpoint to talk to.
+
+### Changed
+- `--enable-management-policies` help text now documents that kingpin negates booleans with `--no-<flag>`. `--flag=false` is rejected outright by kingpin, and the flag defaults to `true`, so there was previously no documented way to turn it off.
+
 ## [0.20.1] - 2026-10-03
 
 ### Fixed
