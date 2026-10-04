@@ -108,3 +108,10 @@ func connectorCR(pcName string) *rolev1beta1.Role {
 		Spec:       rolev1beta1.RoleSpec{ProviderConfigReference: &xpv1.ProviderConfigReference{Name: pcName}},
 	}
 }
+
+func TestDisconnectSucceeds(t *testing.T) {
+	e := &external{}
+	if err := e.Disconnect(context.Background()); err != nil {
+		t.Errorf("Disconnect returned %v, want nil", err)
+	}
+}

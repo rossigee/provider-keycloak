@@ -108,3 +108,10 @@ func connectorCR(pcName string) *clientv1beta1.ProtocolMapper {
 		Spec:       clientv1beta1.ProtocolMapperSpec{ProviderConfigReference: &xpv1.ProviderConfigReference{Name: pcName}},
 	}
 }
+
+func TestDisconnectSucceeds(t *testing.T) {
+	e := &external{}
+	if err := e.Disconnect(context.Background()); err != nil {
+		t.Errorf("Disconnect returned %v, want nil", err)
+	}
+}
