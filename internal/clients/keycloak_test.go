@@ -905,13 +905,13 @@ func TestGetClientV2Fallback(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		enableV2       bool
-		v2StatusCode   int
-		handler        func(w http.ResponseWriter, r *http.Request)
-		expectV2Call   bool
-		wantClient     *ClientRepresentation
-		wantErrStr     string
+		name         string
+		enableV2     bool
+		v2StatusCode int
+		handler      func(w http.ResponseWriter, r *http.Request)
+		expectV2Call bool
+		wantClient   *ClientRepresentation
+		wantErrStr   string
 	}{
 		{
 			name:         "v2 disabled uses v1",
@@ -1001,11 +1001,11 @@ func TestListClientsV2Fallback(t *testing.T) {
 	}
 
 	tests := []struct {
-		name         string
-		enableV2     bool
-		handler      func(w http.ResponseWriter, r *http.Request)
-		wantCount    int
-		wantErrStr   string
+		name       string
+		enableV2   bool
+		handler    func(w http.ResponseWriter, r *http.Request)
+		wantCount  int
+		wantErrStr string
 	}{
 		{
 			name:     "v2 disabled uses v1",
