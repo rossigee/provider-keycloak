@@ -895,3 +895,184 @@ func TestDoCreateHandles429(t *testing.T) {
 		t.Errorf("expected extracted UUID, got %q", id)
 	}
 }
+
+// TestGetClientV2Fallback verifies GetClient falls back to v1 when v2 is not available
+func TestGetClientV2Fallback(t *testing.T) {
+	testClient := &ClientRepresentation{
+		ID:       testClientUUID,
+		ClientID: testClientName,
+		Enabled:  true,
+	}
+
+	tests := []struct {
+		name         string
+		enableV2     bool
+		v2StatusCode int
+		handler      func(w http.ResponseWriter, r *http.Request)
+		expectV2Call bool
+		wantClient   *ClientRepresentation
+		wantErrStr   string
+	}{
+		{
+			name:         "v2 disabled uses v1",
+			enableV2:     false,
+			expectV2Call: false,
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				if strings.Contains(r.URL.Path, "/admin/api/") {
+					t.Error("v2 endpoint called when v2 is disabled")
+				}
+				if err := json.NewEncoder(w).Encode([]ClientRepresentation{*testClient}); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+			},
+			wantClient: testClient,
+		},
+		{
+			name:         "v2 enabled uses v2",
+			enableV2:     true,
+			v2StatusCode: http.StatusOK,
+			expectV2Call: true,
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				if strings.Contains(r.URL.Path, "/admin/api/") && strings.Contains(r.URL.Path, "/clients/v2") {
+					if err := json.NewEncoder(w).Encode([]ClientRepresentation{*testClient}); err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+					}
+					return
+				}
+				http.Error(w, "should use v2", http.StatusInternalServerError)
+			},
+			wantClient: testClient,
+		},
+		{
+			name:         "v2 enabled but returns 404, falls back to v1",
+			enableV2:     true,
+			v2StatusCode: http.StatusNotFound,
+			expectV2Call: true,
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				if strings.Contains(r.URL.Path, "/admin/api/") && strings.Contains(r.URL.Path, "/clients/v2") {
+					http.Error(w, "not found", http.StatusNotFound)
+					return
+				}
+				// Fallback to v1
+				if err := json.NewEncoder(w).Encode([]ClientRepresentation{*testClient}); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+			},
+			wantClient: testClient,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(tt.handler))
+			defer server.Close()
+
+			kc := newTestKeycloakClient(server.Client(), server.URL, testToken)
+			kc.cfg = &Config{AdminAPIv2Enabled: tt.enableV2}
+			kc.tokenExp = time.Now().Add(1 * time.Hour) // Set token expiration to future
+
+			client, err := kc.GetClient(context.Background(), testRealm, testClientName)
+			if tt.wantErrStr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErrStr) {
+					t.Fatalf("got error %v, want substring %q", err, tt.wantErrStr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("got error %v, want nil", err)
+			}
+			if client == nil && tt.wantClient != nil {
+				t.Fatal("got nil client, want non-nil")
+			}
+			if client != nil && tt.wantClient != nil {
+				if client.ID != tt.wantClient.ID || client.ClientID != tt.wantClient.ClientID {
+					t.Errorf("got client %+v, want %+v", client, tt.wantClient)
+				}
+			}
+		})
+	}
+}
+
+// TestListClientsV2Fallback verifies ListClients falls back to v1 when v2 is not available
+func TestListClientsV2Fallback(t *testing.T) {
+	testClients := []ClientRepresentation{
+		{ID: "id1", ClientID: "client1", Enabled: true},
+		{ID: "id2", ClientID: "client2", Enabled: false},
+	}
+
+	tests := []struct {
+		name       string
+		enableV2   bool
+		handler    func(w http.ResponseWriter, r *http.Request)
+		wantCount  int
+		wantErrStr string
+	}{
+		{
+			name:     "v2 disabled uses v1",
+			enableV2: false,
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				if strings.Contains(r.URL.Path, "/admin/api/") {
+					t.Error("v2 endpoint called when v2 is disabled")
+				}
+				if err := json.NewEncoder(w).Encode(testClients); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+			},
+			wantCount: 2,
+		},
+		{
+			name:     "v2 enabled uses v2",
+			enableV2: true,
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				if strings.Contains(r.URL.Path, "/admin/api/") && strings.Contains(r.URL.Path, "/clients/v2") {
+					if err := json.NewEncoder(w).Encode(testClients); err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+					}
+					return
+				}
+				http.Error(w, "should use v2", http.StatusInternalServerError)
+			},
+			wantCount: 2,
+		},
+		{
+			name:     "v2 enabled but returns 404, falls back to v1",
+			enableV2: true,
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				if strings.Contains(r.URL.Path, "/admin/api/") && strings.Contains(r.URL.Path, "/clients/v2") {
+					http.Error(w, "not found", http.StatusNotFound)
+					return
+				}
+				// Fallback to v1
+				if err := json.NewEncoder(w).Encode(testClients); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+			},
+			wantCount: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(tt.handler))
+			defer server.Close()
+
+			kc := newTestKeycloakClient(server.Client(), server.URL, testToken)
+			kc.cfg = &Config{AdminAPIv2Enabled: tt.enableV2}
+			kc.tokenExp = time.Now().Add(1 * time.Hour) // Set token expiration to future
+
+			clients, err := kc.ListClients(context.Background(), testRealm)
+			if tt.wantErrStr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErrStr) {
+					t.Fatalf("got error %v, want substring %q", err, tt.wantErrStr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("got error %v, want nil", err)
+			}
+			if len(clients) != tt.wantCount {
+				t.Errorf("got %d clients, want %d", len(clients), tt.wantCount)
+			}
+		})
+	}
+}

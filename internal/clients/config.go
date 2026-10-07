@@ -41,6 +41,7 @@ type ProviderCredentials struct {
 	TLSInsecureSkipVerify bool   `json:"tls_insecure_skip_verify"`
 	Username              string `json:"username"`
 	Password              string `json:"password"`
+	AdminAPIv2Enabled     bool   `json:"admin_api_v2_enabled"` // experimental: enable Keycloak 26.8+ Admin API v2
 }
 
 // Config contains the resolved connection details for the Keycloak API.
@@ -53,6 +54,7 @@ type Config struct {
 	TLSInsecureSkipVerify bool
 	Username              string
 	Password              string
+	AdminAPIv2Enabled     bool // experimental: enable Keycloak 26.8+ Admin API v2
 }
 
 // GetConfig extracts the Keycloak connection config from a ProviderConfig.
@@ -106,6 +108,7 @@ func parseCredentials(raw []byte) (*Config, error) {
 		TLSInsecureSkipVerify: creds.TLSInsecureSkipVerify,
 		Username:              creds.Username,
 		Password:              creds.Password,
+		AdminAPIv2Enabled:     creds.AdminAPIv2Enabled,
 	}, nil
 }
 
