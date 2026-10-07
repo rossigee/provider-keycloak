@@ -44,6 +44,7 @@ import (
 const (
 	defaultTimeout       = 30 * time.Second
 	adminPath            = "/admin/realms"
+	adminAPIv2Path       = "/admin/api" // experimental: Keycloak 26.8+ Admin API v2
 	oauthKeyClientID     = "client_id"
 	oauthKeyClientSecret = "client_secret"
 	maxErrBodyLen        = 256
@@ -199,6 +200,8 @@ type Client interface {
 	DeleteRealm(ctx context.Context, realm string) error
 
 	// Client operations
+	// GetClient and ListClients support experimental Admin API v2 (Keycloak 26.8+)
+	// when admin_api_v2_enabled is set in credentials. Falls back to v1 if v2 is unavailable.
 	GetClient(ctx context.Context, realm, clientID string) (*ClientRepresentation, error)
 	CreateClient(ctx context.Context, realm string, client *ClientRepresentation) (*ClientRepresentation, error)
 	UpdateClient(ctx context.Context, realm string, client *ClientRepresentation) error
@@ -1245,6 +1248,22 @@ func (c *ClientRepresentation) UnmarshalJSON(data []byte) error {
 }
 
 func (c *keycloakClient) GetClient(ctx context.Context, realm, clientID string) (*ClientRepresentation, error) {
+	// If v2 is enabled, try v2 first with fallback to v1 if not available
+	if c.cfg != nil && c.cfg.AdminAPIv2Enabled {
+		client, err := c.getClientV2(ctx, realm, clientID)
+		if err == nil || !errors.Is(err, ErrNotFound) {
+			// Either found (nil error) or a non-404 error, return as-is
+			return client, err
+		}
+		// If v2 is not available (404), silently fall back to v1
+		return c.getClientV1(ctx, realm, clientID)
+	}
+	// Default to v1
+	return c.getClientV1(ctx, realm, clientID)
+}
+
+// getClientV1 uses the Admin API v1 endpoint.
+func (c *keycloakClient) getClientV1(ctx context.Context, realm, clientID string) (*ClientRepresentation, error) {
 	path := realmPath(realm) + "/clients?clientId=" + url.QueryEscape(clientID)
 	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
@@ -1254,6 +1273,30 @@ func (c *keycloakClient) GetClient(ctx context.Context, realm, clientID string) 
 	var clients []ClientRepresentation
 	if err := json.Unmarshal(respBody, &clients); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal clients")
+	}
+
+	if len(clients) == 0 {
+		return nil, nil
+	}
+
+	return &clients[0], nil
+}
+
+// getClientV2 uses the Admin API v2 endpoint (Keycloak 26.8+) with query filtering.
+// Experimental: requires --features=client-admin-api-v2 on the server.
+func (c *keycloakClient) getClientV2(ctx context.Context, realm, clientID string) (*ClientRepresentation, error) {
+	// v2 API supports query expressions: clientId=<value>
+	// URL encode the clientID to safely embed it in the query expression
+	queryExpr := "clientId=" + url.QueryEscape(clientID)
+	path := adminAPIv2Path + "/" + url.PathEscape(realm) + "/clients/v2?q=" + url.QueryEscape(queryExpr)
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var clients []ClientRepresentation
+	if err := json.Unmarshal(respBody, &clients); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal clients from v2 API")
 	}
 
 	if len(clients) == 0 {
@@ -1360,6 +1403,25 @@ func (c *keycloakClient) DeleteClient(ctx context.Context, realm, clientID strin
 }
 
 func (c *keycloakClient) ListClients(ctx context.Context, realm string) ([]ClientRepresentation, error) {
+	// If v2 is enabled, try v2 first with fallback to v1 if not available
+	if c.cfg != nil && c.cfg.AdminAPIv2Enabled {
+		clients, err := c.listClientsV2(ctx, realm)
+		if err == nil {
+			return clients, nil
+		}
+		// If v2 is not available (404), silently fall back to v1
+		if errors.Is(err, ErrNotFound) {
+			return c.listClientsV1(ctx, realm)
+		}
+		// For other errors, return them (e.g., authentication, rate limit)
+		return nil, err
+	}
+	// Default to v1
+	return c.listClientsV1(ctx, realm)
+}
+
+// listClientsV1 uses the Admin API v1 endpoint.
+func (c *keycloakClient) listClientsV1(ctx context.Context, realm string) ([]ClientRepresentation, error) {
 	path := realmPath(realm) + "/clients"
 	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
@@ -1369,6 +1431,23 @@ func (c *keycloakClient) ListClients(ctx context.Context, realm string) ([]Clien
 	var clients []ClientRepresentation
 	if err := json.Unmarshal(respBody, &clients); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal clients")
+	}
+
+	return clients, nil
+}
+
+// listClientsV2 uses the Admin API v2 endpoint (Keycloak 26.8+).
+// Experimental: requires --features=client-admin-api-v2 on the server.
+func (c *keycloakClient) listClientsV2(ctx context.Context, realm string) ([]ClientRepresentation, error) {
+	path := adminAPIv2Path + "/" + url.PathEscape(realm) + "/clients/v2"
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var clients []ClientRepresentation
+	if err := json.Unmarshal(respBody, &clients); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal clients from v2 API")
 	}
 
 	return clients, nil
