@@ -92,7 +92,7 @@ The `ProviderConfig` references a Kubernetes Secret containing a JSON credential
 apiVersion: keycloak.m.crossplane.io/v1beta1
 kind: ProviderConfig
 metadata:
-  name: keycloak-rossgolderltd
+  name: keycloak-example
 spec:
   credentials:
     source: Secret
@@ -145,7 +145,7 @@ spec:
       namespace: crossplane-keycloak
       key: client-secret
   providerConfigRef:
-    name: keycloak-rossgolderltd
+    name: keycloak-example
 ```
 
 ### Realm
@@ -164,7 +164,7 @@ spec:
     loginWithEmailAllowed: true
     sslRequired: external
   providerConfigRef:
-    name: keycloak-rossgolderltd
+    name: keycloak-example
 ```
 
 ### User
@@ -185,7 +185,7 @@ spec:
     firstName: Alice
     lastName: Example
   providerConfigRef:
-    name: keycloak-rossgolderltd
+    name: keycloak-example
 ```
 
 ## Authentication
