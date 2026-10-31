@@ -51,7 +51,7 @@ The tag-only workflow builds `linux_amd64` and `linux_arm64` xpkg files, publish
 gh run list --workflow Release --limit 1
 gh release view v0.21.0
 docker buildx imagetools inspect \
-  ghcr.io/rossigee/provider-keycloak:v0.21.0 \
+  ghcr.io/rossigee/provider-keycloak:v0.21.1 \
   --format '{{.Manifest.Digest}}'
 docker buildx imagetools inspect \
   ghcr.io/rossigee/provider-keycloak:latest \
