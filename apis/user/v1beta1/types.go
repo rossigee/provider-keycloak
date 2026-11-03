@@ -88,9 +88,20 @@ type UserSpec struct {
 	ForProvider              UserParameters `json:"forProvider"`
 }
 
+// UserObservation are the observed fields of a User.
+type UserObservation struct {
+	// ID is the Keycloak internal user UUID, as used by Groups.spec.forProvider.userId.
+	// +optional
+	ID string `json:"id,omitempty"`
+}
+
 // UserStatus defines the observed state of a User.
 type UserStatus struct {
 	xpv1.ManagedResourceStatus `json:",inline"`
+
+	// AtProvider is the observed state of the user in Keycloak.
+	// +optional
+	AtProvider UserObservation `json:"atProvider,omitempty"`
 }
 
 // +kubebuilder:object:root=true

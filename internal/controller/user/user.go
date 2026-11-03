@@ -120,9 +120,11 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		return managed.ExternalObservation{}, errors.Wrap(err, errGetUser)
 	}
 	if u == nil {
+		cr.Status.AtProvider.ID = ""
 		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
 	cr.Status.SetConditions(xpv1.Available())
+	cr.Status.AtProvider.ID = u.ID
 	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: userUpToDate(&cr.Spec.ForProvider, u)}, nil
 }
 

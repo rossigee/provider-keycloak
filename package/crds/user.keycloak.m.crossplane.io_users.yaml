@@ -254,6 +254,14 @@ spec:
           status:
             description: UserStatus defines the observed state of a User.
             properties:
+              atProvider:
+                description: AtProvider is the observed state of the user in Keycloak.
+                properties:
+                  id:
+                    description: ID is the Keycloak internal user UUID, as used by
+                      Groups.spec.forProvider.userId.
+                    type: string
+                type: object
               conditions:
                 description: Conditions of the resource.
                 items:

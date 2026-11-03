@@ -329,6 +329,7 @@ func TestUserObserve(t *testing.T) {
 		mg         resource.Managed
 		getUserFn  func(ctx context.Context, realm, username string) (*clients.UserRepresentation, error)
 		wantExists bool
+		wantID     string
 		wantErrStr string
 	}{
 		{
@@ -356,6 +357,7 @@ func TestUserObserve(t *testing.T) {
 				return &clients.UserRepresentation{ID: "user-id", Username: "testuser"}, nil
 			},
 			wantExists: true,
+			wantID:     "user-id",
 		},
 		{
 			name: "get user error with 404",
@@ -382,6 +384,9 @@ func TestUserObserve(t *testing.T) {
 			}
 			if obs.ResourceExists != tt.wantExists {
 				t.Errorf("ResourceExists = %v, want %v", obs.ResourceExists, tt.wantExists)
+			}
+			if cr, ok := tt.mg.(*userv1beta1.User); ok && cr.Status.AtProvider.ID != tt.wantID {
+				t.Errorf("AtProvider.ID = %q, want %q", cr.Status.AtProvider.ID, tt.wantID)
 			}
 		})
 	}
