@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0] - 2026-11-03
+
+### Added
+- `User` status now exposes the Keycloak user UUID as `status.atProvider.id`
+  (used where a user ID is needed, e.g. `Groups.spec.forProvider.userId`).
+  Existing resources keep their external names.
+
 ## [0.21.0] - 2026-10-04
 
 A minor release, not a patch. Two behaviour changes that can alter how existing
